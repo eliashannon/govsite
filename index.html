@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training Portal | Dashboard</title>
+<link rel="stylesheet" href="variables.css"><link rel="stylesheet" href="global.css"><link rel="stylesheet" href="layout.css"><link rel="stylesheet" href="components.css"><link rel="stylesheet" href="responsive.css">
+</head>
+<body data-page="dashboard">
+<div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
+<header class="topbar"><div class="topbar-left"><button class="btn btn-secondary mobile-menu-button" id="mobileMenuButton" aria-label="Open navigation">☰</button><span class="breadcrumb">Training Portal / <span id="pageTitle"></span></span></div>
+<div class="topbar-right"><div class="topbar-search search-box"><input type="search" placeholder="Search this page..." data-portal-search aria-label="Search this page"></div>
+<div style="position:relative"><button class="account-button" id="accountButton" aria-expanded="false" aria-controls="accountMenu"><span class="account-avatar">U</span><span>Account ▾</span></button><div class="account-menu" id="accountMenu" hidden><a href="contact.html">Contact Support</a><a href="index.html">Dashboard</a></div></div></div></header>
+<main class="page-content">
+<section class="hero"><div><span class="badge">INTERNAL TRAINING RESOURCE</span><h1>Training Center</h1><p>Your central resource for training requirements, qualification resources, and professional development.</p><a href="training.html" class="btn btn-primary">Explore Training Center →</a></div></section>
+<section><div class="card-header"><div><h2>Training & Qualification Resources</h2><p>Access the primary sections of the portal.</p></div></div>
+<div class="feature-grid">
+<a href="role-overview.html" class="feature-card" data-searchable><div class="feature-icon">▣</div><h3>Role Overview</h3><p>Understand your position, responsibilities, and qualification expectations.</p><span class="feature-action">Explore Role Overview →</span></a>
+<a href="required-training.html" class="feature-card" data-searchable><div class="feature-icon">▥</div><h3>Training Courses</h3><p>Access mandatory training, role-specific modules, and certifications.</p><span class="feature-action">View Training Courses →</span></a>
+<a href="tqs-support.html" class="feature-card" data-searchable><div class="feature-icon">◉</div><h3>TQS Support</h3><p>Find technical assistance, support procedures, and troubleshooting resources.</p><span class="feature-action">Get Support →</span></a>
+<a href="key-references.html" class="feature-card" data-searchable><div class="feature-icon">▧</div><h3>References</h3><p>Access official policies, procedures, and key documents.</p><span class="feature-action">Browse References →</span></a></div></section>
+<div class="content-grid">
+<section class="card col-8"><div class="card-header"><div><h2>Training Announcements</h2><p>Important portal updates and reminders.</p></div><span class="badge">Updates</span></div><div id="announcementList"></div></section>
+<section class="card col-4"><div class="card-header"><h2>Quick Access</h2></div>
+<div class="list-item"><div><h4>Training Courses</h4><p>Browse available courses</p></div><a href="required-training.html">→</a></div>
+<div class="list-item"><div><h4>Qualification Guidance</h4><p>Understand expectations</p></div><a href="role-overview.html">→</a></div>
+<div class="list-item"><div><h4>Reference Library</h4><p>Find official documents</p></div><a href="key-references.html">→</a></div>
+<div class="list-item"><div><h4>Contact Support</h4><p>Get assistance</p></div><a href="contact.html">→</a></div></section>
+<section class="card col-12"><div class="card-header"><div><h2>Training Pathway</h2><p>A general overview of the qualification process.</p></div></div>
+<div class="pathway"><div class="pathway-step"><div class="pathway-number">1</div><h4>Understand Role</h4><p>Review responsibilities and expectations.</p></div><div class="pathway-step"><div class="pathway-number">2</div><h4>Complete Training</h4><p>Review applicable training requirements.</p></div><div class="pathway-step"><div class="pathway-number">3</div><h4>Achieve Qualification</h4><p>Follow the applicable qualification process.</p></div><div class="pathway-step"><div class="pathway-number">4</div><h4>Maintain Qualification</h4><p>Complete required updates and refreshers.</p></div></div></section></div>
+</main></div></div>
+<script src="data.js"></script><script src="build-info.js"></script><script src="navigation.js"></script><script src="account.js"></script><script src="search.js"></script><script>
+document.addEventListener("DOMContentLoaded",()=>{const c=document.getElementById("announcementList");if(c&&window.PortalData)c.innerHTML=window.PortalData.announcements.map(a=>`<div class="list-item" data-searchable><div><h4>${a.title}</h4><p>${a.description}</p><p>${a.date}</p></div><span class="badge">${a.type}</span></div>`).join("");});
+</script>
+</body></html>

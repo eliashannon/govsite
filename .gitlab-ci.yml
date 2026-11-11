@@ -1,0 +1,27 @@
+stages:
+  - validate
+
+validate-portal:
+  stage: validate
+  script:
+    - echo "Validating Training Portal project structure..."
+    - test -f index.html
+    - test -f training.html
+    - test -f role-overview.html
+    - test -f required-training.html
+    - test -f tqs-support.html
+    - test -f key-references.html
+    - test -f contact.html
+    - test -f variables.css
+    - test -f global.css
+    - test -f layout.css
+    - test -f components.css
+    - test -f responsive.css
+    - test -f account.js
+    - test -f build-info.js
+    - test -f data.js
+    - test -f navigation.js
+    - test -f references.js
+    - test -f search.js
+    - test -f training.js
+    - echo "All required portal files were found."

@@ -1,0 +1,16 @@
+.app-shell{min-height:100vh}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-width);background:var(--navy-900);color:white;display:flex;flex-direction:column;z-index:100;transition:transform .25s ease}
+.sidebar-brand{min-height:var(--header-height);display:flex;align-items:center;gap:12px;padding:0 22px;border-bottom:1px solid rgba(255,255,255,.1)}
+.brand-mark{width:38px;height:38px;border-radius:9px;background:var(--blue-600);display:grid;place-items:center;font-weight:800;font-size:15px}
+.brand-name{font-size:15px;font-weight:700;color:white}.brand-subtitle{color:#AABBCD;font-size:10px;letter-spacing:1px;text-transform:uppercase}
+.sidebar-nav{padding:22px 12px;flex:1;overflow-y:auto}.nav-label{padding:0 12px;margin:18px 0 9px;color:#91A5B9;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:12px;padding:11px 13px;margin-bottom:4px;color:#C5D1DD;border-radius:var(--radius-sm);font-size:13px;transition:.2s}
+.nav-link:hover{background:rgba(255,255,255,.08);color:white;text-decoration:none}.nav-link.active{background:rgba(71,121,165,.32);color:white;border-left:3px solid #8BB4D8;padding-left:10px}
+.nav-icon{width:20px;text-align:center}.sidebar-footer{padding:18px;border-top:1px solid rgba(255,255,255,.1);color:#AABBCD;font-size:11px}
+.main-area{margin-left:var(--sidebar-width);min-height:100vh}
+.topbar{height:var(--header-height);background:white;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:50}
+.topbar-left,.topbar-right{display:flex;align-items:center;gap:18px}.breadcrumb{color:var(--text-muted);font-size:12px}.topbar-search{width:260px}
+.page-content{max-width:var(--content-max-width);margin:0 auto;padding:32px}.page-heading{margin-bottom:26px}.page-heading h1{margin-bottom:6px}.page-heading p{margin-bottom:0}
+.content-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:22px}
+.col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}
+.mobile-menu-button{display:none}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training Portal | TQS Support</title>
+<link rel="stylesheet" href="variables.css"><link rel="stylesheet" href="global.css"><link rel="stylesheet" href="layout.css"><link rel="stylesheet" href="components.css"><link rel="stylesheet" href="responsive.css">
+</head>
+<body data-page="tqs-support">
+<div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
+<header class="topbar"><div class="topbar-left"><button class="btn btn-secondary mobile-menu-button" id="mobileMenuButton" aria-label="Open navigation">☰</button><span class="breadcrumb">Training Portal / <span id="pageTitle"></span></span></div>
+<div class="topbar-right"><div class="topbar-search search-box"><input type="search" placeholder="Search this page..." data-portal-search aria-label="Search this page"></div>
+<div style="position:relative"><button class="account-button" id="accountButton" aria-expanded="false" aria-controls="accountMenu"><span class="account-avatar">U</span><span>Account ▾</span></button><div class="account-menu" id="accountMenu" hidden><a href="contact.html">Contact Support</a><a href="index.html">Dashboard</a></div></div></div></header>
+<main class="page-content">
+<div class="page-heading"><h1>TQS Support</h1><p>Find assistance, troubleshooting guidance, and answers to common questions.</p></div>
+<section class="hero"><div><h1>How Can We Help?</h1><p>Use the support resources below to find guidance and identify the appropriate point of contact.</p><a href="contact.html" class="btn btn-primary">Contact Support →</a></div></section>
+<div class="content-grid">
+<section class="card col-6"><h2>Support Procedures</h2>
+<div class="list-item"><div><h4>Step 1 — Identify the Issue</h4><p>Document the issue and relevant context.</p></div></div>
+<div class="list-item"><div><h4>Step 2 — Review Available Guidance</h4><p>Check approved references and troubleshooting guides.</p></div></div>
+<div class="list-item"><div><h4>Step 3 — Request Assistance</h4><p>Contact the appropriate designated support office.</p></div></div>
+<div class="list-item"><div><h4>Step 4 — Follow Up</h4><p>Follow applicable procedures for resolution and closure.</p></div></div></section>
+<section class="card col-6"><h2>Support Resources</h2>
+<div class="list-item"><div><h4>Training Guidance</h4><p>Information about course requirements.</p></div><a href="required-training.html">→</a></div>
+<div class="list-item"><div><h4>Qualification Expectations</h4><p>Position and qualification information.</p></div><a href="role-overview.html">→</a></div>
+<div class="list-item"><div><h4>Reference Library</h4><p>Official procedures and documentation.</p></div><a href="key-references.html">→</a></div></section>
+<section class="card col-12"><h2>Frequently Asked Questions</h2><div id="faqList"></div></section></div>
+</main></div></div>
+<script src="data.js"></script><script src="build-info.js"></script><script src="navigation.js"></script><script src="account.js"></script><script src="search.js"></script><script>
+document.addEventListener("DOMContentLoaded",()=>{const c=document.getElementById("faqList");if(!c||!window.PortalData)return;c.innerHTML=window.PortalData.faqs.map((f,i)=>`<div class="faq-item" data-searchable><button class="faq-question" type="button" aria-expanded="false" aria-controls="faq-answer-${i}">${f.question} <span aria-hidden="true">＋</span></button><div class="faq-answer" id="faq-answer-${i}" hidden>${f.answer}</div></div>`).join("");c.querySelectorAll(".faq-question").forEach(b=>b.addEventListener("click",()=>{const a=document.getElementById(b.getAttribute("aria-controls"));const expanded=b.getAttribute("aria-expanded")==="true";b.setAttribute("aria-expanded",String(!expanded));a.hidden=expanded;b.querySelector("span").textContent=expanded?"＋":"−";}));});
+</script>
+</body></html>
