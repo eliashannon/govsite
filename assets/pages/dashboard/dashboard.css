@@ -106,6 +106,7 @@ body[data-page="dashboard"] .dashboard-account .account-avatar{width:36px;height
 .resource-link strong,.resource-link small{display:block}
 .resource-link strong{color:var(--text-primary);font-size:14px;font-weight:600}
 .resource-link small{margin-top:2px;color:var(--text-secondary);font-size:12px}
+.resource-link-status{padding:4px 7px;border:1px solid var(--border);border-radius:20px;background:var(--surface-secondary);color:var(--text-muted);font-size:10px;font-weight:600;white-space:nowrap}
 .dashboard-empty-search{margin:12px 0;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text-secondary);font-size:13px;text-align:center}
 .dashboard-unavailable{margin:8px 0;color:var(--text-secondary);font-size:13px}
 
