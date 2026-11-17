@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
         overlay.addEventListener("click", closeMenu);
-        sidebar.querySelectorAll("a").forEach(link => link.addEventListener("click", closeMenu));
+        // Let page navigation happen directly; closing the drawer first causes a visible slide-out before the next page loads.
         document.addEventListener("keydown", event => {
             if (event.key === "Escape" && sidebar.classList.contains("open")) {
                 closeMenu();
