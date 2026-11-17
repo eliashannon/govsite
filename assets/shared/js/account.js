@@ -3,6 +3,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const menu = document.getElementById("accountMenu");
     const storageKey = "govsiteAccountProfile";
     const roleStorageKey = "portal.selectedRole";
+    const demoCredentials = {
+        email: "elias@navy.mil",
+        password: "elias"
+    };
     const signInForm = document.getElementById("signInForm");
     const signInNotice = document.getElementById("signInNotice");
     const createAccountForm = document.getElementById("createAccountForm");
@@ -36,7 +40,27 @@ document.addEventListener("DOMContentLoaded", () => {
     if (signInForm && signInNotice) {
         signInForm.addEventListener("submit", event => {
             event.preventDefault();
-            signInNotice.hidden = false;
+            const email = document.getElementById("email").value.trim().toLowerCase();
+            const password = document.getElementById("password").value;
+            if (email !== demoCredentials.email || password !== demoCredentials.password) {
+                signInNotice.textContent = "Email or password is incorrect.";
+                signInNotice.hidden = false;
+                return;
+            }
+
+            try {
+                sessionStorage.setItem(storageKey, JSON.stringify({
+                    firstName: "Elias",
+                    lastName: "Hannon",
+                    email: demoCredentials.email
+                }));
+            } catch (error) {
+                console.error("Unable to save the demo account profile.", error);
+                signInNotice.textContent = "This browser could not save the sign-in session. Check your browser storage settings and try again.";
+                signInNotice.hidden = false;
+                return;
+            }
+            window.location.href = "index.html";
         });
     }
 
