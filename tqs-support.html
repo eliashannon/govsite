@@ -26,7 +26,7 @@
 <div class="list-item"><div><h4>Reference Library</h4><p>Official procedures and documentation.</p></div><a href="key-references.html">→</a></div></section>
 <section class="card col-12"><h2>Frequently Asked Questions</h2><div id="faqList"></div></section></div>
 </main></div></div>
-<script src="data.js"></script><script src="build-info.js"></script><script src="navigation.js?v=20261110-2"></script><script src="account.js"></script><script src="search.js"></script><script>
+<script src="data.js"></script><script src="build-info.js"></script><script src="navigation.js?v=20261110-2"></script><script src="account.js?v=20261117-1"></script><script src="search.js"></script><script>
 document.addEventListener("DOMContentLoaded",()=>{const c=document.getElementById("faqList");if(!c||!window.PortalData)return;c.innerHTML=window.PortalData.faqs.map((f,i)=>`<div class="faq-item" data-searchable><button class="faq-question" type="button" aria-expanded="false" aria-controls="faq-answer-${i}">${f.question} <span aria-hidden="true">＋</span></button><div class="faq-answer" id="faq-answer-${i}" hidden>${f.answer}</div></div>`).join("");c.querySelectorAll(".faq-question").forEach(b=>b.addEventListener("click",()=>{const a=document.getElementById(b.getAttribute("aria-controls"));const expanded=b.getAttribute("aria-expanded")==="true";b.setAttribute("aria-expanded",String(!expanded));a.hidden=expanded;b.querySelector("span").textContent=expanded?"＋":"−";}));});
 </script>
 </body></html>
