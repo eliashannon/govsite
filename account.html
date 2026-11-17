@@ -12,8 +12,8 @@
 <div class="topbar-right"><div class="topbar-search search-box"><input type="search" placeholder="Search this page..." data-portal-search aria-label="Search this page"></div>
 <div style="position:relative"><button class="account-button" id="accountButton" aria-expanded="false" aria-controls="accountMenu"><span class="account-avatar">U</span><span>Account ▾</span></button><div class="account-menu" id="accountMenu" hidden><a href="contact.html">Contact Support</a><a href="index.html">Dashboard</a></div></div></div></header>
 <main class="page-content account-page">
-<div class="page-heading"><h1>Sign in</h1><p>Sign in to access your training portal account and personalized resources.</p></div>
-<section class="account-signin-card" aria-labelledby="signinTitle">
+<div class="page-heading"><h1 id="accountPageTitle" tabindex="-1">Sign in</h1><p id="accountPageDescription">Sign in to access your training portal account and personalized resources.</p></div>
+<section class="account-signin-card" id="sign-in" aria-labelledby="signinTitle">
 <div class="signin-intro"><span class="signin-emblem" aria-hidden="true">NAVSEA</span><h2 id="signinTitle">Welcome back</h2><p>Use your organization account to continue.</p></div>
 <form id="signInForm" class="signin-form">
 <div class="field-group"><label for="email">Work email</label><input class="form-control" id="email" name="email" type="email" autocomplete="username" placeholder="name@example.mil" required></div>
@@ -22,18 +22,24 @@
 <button class="btn btn-primary signin-submit" type="submit">Sign in</button>
 <p class="signin-notice" id="signInNotice" role="status" aria-live="polite" hidden>Authentication is not connected in this demo. Please use your organization’s approved sign-in system.</p>
 </form>
+<div class="create-account-prompt"><span>Don't have an account?</span><a class="btn btn-secondary" href="#create-account">Create an Account!</a></div>
+<div class="signin-footer"><span class="security-icon" aria-hidden="true">▣</span><p>For authorized users only. Protect your credentials and follow your organization’s security policies.</p></div>
+</section>
+<section class="account-signin-card create-account-card" id="create-account" aria-labelledby="createAccountTitle" hidden>
+<div class="signin-intro"><span class="signin-emblem" aria-hidden="true">NAVSEA</span><h2 id="createAccountTitle">Create an account</h2><p>Enter your details below.</p></div>
+<form id="createAccountForm" class="signin-form">
+<div class="field-group"><label for="firstName">First name</label><input class="form-control" id="firstName" name="firstName" type="text" autocomplete="given-name" required></div>
+<div class="field-group"><label for="lastName">Last name</label><input class="form-control" id="lastName" name="lastName" type="text" autocomplete="family-name" required></div>
+<div class="field-group"><label for="createEmail">Work email</label><input class="form-control" id="createEmail" name="email" type="email" autocomplete="email" placeholder="name@example.mil" required></div>
+<div class="field-group"><label for="passcode">Passcode</label><input class="form-control" id="passcode" name="passcode" type="password" autocomplete="new-password" required></div>
+<div class="field-group"><label for="confirmPasscode">Re-enter passcode</label><input class="form-control" id="confirmPasscode" name="confirmPasscode" type="password" autocomplete="new-password" required></div>
+<button class="btn btn-primary signin-submit" type="submit">Create an account</button>
+<p class="prototype-notice" id="createAccountNotice" role="status" aria-live="polite" hidden>Account creation is not connected in this demo. Your information has not been submitted or saved.</p>
+</form>
+<p class="create-account-prompt"><a href="#sign-in">Back to sign in</a></p>
 <div class="signin-footer"><span class="security-icon" aria-hidden="true">▣</span><p>For authorized users only. Protect your credentials and follow your organization’s security policies.</p></div>
 </section>
 <p class="account-support">Having trouble? <a href="contact.html">Contact portal support</a>.</p>
 </main></div></div>
-<script src="data.js"></script><script src="build-info.js"></script><script src="navigation.js?v=20261110-2"></script><script src="account.js"></script><script src="search.js"></script><script>
-document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("signInForm");
-    const notice = document.getElementById("signInNotice");
-    form.addEventListener("submit", event => {
-        event.preventDefault();
-        notice.hidden = false;
-    });
-});
-</script>
+<script src="data.js"></script><script src="build-info.js"></script><script src="navigation.js?v=20261110-2"></script><script src="account.js"></script><script src="search.js"></script>
 </body></html>

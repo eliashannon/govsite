@@ -17,7 +17,9 @@
 .signin-submit{width:100%;min-height:46px}
 .signin-notice{padding:12px 14px;border:1px solid #e8c982;border-radius:var(--radius-sm);background:#fff8e6;color:#604a18;font-size:13px}
 .prototype-notice{padding:11px 13px;margin:0 0 20px;border:1px solid #e8c982;border-radius:var(--radius-sm);background:#fff8e6;color:#604a18;font-size:12px;line-height:1.5}
-.create-account-prompt{text-align:center;margin-top:18px;font-size:13px;color:var(--text-secondary)}
+.create-account-prompt{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;text-align:center;margin-top:18px;font-size:14px;color:var(--text-secondary)}
+.create-account-prompt a{min-height:42px}
+.create-account-card .signin-form{gap:15px}
 .account-menu-action{display:block;width:100%;padding:9px;border:0;border-radius:5px;background:transparent;text-align:left;color:var(--text-primary);font:inherit;font-size:12px;cursor:pointer}
 .account-menu-action:hover{background:var(--surface-secondary)}
 .signin-footer{display:flex;align-items:flex-start;gap:10px;border-top:1px solid var(--border);margin-top:24px;padding-top:18px}

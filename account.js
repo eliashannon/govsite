@@ -2,6 +2,63 @@ document.addEventListener("DOMContentLoaded", () => {
     const button = document.getElementById("accountButton");
     const menu = document.getElementById("accountMenu");
     const storageKey = "govsiteAccountProfile";
+    const signInForm = document.getElementById("signInForm");
+    const signInNotice = document.getElementById("signInNotice");
+    const createAccountForm = document.getElementById("createAccountForm");
+    const createAccountNotice = document.getElementById("createAccountNotice");
+    const signInPanel = document.getElementById("sign-in");
+    const createAccountPanel = document.getElementById("create-account");
+    const pageTitle = document.getElementById("accountPageTitle");
+    const pageDescription = document.getElementById("accountPageDescription");
+
+    const showAccountPanel = (shouldFocus = false) => {
+        const creatingAccount = window.location.hash === "#create-account";
+        if (signInPanel) signInPanel.hidden = creatingAccount;
+        if (createAccountPanel) createAccountPanel.hidden = !creatingAccount;
+        if (pageTitle) {
+            pageTitle.textContent = creatingAccount ? "Create an account" : "Sign in";
+            if (shouldFocus) pageTitle.focus();
+        }
+        if (pageDescription) {
+            pageDescription.textContent = creatingAccount
+                ? "Enter the requested details to get started."
+                : "Sign in to access your training portal account and personalized resources.";
+        }
+        document.title = `Training Portal | ${creatingAccount ? "Create an Account" : "Sign In"}`;
+    };
+
+    if (signInForm && signInNotice) {
+        signInForm.addEventListener("submit", event => {
+            event.preventDefault();
+            signInNotice.hidden = false;
+        });
+    }
+
+    if (createAccountForm && createAccountNotice) {
+        const passcode = createAccountForm.elements.namedItem("passcode");
+        const confirmPasscode = createAccountForm.elements.namedItem("confirmPasscode");
+        const validatePasscodes = () => {
+            confirmPasscode.setCustomValidity(
+                confirmPasscode.value && confirmPasscode.value !== passcode.value
+                    ? "Passcodes must match."
+                    : ""
+            );
+        };
+        passcode.addEventListener("input", validatePasscodes);
+        confirmPasscode.addEventListener("input", validatePasscodes);
+        createAccountForm.addEventListener("submit", event => {
+            event.preventDefault();
+            validatePasscodes();
+            if (!createAccountForm.reportValidity()) return;
+            createAccountNotice.hidden = false;
+        });
+    }
+
+    if (signInPanel && createAccountPanel) {
+        showAccountPanel();
+        window.addEventListener("hashchange", () => showAccountPanel(true));
+    }
+
     if (!button) return;
 
     let profile = null;
