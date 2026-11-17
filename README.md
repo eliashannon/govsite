@@ -1,196 +1,187 @@
-Modernize Existing Training Courses Page
+Website Visual Modernization – Enterprise Design System
 
-I want to completely modernize the visual design and user experience of my EXISTING Training Courses page.
+I want to significantly improve the visual appearance of my existing training website.
 
-IMPORTANT: My website is already built. This is a redesign of one existing page, NOT a request to build a new application.
+The current website looks too plain, predominantly white, and has basic typography. I want it to look like a polished, modern enterprise application.
 
-Only modify the existing Training Courses page and its directly associated styling/components when necessary.
-
-Do not modify the Dashboard, Training Center, Role Overview, navigation, authentication, or any other existing pages.
+This is a VISUAL DESIGN improvement. Preserve all existing functionality.
 
 1. Overall Design Direction
 
-Create a modern enterprise training management interface inspired by professional Microsoft-style applications and corporate learning management systems.
+Use a combination of:
 
-Design characteristics:
+* Modern enterprise SaaS design.
+* Professional government employee portal.
+* Microsoft-style application layout.
+* Clean, sophisticated corporate training platform.
 
-* Professional enterprise appearance.
-* Clean white and light-gray backgrounds.
-* Dark navy and blue accent colors.
-* Modern typography (Inter).
-* Subtle shadows and borders.
-* Rounded corners without excessive rounding.
-* Consistent spacing and alignment.
-* Smooth hover effects and transitions.
-* Responsive desktop, tablet, and mobile layouts.
+The interface should feel welcoming, professional, organized, and easy to look at for extended periods.
 
-The page should feel like a professional government employee training portal.
+Avoid making the website look like a generic HTML template.
 
-2. Page Header
+2. Establish a Consistent Color System
 
-At the top of the existing page, create a clean header containing:
+Implement the following color palette throughout the existing website:
 
-Title: “Training Courses”
+* Main background: #EEF2F7
+* Sidebar: #18263D
+* Card background: #FAFBFD
+* Primary buttons: #5276B9
+* Secondary accent: #6C9E9A
+* Success indicators: #6EAA88
+* Warning indicators: #D5A75D
+* Primary text: #263449
+* Secondary text: #718096
+* Borders: #DCE3EC
 
-Subtitle: “Explore available training programs, manage your learning, and track your professional development.”
+IMPORTANT:
 
-Include:
+* Avoid large areas of pure white.
+* Avoid harsh, overly saturated colors.
+* Avoid excessive gradients.
+* Use colors consistently across every page.
+* Maintain sufficient contrast for readability.
+* Use subtle color variations to distinguish different sections.
 
-* Total number of available courses.
-* A prominent search bar.
-* A clean, minimal layout.
+3. Typography Modernization
 
-Search placeholder:
-“Search courses by title, category, or keyword…”
+Improve the typography throughout the website.
 
-The search should filter the existing course data dynamically.
+Use Inter or Plus Jakarta Sans.
 
-3. Training Summary Cards
+Establish a consistent hierarchy:
 
-Below the header, introduce four compact statistics cards:
+* Main page titles: 28–32px, semibold.
+* Section headings: 18–20px, semibold.
+* Card titles: 15–16px, medium.
+* Body text: 14–15px.
+* Secondary descriptions: 13px.
+* Buttons: 14px, medium weight.
 
-* Total Courses
-* Not Started
-* In Progress
-* Completed
+Avoid making every heading bold or using the same text size everywhere.
 
-Each card should include:
+Create clear visual separation between titles, descriptions, labels, and supporting information.
 
-* Relevant Lucide icon.
-* Large numerical statistic.
-* Short descriptive label.
-* Subtle blue, green, amber, or gray accent.
+4. Improve Component Styling
 
-These statistics must reflect actual available course data when possible.
+Modernize the existing components:
 
-4. Course Catalog Table
+CARDS:
 
-This should be the primary component of the page.
+* Soft background colors.
+* Subtle borders.
+* Light shadows only where appropriate.
+* Consistent padding.
+* 8–12px corner radius.
 
-Create a modern, professional data table displaying existing training courses.
+BUTTONS:
 
-Table columns:
+* Consistent primary and secondary styles.
+* Subtle hover transitions.
+* Clear active and disabled states.
+* Avoid oversized or excessively rounded buttons.
 
-1. Course Name
-2. Category
-3. Duration
-4. Difficulty
-5. Status
-6. Actions
+TABLES:
 
-Course rows should feature:
+* Soft alternating row backgrounds.
+* Clean column headings.
+* Better row spacing.
+* Subtle separators.
+* Consistent status badges.
 
-* Course title in bold.
-* Optional short description beneath the title.
-* Small category icon.
-* Estimated course duration.
-* Difficulty badge (Beginner, Intermediate, Advanced).
-* Status badge (Not Started, In Progress, Completed).
-* A “View Details” action.
+INPUTS:
 
-Table functionality
+* Modern search fields.
+* Soft gray-blue backgrounds.
+* Clear focus indicators.
+* Consistent border styling.
 
-Implement:
+ICONS:
 
-* Search filtering.
-* Category filtering.
-* Status filtering.
-* Difficulty filtering.
-* Sort by course name.
-* Sort by duration.
-* Sort by newest.
-* Pagination if the existing catalog contains enough courses.
-* Clear filters option.
+* Use Lucide icons consistently.
+* Maintain consistent sizing and stroke weight.
+* Use muted accent colors.
 
-Use subtle row hover effects and clear column alignment.
+5. Navigation and Application Layout
 
-Keep the table clean and readable. Avoid unnecessary visual clutter.
+Modernize the existing sidebar and navigation styling.
 
-5. Course Details Interaction
+* Deep navy sidebar.
+* Clear active-page indicator.
+* Subtle hover backgrounds.
+* Consistent navigation icons.
+* Improved spacing between navigation items.
+* Professional logo and application branding area.
+* Smooth but subtle navigation transitions.
 
-When an employee clicks “View Details”, open a modern course details modal or side panel.
+Preserve all existing navigation routes and functionality.
 
-The details view should contain:
+6. Add Visual Depth
 
-* Course title.
-* Course description.
-* Course category.
-* Estimated duration.
-* Difficulty level.
-* Learning objectives.
-* Course requirements, if available.
-* Course content or module breakdown, if available.
-* Current completion status.
+The website should no longer feel like a completely flat white page.
 
-At the bottom, include an appropriate primary action:
+Use:
 
-* “Start Course” for courses not started.
-* “Continue Course” for courses in progress.
-* “Review Course” for completed courses.
+* Different background shades to separate content areas.
+* Subtle card elevation.
+* Soft blue-gray section backgrounds.
+* Small accent borders where appropriate.
+* Better spacing between content sections.
+* Consistent visual hierarchy.
 
-The modal should have:
+Do not overuse shadows, gradients, or decorative elements.
 
-* Clean spacing.
-* Clear typography.
-* Professional layout.
-* Subtle animations.
-* Close button.
-* Responsive behavior.
+7. Consistency Across Existing Pages
 
-Do not create a separate course page unless the existing application already uses that structure.
+Apply the same design language to:
 
-6. Visual Status Indicators
+* Dashboard
+* Training Center
+* Role Overview
+* Training Courses
 
-Use consistent status colors:
+Every page should look like it belongs to the same professional application.
 
-* Not Started: Neutral gray.
-* In Progress: Blue.
-* Completed: Green.
-
-Difficulty indicators:
-
-* Beginner: Green.
-* Intermediate: Amber.
-* Advanced: Red or dark neutral.
-
-Keep badges small and professional.
-
-7. Additional User Experience Improvements
-
-Include:
-
-* Empty state when no courses match search criteria.
-* Helpful message when filters return no results.
-* Clear visual feedback when a course is selected.
-* Keyboard-accessible interactions.
-* Responsive table behavior on mobile.
-* Consistent button styling.
+Do not unnecessarily redesign the content or functionality of these pages. Focus on improving their visual presentation.
 
 8. Technical Requirements
 
-CRITICAL:
+Before making changes:
 
-1. Inspect the existing Training Courses page before making changes.
-2. Identify the current component, styling, data structure, and routing.
-3. Reuse existing course data rather than creating duplicate course records.
-4. Preserve all existing course functionality.
-5. Preserve existing navigation and authentication.
-6. Do not modify other pages.
-7. Do not introduce a backend.
-8. Do not add unnecessary dependencies.
-9. Use the existing framework and component structure.
-10. Use Lucide icons if already available.
-11. Keep the implementation modular and maintainable.
-12. Do not replace real course information with arbitrary placeholder data.
+1. Inspect the existing project structure.
+2. Identify the existing global styles and shared components.
+3. Determine how the website currently handles colors, typography, and layout.
+4. Identify opportunities to centralize reusable styling.
 
-If some requested information does not exist in the current data, gracefully omit it rather than inventing course details.
+Implementation requirements:
 
-Final Objective
+* Use reusable CSS variables/design tokens.
+* Reuse existing components.
+* Avoid unnecessary dependencies.
+* Preserve existing routing.
+* Preserve authentication.
+* Preserve all existing page functionality.
+* Do not introduce a backend.
+* Do not remove existing content or features.
+* Avoid duplicating CSS rules.
+* Maintain responsive layouts.
+* Ensure accessibility and readable contrast.
 
-Transform the existing Training Courses page into a polished enterprise training catalog.
+If the project already has a styling system, extend it rather than replacing it unnecessarily.
 
-The final result should prioritize usability, organization, accessibility, and professional presentation.
+FINAL DESIGN GOAL
 
-The course table should be the central focus, with summary statistics, search, filtering, and an interactive course details modal supporting it.
+Transform the website from a basic white interface into a polished, modern enterprise training application.
 
-Again, ONLY modernize the existing Training Courses page. Leave every other page and existing website functionality untouched.
+I want the website to feel professionally designed, visually balanced, and comfortable to use for extended periods.
+
+Prioritize:
+
+1. Eye-friendly colors.
+2. Strong typography.
+3. Visual hierarchy.
+4. Consistent spacing.
+5. Professional component styling.
+6. A cohesive identity across all pages.
+
+Do not sacrifice usability or existing functionality for aesthetics.
