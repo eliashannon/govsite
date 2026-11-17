@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
         {label:"Training Calendar",icon:"🗓",href:"#"},
         {label:"Policy Updates",icon:"📜",href:"#"},
         {label:"FAQ",icon:"?",href:"#"},
-        {label:"Pipeline",icon:"#",href:"#",pipeline:true}
+        {label:"Completed Workflows",icon:"✓",href:"https://github.com/eliashannon/govsite/actions",workflowCount:true}
     ];
     const titles = {dashboard:"Dashboard",training:"Training Center","role-overview":"Role Overview","required-training":"Training Courses","tqs-support":"TQS Support",references:"References",contact:"Contact"};
     if (pageTitle) pageTitle.textContent = titles[currentPage] || "Training Portal";
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <nav class="sidebar-nav" aria-label="Main navigation"><div class="nav-label">Main Menu</div>
         ${items.map(item => `<a class="nav-link ${item.page===currentPage?"active":""}" href="${item.href}" ${item.page===currentPage?'aria-current="page"':""}><span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}</span></a>`).join("")}
         <div class="nav-label">Quick Links</div>
-        ${quickLinks.map(item => `<a class="nav-link" href="${item.href}"><span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}${item.pipeline?'<br><small class="nav-pipeline" data-build-pipeline>Pipeline #Local</small>':''}</span></a>`).join("")}
+        ${quickLinks.map(item => `<a class="nav-link" href="${item.href}" ${item.workflowCount?'target="_blank" rel="noopener noreferrer"':''}><span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}${item.workflowCount?'<br><small class="nav-workflow-count" data-workflow-count>Loading…</small>':''}</span></a>`).join("")}
         </nav>
         <div class="sidebar-footer">Internal Training Resource<br><span data-build-version></span></div>`;
     if (window.BuildInfo?.refresh) window.BuildInfo.refresh();
