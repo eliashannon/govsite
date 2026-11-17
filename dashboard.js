@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (welcomeTitle) {
         welcomeTitle.textContent = isSignedIn
             ? `Welcome back, ${firstName} ${lastName}!`
-            : "Welcome! Please sign in to view your dashboard.";
+            : "Welcome!";
     }
     if (welcomeSubtitle) {
         welcomeSubtitle.textContent = isSignedIn

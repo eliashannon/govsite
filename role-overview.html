@@ -65,6 +65,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const selectedRoleStorageKey = 'portal.selectedRole';
+  const navigationEntry = performance.getEntriesByType('navigation')[0];
+  if (navigationEntry && navigationEntry.type === 'reload') {
+    localStorage.removeItem(selectedRoleStorageKey);
+  }
   const roleCatalog = {
     'Operations': {
       'Logistics': ['Operations Supervisor', 'Fleet Coordinator', 'Warehouse Lead'],
