@@ -10,7 +10,7 @@
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
 <header class="topbar"><div class="topbar-left"><button class="btn btn-secondary mobile-menu-button" id="mobileMenuButton" aria-label="Open navigation">☰</button><img class="navsea-logo" src="assets/shared/images/navsea%20logo.jpg" alt="NAVSEA, Naval Sea Systems Command"><span class="portal-title">C Department Training Portal</span></div>
 <div class="topbar-right"><div class="topbar-search search-box"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input type="search" placeholder="Search training, resources..." data-portal-search aria-label="Search this page"></div>
-<div class="topbar-actions"><button class="icon-button" aria-label="Notifications"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg><span class="badge-count">2</span></button><div class="dashboard-account"><button class="account-button" id="accountButton" aria-expanded="false" aria-controls="accountMenu"><span class="account-avatar">U</span><span>Sign in</span></button><div class="account-menu" id="accountMenu" hidden><a href="contact.html">Contact Support</a><a href="index.html">Dashboard</a></div></div></div></div></header>
+<div class="topbar-actions"><div class="dashboard-account"><button class="account-button" id="accountButton" aria-expanded="false" aria-controls="accountMenu"><span class="account-avatar">U</span><span>Sign in</span></button><div class="account-menu" id="accountMenu" hidden><a href="contact.html">Contact Support</a><a href="index.html">Dashboard</a></div></div></div></div></header>
 <main class="page-content dashboard-content">
   <section class="dashboard-welcome" aria-labelledby="welcomeTitle">
     <div>
@@ -51,7 +51,13 @@
   <section class="dashboard-panel dashboard-progress-panel dashboard-tqs-panel" aria-labelledby="tqsProgressTitle">
     <div class="section-heading">
       <div><p class="dashboard-eyebrow">ROLE QUALIFICATION</p><h2 id="tqsProgressTitle">TQS Progress</h2><p id="tqsProgressSummary" class="dashboard-progress-summary">N/A</p></div>
-      <a class="dashboard-text-link" href="tqs-support.html">View TQS Support <span aria-hidden="true">→</span></a>
+      <div class="dashboard-tqs-actions">
+        <div id="dashboardQualificationStatus" class="dashboard-qualification-status" role="status" aria-live="polite" hidden>
+          <span id="dashboardQualificationIcon" class="dashboard-qualification-icon" aria-hidden="true">✓</span>
+          <span class="dashboard-qualification-copy"><small>Qualification Status</small><strong id="dashboardQualificationLabel"></strong><small id="dashboardQualificationDetail"></small></span>
+        </div>
+        <a class="dashboard-text-link" href="tqs-support.html">View TQS Support <span aria-hidden="true">→</span></a>
+      </div>
     </div>
     <div class="dashboard-progress-overview">
       <div id="dashboardTqsProgressTrack" class="dashboard-progress-track" role="progressbar" aria-label="TQS completion progress" aria-valuemin="0" aria-valuemax="100" aria-valuetext="N/A"><div id="dashboardTqsProgressBar" class="dashboard-progress-bar"></div></div>
@@ -122,5 +128,5 @@
   </section>
   <div id="searchEmptyState" class="dashboard-empty-search" hidden>No results match your search.</div>
 </main></div></div>
-<script src="assets/shared/js/data.js"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261110-2"></script><script src="assets/shared/js/account.js?v=20261117-2"></script><script src="assets/shared/js/search.js"></script><script src="assets/pages/dashboard/dashboard.js?v=20261117-2"></script>
+<script src="assets/shared/js/data.js"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261110-2"></script><script src="assets/shared/js/account.js?v=20261117-2"></script><script src="assets/shared/js/search.js"></script><script src="assets/pages/dashboard/dashboard.js?v=20261117-3"></script>
 </body></html>

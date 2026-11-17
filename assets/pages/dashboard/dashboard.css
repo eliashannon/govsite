@@ -30,6 +30,19 @@ body[data-page="dashboard"] .dashboard-account .account-avatar{width:36px;height
 .dashboard-role-button:hover{border-color:var(--border-dark);background:var(--surface-secondary);text-decoration:none}
 .dashboard-progress-panel{margin-bottom:20px}
 .dashboard-tqs-panel{margin-bottom:24px}
+.dashboard-tqs-actions{display:flex;align-items:center;gap:12px}
+.dashboard-qualification-status{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-secondary)}
+.dashboard-qualification-status[hidden]{display:none}
+.dashboard-qualification-icon{display:grid;flex:0 0 29px;width:29px;height:29px;place-items:center;border-radius:50%;font-size:16px;font-weight:700}
+.dashboard-qualification-copy{display:flex;flex-direction:column;gap:2px}
+.dashboard-qualification-copy small{color:var(--text-secondary);font-size:10px;line-height:1.2}
+.dashboard-qualification-copy strong{color:var(--text-primary);font-size:13px;line-height:1.2}
+.dashboard-qualification-status.is-qualified{border-color:#cfe3d6;background:var(--success-bg)}
+.dashboard-qualification-status.is-qualified .dashboard-qualification-icon{background:var(--success-indicator);color:#fff}
+.dashboard-qualification-status.is-qualified .dashboard-qualification-copy strong{color:var(--success)}
+.dashboard-qualification-status.is-not-qualified{border-color:#edcccc;background:var(--danger-bg)}
+.dashboard-qualification-status.is-not-qualified .dashboard-qualification-icon{background:var(--danger);color:#fff}
+.dashboard-qualification-status.is-not-qualified .dashboard-qualification-copy strong{color:var(--danger)}
 .dashboard-progress-summary{margin:5px 0 0;color:var(--text-secondary);font-size:13px}
 .dashboard-progress-overview{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;margin:17px 0}
 .dashboard-progress-track{height:9px;overflow:hidden;border-radius:8px;background:#e6ebf2}
@@ -88,7 +101,7 @@ body[data-page="dashboard"] .dashboard-account .account-avatar{width:36px;height
 .quick-link-copy strong{color:var(--text-primary);font-size:15px;font-weight:600}
 .quick-link-copy>span{color:var(--text-secondary);font-size:13px;line-height:1.45}
 .quick-link-arrow{color:var(--text-muted);font-size:17px}
-.dashboard-bottom-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(270px,.8fr);gap:18px}
+.dashboard-bottom-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(270px,.8fr);align-items:start;gap:18px}
 .dashboard-pathway{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
 .pathway-step{display:flex;align-items:flex-start;gap:9px;min-width:0;min-height:0;padding:11px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface-secondary);color:var(--text-primary);text-align:left}
 .pathway-step>span{display:grid;flex:0 0 23px;width:23px;height:23px;place-items:center;border-radius:50%;background:var(--blue-100);color:var(--blue-700);font-size:11px;font-weight:600}
@@ -128,6 +141,7 @@ body[data-page="dashboard"] .dashboard-account .account-avatar{width:36px;height
   .dashboard-role-icon{flex-basis:36px;width:36px;height:36px}
   .dashboard-role-button{gap:5px;padding:0 9px;font-size:12px}
   .dashboard-progress-panel{padding:17px}
+  .dashboard-tqs-actions{align-items:flex-start;flex-direction:column}
   .dashboard-progress-stats{gap:7px}
   .dashboard-progress-stats>div{padding:8px}
   .dashboard-progress-stats span{font-size:11px}

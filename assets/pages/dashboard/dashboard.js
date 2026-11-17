@@ -116,7 +116,11 @@ document.addEventListener("DOMContentLoaded", () => {
         inProgress: document.getElementById("dashboardTqsInProgress"),
         notStarted: document.getElementById("dashboardTqsNotStarted"),
         track: document.getElementById("dashboardTqsProgressTrack"),
-        bar: document.getElementById("dashboardTqsProgressBar")
+        bar: document.getElementById("dashboardTqsProgressBar"),
+        qualificationStatus: document.getElementById("dashboardQualificationStatus"),
+        qualificationIcon: document.getElementById("dashboardQualificationIcon"),
+        qualificationLabel: document.getElementById("dashboardQualificationLabel"),
+        qualificationDetail: document.getElementById("dashboardQualificationDetail")
     };
     const accountId = typeof profile.email === "string" ? profile.email.trim().toLowerCase() : "";
     if (accountId) {
@@ -144,6 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const tqsPercent = tqsRequirements.length
             ? Math.round((tqsCompleted / tqsRequirements.length) * 100)
             : 0;
+        const isQualified = tqsRequirements.length > 0 && tqsCompleted === tqsRequirements.length;
 
         tqsElements.summary.textContent = `${tqsCompleted} of ${tqsRequirements.length} requirements completed`;
         tqsElements.percent.textContent = `${tqsPercent}%`;
@@ -154,6 +159,12 @@ document.addEventListener("DOMContentLoaded", () => {
         tqsElements.bar.style.width = `${tqsPercent}%`;
         tqsElements.track.removeAttribute("aria-valuetext");
         tqsElements.track.setAttribute("aria-valuenow", String(tqsPercent));
+        tqsElements.qualificationStatus.hidden = false;
+        tqsElements.qualificationStatus.classList.toggle("is-qualified", isQualified);
+        tqsElements.qualificationStatus.classList.toggle("is-not-qualified", !isQualified);
+        tqsElements.qualificationIcon.textContent = "✓";
+        tqsElements.qualificationLabel.textContent = isQualified ? "Qualified" : "Not Qualified";
+        tqsElements.qualificationDetail.textContent = `${tqsPercent}% TQS completion`;
     }
 
     const completionKey = "portal.completedCourses";
