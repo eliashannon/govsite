@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentPage = document.body.dataset.page || "dashboard";
     const items = [
         {label:"Dashboard",icon:"⌂",href:"index.html",page:"dashboard"},
-        {label:"Training Center",icon:"▤",href:"training.html",page:"training"},
         {label:"Role Overview",icon:"▣",href:"role-overview.html",page:"role-overview"},
+        {label:"Training Center",icon:"▤",href:"training.html",page:"training"},
         {label:"Training Courses",icon:"▥",href:"required-training.html",page:"required-training"},
         {label:"TQS Support",icon:"◉",href:"tqs-support.html",page:"tqs-support"},
         {label:"References",icon:"▧",href:"key-references.html",page:"references"},
