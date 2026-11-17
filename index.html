@@ -31,7 +31,11 @@
     <a class="dashboard-role-button" href="role-overview.html">Change Role <span aria-hidden="true">→</span></a>
   </section>
 
-  <section class="dashboard-stats" aria-label="Training statistics">
+  <section class="dashboard-progress-section" aria-labelledby="trainingProgressTitle">
+    <div class="section-heading dashboard-progress-heading">
+      <div><p class="dashboard-eyebrow">COURSE OVERVIEW</p><h2 id="trainingProgressTitle">Training Progress</h2></div>
+    </div>
+    <div class="dashboard-stats" aria-label="Training statistics">
     <article class="dashboard-stat" data-searchable>
       <div class="stat-icon stat-icon-blue"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2 7h20M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"></path><path d="M8 12h8M8 16h5"></path></svg></div>
       <div class="stat-label">Available Courses</div><strong class="stat-value" id="availableCourses">N/A</strong><p>Sign in and select a role</p>
@@ -48,6 +52,24 @@
       <div class="stat-icon stat-icon-violet"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"></path><circle cx="12" cy="12" r="9"></circle></svg></div>
       <div class="stat-label">Overall Progress</div><strong class="stat-value" id="overallProgress">N/A</strong><p>N/A</p>
     </article>
+    </div>
+  </section>
+
+  <section class="dashboard-panel dashboard-tqs-panel" aria-labelledby="tqsProgressTitle">
+    <div class="section-heading">
+      <div><p class="dashboard-eyebrow">ROLE QUALIFICATION</p><h2 id="tqsProgressTitle">TQS Progress</h2><p id="tqsProgressSummary" class="dashboard-tqs-summary">N/A</p></div>
+      <a class="dashboard-text-link" href="tqs-support.html">View TQS Support <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="dashboard-tqs-overview">
+      <div id="dashboardTqsProgressTrack" class="dashboard-tqs-track" role="progressbar" aria-label="TQS completion progress" aria-valuemin="0" aria-valuemax="100" aria-valuetext="N/A"><div id="dashboardTqsProgressBar" class="dashboard-tqs-bar"></div></div>
+      <strong id="dashboardTqsProgressPercent">N/A</strong>
+    </div>
+    <div class="dashboard-tqs-stats" aria-live="polite">
+      <div><span>Total Requirements</span><strong id="dashboardTqsTotal">N/A</strong></div>
+      <div><span>Completed</span><strong id="dashboardTqsCompleted">N/A</strong></div>
+      <div><span>In Progress</span><strong id="dashboardTqsInProgress">N/A</strong></div>
+      <div><span>Not Started</span><strong id="dashboardTqsNotStarted">N/A</strong></div>
+    </div>
   </section>
 
   <div class="dashboard-main-grid">
@@ -106,5 +128,5 @@
   </section>
   <div id="searchEmptyState" class="dashboard-empty-search" hidden>No results match your search.</div>
 </main></div></div>
-<script src="assets/shared/js/data.js"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261110-2"></script><script src="assets/shared/js/account.js?v=20261117-2"></script><script src="assets/shared/js/search.js"></script><script src="assets/pages/dashboard/dashboard.js?v=20261117-1"></script>
+<script src="assets/shared/js/data.js"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261110-2"></script><script src="assets/shared/js/account.js?v=20261117-2"></script><script src="assets/shared/js/search.js"></script><script src="assets/pages/dashboard/dashboard.js?v=20261117-2"></script>
 </body></html>

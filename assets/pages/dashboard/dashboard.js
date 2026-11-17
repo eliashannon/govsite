@@ -109,6 +109,54 @@ document.addEventListener("DOMContentLoaded", () => {
     const roleCourses = courses.filter(course =>
         Array.isArray(course.roles) && course.roles.includes(roleName)
     );
+    const tqsElements = {
+        summary: document.getElementById("tqsProgressSummary"),
+        percent: document.getElementById("dashboardTqsProgressPercent"),
+        total: document.getElementById("dashboardTqsTotal"),
+        completed: document.getElementById("dashboardTqsCompleted"),
+        inProgress: document.getElementById("dashboardTqsInProgress"),
+        notStarted: document.getElementById("dashboardTqsNotStarted"),
+        track: document.getElementById("dashboardTqsProgressTrack"),
+        bar: document.getElementById("dashboardTqsProgressBar")
+    };
+    const accountId = typeof profile.email === "string" ? profile.email.trim().toLowerCase() : "";
+    if (accountId) {
+        const tqsStorageKey = `portal.tqsProgress:${encodeURIComponent(accountId)}:${encodeURIComponent(roleName)}`;
+        let tqsProgress = {};
+        try {
+            const stored = JSON.parse(localStorage.getItem(tqsStorageKey) || "{}");
+            if (stored && typeof stored === "object" && !Array.isArray(stored)) {
+                tqsProgress = stored;
+            } else {
+                console.error("Saved TQS progress is not a valid record.");
+            }
+        } catch (error) {
+            console.error("Unable to read TQS progress for the dashboard.", error);
+        }
+
+        const tqsRequirements = roleCourses.filter(course => course.requirement === "Required");
+        const tqsCompleted = tqsRequirements.filter(course =>
+            tqsProgress[course.id]?.status === "Completed"
+        ).length;
+        const tqsInProgress = tqsRequirements.filter(course =>
+            tqsProgress[course.id]?.status === "In Progress"
+        ).length;
+        const tqsNotStarted = tqsRequirements.length - tqsCompleted - tqsInProgress;
+        const tqsPercent = tqsRequirements.length
+            ? Math.round((tqsCompleted / tqsRequirements.length) * 100)
+            : 0;
+
+        tqsElements.summary.textContent = `${tqsCompleted} of ${tqsRequirements.length} requirements completed`;
+        tqsElements.percent.textContent = `${tqsPercent}%`;
+        tqsElements.total.textContent = String(tqsRequirements.length);
+        tqsElements.completed.textContent = String(tqsCompleted);
+        tqsElements.inProgress.textContent = String(tqsInProgress);
+        tqsElements.notStarted.textContent = String(tqsNotStarted);
+        tqsElements.bar.style.width = `${tqsPercent}%`;
+        tqsElements.track.removeAttribute("aria-valuetext");
+        tqsElements.track.setAttribute("aria-valuenow", String(tqsPercent));
+    }
+
     const completionKey = "portal.completedCourses";
     let completedIds = ["TRN-001", "TRN-002"];
     try {
@@ -170,7 +218,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="active-course-copy">
                             <h3>${escapeHtml(course.title)}</h3>
                             <p>${escapeHtml(course.description)}</p>
-                            <div class="course-progress-meta"><span>Course status</span><strong>In Progress</strong></div>
                         </div>
                         <a class="continue-course-button" href="${escapeHtml(courseHref)}">Continue Course</a>
                     </article>`;
