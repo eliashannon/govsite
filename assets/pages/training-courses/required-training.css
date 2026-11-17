@@ -1,5 +1,5 @@
 body[data-page="required-training"] .main-area{background:var(--background)}
-body[data-page="required-training"] .portal-title{font-family:"Inter","Segoe UI",Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:-.01em;color:var(--text-primary)}
+body[data-page="required-training"] .portal-title{font-family:"Inter","Segoe UI",Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:-.01em;color:var(--text-primary)}
 body[data-page="required-training"] .page-content.course-catalog-page{font-family:"Inter","Segoe UI",Arial,sans-serif}
 .course-catalog-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:23px}
 .course-catalog-header h1{margin:0 0 8px;color:var(--text-primary);font-size:32px;font-weight:600;letter-spacing:-.035em}

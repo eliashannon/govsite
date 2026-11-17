@@ -13,7 +13,7 @@
 .sidebar-footer{padding:18px 20px;border-top:1px solid rgba(255,255,255,.12);color:#AABBCD;font-size:11px;line-height:1.4}
 .main-area{margin-left:var(--sidebar-width);min-height:100vh}
 .topbar{height:var(--header-height);background:rgba(250,251,253,.96);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px 0 24px;position:sticky;top:0;z-index:50;backdrop-filter:blur(8px)}
-.topbar-left,.topbar-right{display:flex;align-items:center;gap:18px}.portal-title{color:var(--navy-900);font-family:var(--brand-font-family);font-size:18px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}.topbar-search{width:620px}
+.topbar-left,.topbar-right{display:flex;align-items:center;gap:18px}.navsea-logo{display:block;flex:0 0 auto;width:112px;height:50px;object-fit:contain;border-radius:4px}.portal-title{color:var(--navy-900);font-family:var(--brand-font-family);font-size:18px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}.topbar-search{width:620px}
 .topbar-search>svg{position:absolute;z-index:1;left:12px;top:50%;width:18px;height:18px;transform:translateY(-50%);fill:none;stroke:var(--text-muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
 .topbar-actions{display:flex;align-items:center;gap:14px}.icon-button{position:relative;width:38px;height:38px;border:1px solid var(--border);background:var(--surface);border-radius:10px;display:grid;place-items:center;color:var(--navy-800);box-shadow:none;transition:background .18s ease,border-color .18s ease}
 .icon-button:hover{background:var(--surface-secondary);border-color:var(--border-dark)}
