@@ -27,10 +27,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const quickLinks = [
         {label:"Training Calendar",icon:icons.calendar,href:"#"},
         {label:"Policy Updates",icon:icons.updates,href:"#"},
-        {label:"FAQ",icon:icons.help,href:"#"},
+        {label:"FAQ",icon:icons.help,href:"faq.html"},
         {label:"Completed Workflows",icon:icons.completed,href:"https://github.com/eliashannon/govsite/actions",workflowCount:true}
     ];
-    const titles = {dashboard:"Dashboard","role-overview":"Role Overview","required-training":"Training Courses","tqs-support":"TQS Support",references:"References",contact:"Contact"};
+    const titles = {dashboard:"Dashboard","role-overview":"Role Overview","required-training":"Training Courses","tqs-support":"TQS Support",references:"References",contact:"Contact",faq:"FAQ"};
     if (pageTitle) pageTitle.textContent = titles[currentPage] || "Training Portal";
     if (sidebar) sidebar.innerHTML = `
         <div class="sidebar-brand"><div class="brand-mark" aria-hidden="true">${icons.training}</div><div><div class="brand-name">Training &<br>Qualification Portal</div></div></div>
