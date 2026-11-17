@@ -11,6 +11,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const pageTitle = document.getElementById("accountPageTitle");
     const pageDescription = document.getElementById("accountPageDescription");
 
+    const navigationEntry = performance.getEntriesByType("navigation")[0];
+    if (navigationEntry && navigationEntry.type === "reload") {
+        sessionStorage.removeItem(storageKey);
+    }
+
     const showAccountPanel = (shouldFocus = false) => {
         const creatingAccount = window.location.hash === "#create-account";
         if (signInPanel) signInPanel.hidden = creatingAccount;
@@ -50,6 +55,24 @@ document.addEventListener("DOMContentLoaded", () => {
             event.preventDefault();
             validatePasscodes();
             if (!createAccountForm.reportValidity()) return;
+            const formData = new FormData(createAccountForm);
+            const newProfile = {
+                firstName: formData.get("firstName").trim(),
+                lastName: formData.get("lastName").trim(),
+                email: formData.get("email").trim()
+            };
+            try {
+                sessionStorage.setItem(storageKey, JSON.stringify(newProfile));
+            } catch (error) {
+                console.error("Unable to save the temporary account profile.", error);
+                createAccountNotice.textContent = "This browser could not save the temporary account details. Please check your browser storage settings and try again.";
+                createAccountNotice.hidden = false;
+                return;
+            }
+            profile = newProfile;
+            renderAccount();
+            createAccountForm.reset();
+            createAccountNotice.textContent = `Account created for ${[profile.firstName, profile.lastName].filter(Boolean).join(" ")}. Your name and work email are saved for this browser session and will be cleared when you refresh. Passcodes are not saved.`;
             createAccountNotice.hidden = false;
         });
     }
@@ -59,8 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
         window.addEventListener("hashchange", () => showAccountPanel(true));
     }
 
-    if (!button) return;
-
     let profile = null;
     try {
         profile = JSON.parse(sessionStorage.getItem(storageKey) || "null");
@@ -68,10 +89,11 @@ document.addEventListener("DOMContentLoaded", () => {
         sessionStorage.removeItem(storageKey);
     }
 
-    const avatar = button.querySelector(".account-avatar");
-    const label = button.querySelector("span:last-child");
-    if (profile) {
+    const renderAccount = () => {
+        if (!button || !profile) return;
         const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || profile.email || "Account";
+        const avatar = button.querySelector(".account-avatar");
+        const label = button.querySelector("span:last-child");
         if (avatar) avatar.textContent = name.split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase();
         if (label) label.textContent = `${name} ▾`;
         button.setAttribute("aria-expanded", "false");
@@ -84,19 +106,24 @@ document.addEventListener("DOMContentLoaded", () => {
             signOut.textContent = "Sign out";
             signOut.addEventListener("click", () => {
                 sessionStorage.removeItem(storageKey);
+                profile = null;
                 window.location.href = "account.html";
             });
             menu.append(signOut);
         }
+    };
+
+    renderAccount();
+    if (button) {
         button.addEventListener("click", () => {
+            if (!profile) {
+                window.location.href = "account.html";
+                return;
+            }
             if (!menu) return;
             const expanded = button.getAttribute("aria-expanded") === "true";
             button.setAttribute("aria-expanded", String(!expanded));
             menu.hidden = expanded;
-        });
-    } else {
-        button.addEventListener("click", () => {
-            window.location.href = "account.html";
         });
     }
 
