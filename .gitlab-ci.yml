@@ -12,16 +12,23 @@ validate-portal:
     - test -f tqs-support.html
     - test -f key-references.html
     - test -f contact.html
-    - test -f variables.css
-    - test -f global.css
-    - test -f layout.css
-    - test -f components.css
-    - test -f responsive.css
-    - test -f account.js
-    - test -f build-info.js
-    - test -f data.js
-    - test -f navigation.js
-    - test -f references.js
-    - test -f search.js
-    - test -f training.js
+    - test -f assets/shared/css/variables.css
+    - test -f assets/shared/css/global.css
+    - test -f assets/shared/css/layout.css
+    - test -f assets/shared/css/components.css
+    - test -f assets/shared/css/responsive.css
+    - test -f assets/shared/js/account.js
+    - test -f assets/shared/js/build-info.js
+    - test -f assets/shared/js/data.js
+    - test -f assets/shared/js/navigation.js
+    - test -f assets/shared/js/search.js
+    - test -f assets/pages/account/account.css
+    - test -f assets/pages/dashboard/dashboard.css
+    - test -f assets/pages/dashboard/dashboard.js
+    - test -f assets/pages/key-references/references.js
+    - test -f assets/pages/role-overview/role-overview.js
+    - test -f assets/pages/tqs-support/tqs-support.js
+    - test -f assets/pages/training-center/training.js
+    - test -f assets/pages/training-courses/required-training.css
+    - test -f assets/pages/training-courses/required-training.js
     - echo "All required portal files were found."

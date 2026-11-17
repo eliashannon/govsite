@@ -4,7 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | Training Center</title>
-<link rel="stylesheet" href="variables.css"><link rel="stylesheet" href="global.css"><link rel="stylesheet" href="layout.css?v=20261110-3"><link rel="stylesheet" href="components.css"><link rel="stylesheet" href="responsive.css">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261110-3"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css">
 </head>
 <body data-page="training">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -16,32 +16,32 @@
 <section class="account-progress-grid">
   <div class="card account-role-card">
     <span class="progress-eyebrow">My Role</span>
-    <h2 id="accountProgressRole">No role selected</h2>
-    <p id="accountProgressRoleDetail">Select your role to personalize this training center.</p>
+    <h2 id="accountProgressRole">N/A</h2>
+    <p id="accountProgressRoleDetail">N/A</p>
     <a class="btn btn-secondary btn-small" href="role-overview.html">View or change role</a>
   </div>
   <div class="card tqs-progress-card">
     <div class="progress-card-header">
       <div><span class="progress-eyebrow">TQS Qualification</span><h2>Training Progress</h2></div>
-      <strong id="tqsProgressPercent">0%</strong>
+      <strong id="tqsProgressPercent">N/A</strong>
     </div>
-    <div class="progress-track" role="progressbar" aria-label="TQS qualification progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-bar" id="tqsProgressBar"></div></div>
+    <div class="progress-track" role="progressbar" aria-label="TQS qualification progress" aria-valuemin="0" aria-valuemax="100" aria-valuetext="N/A"><div class="progress-bar" id="tqsProgressBar"></div></div>
     <div class="progress-stats">
-      <div><strong id="tqsCompletedCount">0</strong><span>Completed</span></div>
-      <div><strong id="tqsRemainingCount">0</strong><span>Remaining</span></div>
+      <div><strong id="tqsCompletedCount">N/A</strong><span>Completed</span></div>
+      <div><strong id="tqsRemainingCount">N/A</strong><span>Remaining</span></div>
     </div>
   </div>
 </section>
 <section class="progress-content-grid">
   <div class="card">
-    <div class="card-header"><div><h2>Training Courses Taken</h2><p class="card-description">Your completed training courses.</p></div><span class="badge badge-success" id="takenTrainingCount">0 completed</span></div>
-    <div id="takenTrainingList" class="progress-course-list"></div>
+    <div class="card-header"><div><h2>Training Courses Taken</h2><p class="card-description">Your completed training courses.</p></div><span class="badge badge-success" id="takenTrainingCount">N/A</span></div>
+    <div id="takenTrainingList" class="progress-course-list">N/A</div>
   </div>
   <div class="card">
     <div class="card-header"><div><h2>Training Courses Remaining</h2><p class="card-description">Required courses still needed for qualification.</p></div><a class="btn btn-secondary btn-small" href="required-training.html">View courses</a></div>
-    <div id="remainingTrainingList" class="progress-course-list"></div>
+    <div id="remainingTrainingList" class="progress-course-list">N/A</div>
   </div>
 </section>
 </main></div></div>
-<script src="data.js"></script><script src="build-info.js"></script><script src="navigation.js?v=20261110-2"></script><script src="account.js?v=20261117-1"></script><script src="search.js"></script><script src="training.js"></script>
+<script src="assets/shared/js/data.js"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261110-2"></script><script src="assets/shared/js/account.js?v=20261117-1"></script><script src="assets/shared/js/search.js"></script><script src="assets/pages/training-center/training.js"></script>
 </body></html>

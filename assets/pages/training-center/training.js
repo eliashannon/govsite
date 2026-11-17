@@ -29,10 +29,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const accountProgressRole = document.getElementById("accountProgressRole");
     if (accountProgressRole) {
+        const roleDetail = document.getElementById("accountProgressRoleDetail");
+        const progressPercent = document.getElementById("tqsProgressPercent");
+        const completedCount = document.getElementById("tqsCompletedCount");
+        const remainingCount = document.getElementById("tqsRemainingCount");
+        const progressTrack = document.querySelector(".progress-track");
+        const progressBar = document.getElementById("tqsProgressBar");
+        const takenList = document.getElementById("takenTrainingList");
+        const takenCount = document.getElementById("takenTrainingCount");
+        const remainingList = document.getElementById("remainingTrainingList");
+
+        if (!roleName) {
+            accountProgressRole.textContent = "N/A";
+            if (roleDetail) roleDetail.textContent = "N/A";
+            if (progressPercent) progressPercent.textContent = "N/A";
+            if (completedCount) completedCount.textContent = "N/A";
+            if (remainingCount) remainingCount.textContent = "N/A";
+            if (progressBar) progressBar.style.width = "0";
+            if (progressTrack) {
+                progressTrack.removeAttribute("aria-valuenow");
+                progressTrack.setAttribute("aria-valuetext", "N/A");
+            }
+            if (takenCount) takenCount.textContent = "N/A";
+            if (takenList) takenList.textContent = "N/A";
+            if (remainingList) remainingList.textContent = "N/A";
+            return;
+        }
+
         const courses = window.PortalData ? window.PortalData.courses : [];
-        const roleCourses = roleName
-            ? courses.filter(course => Array.isArray(course.roles) && course.roles.includes(roleName))
-            : courses.filter(course => course.requirement === "Required");
+        const roleCourses = courses.filter(course =>
+            Array.isArray(course.roles) && course.roles.includes(roleName)
+        );
         const completed = getCompletedCourses();
         const requiredCourses = roleCourses.filter(course => course.requirement === "Required");
         const completedRequired = requiredCourses.filter(course => completed.includes(course.id));
@@ -41,25 +68,21 @@ document.addEventListener("DOMContentLoaded", () => {
             ? Math.round((completedRequired.length / requiredCourses.length) * 100)
             : 0;
 
-        accountProgressRole.textContent = roleName || "No role selected";
-        const roleDetail = document.getElementById("accountProgressRoleDetail");
+        accountProgressRole.textContent = roleName;
         if (roleDetail) {
-            roleDetail.textContent = roleName
-                ? `${roleSelection && roleSelection.branch ? `${roleSelection.branch} · ` : ""}${roleSelection && roleSelection.division ? roleSelection.division : "Assigned position"}`
-                : "Select your role to personalize this training center.";
+            roleDetail.textContent = `${roleSelection && roleSelection.branch ? `${roleSelection.branch} · ` : ""}${roleSelection && roleSelection.division ? roleSelection.division : "Assigned position"}`;
         }
 
-        document.getElementById("tqsProgressPercent").textContent = `${percent}%`;
-        document.getElementById("tqsCompletedCount").textContent = completedRequired.length;
-        document.getElementById("tqsRemainingCount").textContent = remainingCourses.length;
-        const progressTrack = document.querySelector(".progress-track");
-        const progressBar = document.getElementById("tqsProgressBar");
+        progressPercent.textContent = `${percent}%`;
+        completedCount.textContent = completedRequired.length;
+        remainingCount.textContent = remainingCourses.length;
         if (progressBar) progressBar.style.width = `${percent}%`;
-        if (progressTrack) progressTrack.setAttribute("aria-valuenow", String(percent));
+        if (progressTrack) {
+            progressTrack.removeAttribute("aria-valuetext");
+            progressTrack.setAttribute("aria-valuenow", String(percent));
+        }
 
         const taken = roleCourses.filter(course => completed.includes(course.id));
-        const takenList = document.getElementById("takenTrainingList");
-        const takenCount = document.getElementById("takenTrainingCount");
         if (takenCount) takenCount.textContent = `${taken.length} completed`;
         if (takenList) {
             takenList.innerHTML = taken.length
@@ -67,7 +90,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 : `<p class="progress-empty">No training courses have been completed for this role.</p>`;
         }
 
-        const remainingList = document.getElementById("remainingTrainingList");
         if (remainingList) {
             remainingList.innerHTML = remainingCourses.length
                 ? remainingCourses.map(course => `<div class="progress-course"><span class="progress-course-icon progress-course-icon-pending">○</span><div><h3>${course.title}</h3><p>${course.category} · ${course.duration}</p></div><span class="badge badge-warning">Remaining</span></div>`).join("")

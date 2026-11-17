@@ -4,7 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | TQS Support</title>
-<link rel="stylesheet" href="variables.css"><link rel="stylesheet" href="global.css"><link rel="stylesheet" href="layout.css?v=20261110-3"><link rel="stylesheet" href="components.css"><link rel="stylesheet" href="responsive.css">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261110-3"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css">
 </head>
 <body data-page="tqs-support">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -26,7 +26,5 @@
 <div class="list-item"><div><h4>Reference Library</h4><p>Official procedures and documentation.</p></div><a href="key-references.html">→</a></div></section>
 <section class="card col-12"><h2>Frequently Asked Questions</h2><div id="faqList"></div></section></div>
 </main></div></div>
-<script src="data.js"></script><script src="build-info.js"></script><script src="navigation.js?v=20261110-2"></script><script src="account.js?v=20261117-1"></script><script src="search.js"></script><script>
-document.addEventListener("DOMContentLoaded",()=>{const c=document.getElementById("faqList");if(!c||!window.PortalData)return;c.innerHTML=window.PortalData.faqs.map((f,i)=>`<div class="faq-item" data-searchable><button class="faq-question" type="button" aria-expanded="false" aria-controls="faq-answer-${i}">${f.question} <span aria-hidden="true">＋</span></button><div class="faq-answer" id="faq-answer-${i}" hidden>${f.answer}</div></div>`).join("");c.querySelectorAll(".faq-question").forEach(b=>b.addEventListener("click",()=>{const a=document.getElementById(b.getAttribute("aria-controls"));const expanded=b.getAttribute("aria-expanded")==="true";b.setAttribute("aria-expanded",String(!expanded));a.hidden=expanded;b.querySelector("span").textContent=expanded?"＋":"−";}));});
-</script>
+<script src="assets/shared/js/data.js"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261110-2"></script><script src="assets/shared/js/account.js?v=20261117-1"></script><script src="assets/shared/js/search.js"></script><script src="assets/pages/tqs-support/tqs-support.js"></script>
 </body></html>
