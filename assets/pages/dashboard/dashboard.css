@@ -1,12 +1,12 @@
 body[data-page="dashboard"] .main-area{background:var(--background)}
 body[data-page="dashboard"] .dashboard-content{font-family:"Inter","Segoe UI",Arial,sans-serif}
-body[data-page="dashboard"] .topbar{background:rgba(250,251,253,.96);border-color:var(--border)}
+body[data-page="dashboard"] .topbar{background:var(--header-background);border-color:var(--border)}
 body[data-page="dashboard"] .portal-title{font-family:"Inter","Segoe UI",Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:-.01em;color:var(--text-primary)}
 body[data-page="dashboard"] .topbar-search{width:min(310px,28vw)}
 body[data-page="dashboard"] .topbar-search.search-box:before{content:none}
 body[data-page="dashboard"] .topbar-search svg{position:absolute;z-index:1;left:14px;top:50%;width:18px;height:18px;transform:translateY(-50%);fill:none;stroke:var(--text-muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
 body[data-page="dashboard"] .topbar-search input{height:42px;padding:10px 14px 10px 42px;border-color:var(--border);border-radius:8px;background:var(--surface-secondary);font-size:14px}
-body[data-page="dashboard"] .topbar-search input:focus{border-color:var(--blue-500);background:var(--surface);outline:3px solid rgba(82,118,185,.12)}
+body[data-page="dashboard"] .topbar-search input:focus{border-color:var(--blue-500);background:var(--surface);outline:3px solid var(--focus-ring)}
 body[data-page="dashboard"] .topbar-actions{gap:18px}
 body[data-page="dashboard"] .icon-button{width:40px;height:40px;border-color:var(--border);box-shadow:none}
 body[data-page="dashboard"] .icon-button>svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -37,15 +37,15 @@ body[data-page="dashboard"] .dashboard-account .account-avatar{width:36px;height
 .dashboard-qualification-copy{display:flex;flex-direction:column;gap:2px}
 .dashboard-qualification-copy small{color:var(--text-secondary);font-size:10px;line-height:1.2}
 .dashboard-qualification-copy strong{color:var(--text-primary);font-size:13px;line-height:1.2}
-.dashboard-qualification-status.is-qualified{border-color:#cfe3d6;background:var(--success-bg)}
-.dashboard-qualification-status.is-qualified .dashboard-qualification-icon{background:var(--success-indicator);color:#fff}
+.dashboard-qualification-status.is-qualified{border-color:var(--success);background:var(--success-bg)}
+.dashboard-qualification-status.is-qualified .dashboard-qualification-icon{background:var(--success-indicator);color:var(--button-text)}
 .dashboard-qualification-status.is-qualified .dashboard-qualification-copy strong{color:var(--success)}
-.dashboard-qualification-status.is-not-qualified{border-color:#edcccc;background:var(--danger-bg)}
-.dashboard-qualification-status.is-not-qualified .dashboard-qualification-icon{background:var(--danger);color:#fff}
+.dashboard-qualification-status.is-not-qualified{border-color:var(--danger);background:var(--danger-bg)}
+.dashboard-qualification-status.is-not-qualified .dashboard-qualification-icon{background:var(--danger);color:var(--button-text)}
 .dashboard-qualification-status.is-not-qualified .dashboard-qualification-copy strong{color:var(--danger)}
 .dashboard-progress-summary{margin:5px 0 0;color:var(--text-secondary);font-size:13px}
 .dashboard-progress-overview{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;margin:17px 0}
-.dashboard-progress-track{height:9px;overflow:hidden;border-radius:8px;background:#e6ebf2}
+.dashboard-progress-track{height:9px;overflow:hidden;border-radius:8px;background:var(--progress-track)}
 .dashboard-progress-bar{width:0;height:100%;border-radius:inherit;background:var(--success-indicator);transition:width .28s ease}
 .dashboard-training-progress-bar{background:var(--blue-600)}
 .dashboard-progress-percent{min-width:52px;color:var(--navy-800);font-size:24px;text-align:right}
@@ -73,7 +73,7 @@ body[data-page="dashboard"] .dashboard-account .account-avatar{width:36px;height
 .course-progress-meta strong{color:var(--blue-700)}
 .course-progress-track{height:6px;overflow:hidden;border-radius:6px;background:var(--blue-100)}
 .course-progress-bar{height:100%;border-radius:6px;background:var(--blue-600)}
-.continue-course-button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:8px;background:var(--blue-600);color:#fff;font-size:14px;font-weight:500;white-space:nowrap;transition:background .18s ease,transform .18s ease}
+.continue-course-button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:8px;background:var(--blue-600);color:var(--button-text);font-size:14px;font-weight:500;white-space:nowrap;transition:background .18s ease,transform .18s ease}
 .continue-course-button:hover{transform:translateY(-1px);background:var(--blue-700);text-decoration:none}
 .dashboard-empty-state{display:flex;align-items:center;gap:14px;min-height:145px;padding:18px;border:1px dashed var(--border);border-radius:12px;background:var(--surface-secondary)}
 .empty-state-icon{display:grid;flex:0 0 42px;width:42px;height:42px;place-items:center;border-radius:12px;background:var(--blue-100);color:var(--blue-700)}
@@ -94,7 +94,7 @@ body[data-page="dashboard"] .dashboard-account .account-avatar{width:36px;height
 .quick-access-section>.section-heading{margin-bottom:13px}
 .dashboard-quick-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .dashboard-link-card{display:flex;align-items:center;gap:13px;min-width:0;padding:17px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-sm);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.dashboard-link-card:hover{transform:translateY(-2px);border-color:var(--border-dark);box-shadow:0 9px 20px rgba(28,48,74,.07);text-decoration:none}
+.dashboard-link-card:hover{transform:translateY(-2px);border-color:var(--border-dark);box-shadow:0 9px 20px rgba(0,0,0,.25);text-decoration:none}
 .quick-link-icon{display:grid;flex:0 0 40px;width:40px;height:40px;place-items:center;border-radius:12px}
 .quick-link-blue{background:var(--blue-100);color:var(--blue-600)}.quick-link-violet{background:var(--accent-secondary-bg);color:var(--accent-secondary)}.quick-link-green{background:var(--success-bg);color:var(--success)}
 .quick-link-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}

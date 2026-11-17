@@ -17,7 +17,7 @@ body[data-page="required-training"] .page-content.course-catalog-page{font-famil
 .role-progress-name{display:block;color:var(--navy-800);font-size:16px;font-weight:600}
 .role-progress-detail{margin:3px 0 0;color:var(--text-secondary);font-size:12px}
 .role-progress-percent{color:var(--navy-800);font-size:25px;line-height:1}
-.role-progress-track{height:9px;margin:17px 0 12px;overflow:hidden;border-radius:8px;background:#e6ebf2}
+.role-progress-track{height:9px;margin:17px 0 12px;overflow:hidden;border-radius:8px;background:var(--progress-track)}
 .role-progress-bar{width:0;height:100%;border-radius:inherit;background:var(--success-indicator);transition:width .28s ease}
 .role-progress-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-secondary);font-size:12px}
 .role-progress-summary>strong{color:var(--text-primary);font-weight:600}
@@ -31,12 +31,12 @@ body[data-page="required-training"] .page-content.course-catalog-page{font-famil
 .catalog-search-input input{padding:0 12px 0 37px}
 .catalog-filter select{padding:0 28px 0 10px}
 .catalog-search-input input::placeholder{color:var(--text-muted)}
-.catalog-search-input input:focus,.catalog-filter select:focus{border-color:var(--blue-500);outline:3px solid rgba(82,118,185,.16)}
+.catalog-search-input input:focus,.catalog-filter select:focus{border-color:var(--blue-500);outline:3px solid var(--focus-ring)}
 .catalog-clear-button{height:44px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary);font-family:inherit;font-size:13px;font-weight:600;white-space:nowrap;transition:background .18s ease,border-color .18s ease}
 .catalog-clear-button:hover{border-color:var(--border-dark);background:var(--surface-secondary)}
 .course-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:20px}
 .course-stat-card{display:flex;align-items:center;gap:12px;min-width:0;padding:18px 17px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-sm);transition:transform .18s ease,box-shadow .18s ease}
-.course-stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(27,48,74,.065)}
+.course-stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.24)}
 .course-stat-icon{display:grid;flex:0 0 42px;width:42px;height:42px;place-items:center;border-radius:10px}
 .course-stat-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .stat-blue{background:var(--blue-100);color:var(--blue-600)}.stat-gray{background:var(--surface-secondary);color:var(--text-secondary)}.stat-amber{background:var(--warning-bg);color:var(--warning-indicator)}.stat-green{background:var(--success-bg);color:var(--success-indicator)}
@@ -82,13 +82,13 @@ body[data-page="required-training"] .page-content.course-catalog-page{font-famil
 .course-pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border-top:1px solid var(--border)}
 .course-pagination button{min-width:34px;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text-secondary);font-family:inherit;font-size:12px}
 .course-pagination button:hover:not(:disabled){background:var(--surface-secondary)}
-.course-pagination button[aria-current="page"]{border-color:var(--blue-600);background:var(--blue-600);color:#fff}
+.course-pagination button[aria-current="page"]{border-color:var(--blue-600);background:var(--blue-600);color:var(--button-text)}
 .course-pagination button:disabled{opacity:.45;cursor:not-allowed}
 .course-catalog-note{margin:13px 0 0;color:var(--text-secondary);font-size:12px}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.course-dialog{width:min(680px,calc(100% - 28px));max-height:88vh;overflow-y:auto;padding:0;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text-primary);box-shadow:0 16px 48px rgba(38,52,73,.18)}
+.course-dialog{width:min(680px,calc(100% - 28px));max-height:88vh;overflow-y:auto;padding:0;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text-primary);box-shadow:0 16px 48px rgba(0,0,0,.38)}
 .course-dialog[open]{animation:course-dialog-in .18s ease-out}
-.course-dialog::backdrop{background:rgba(13,31,51,.48);backdrop-filter:blur(2px)}
+.course-dialog::backdrop{background:rgba(4,10,19,.68);backdrop-filter:blur(2px)}
 @keyframes course-dialog-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
 .course-dialog-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:21px 23px 10px}
 .course-dialog-header h2{margin:0;color:var(--text-primary);font-size:22px;font-weight:600;letter-spacing:-.025em}
@@ -104,7 +104,7 @@ body[data-page="required-training"] .page-content.course-catalog-page{font-famil
 .course-secondary-action,.course-primary-action{min-height:42px;padding:0 16px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;font-weight:500;transition:background .16s ease}
 .course-secondary-action{background:var(--surface);color:var(--text-secondary)}
 .course-secondary-action:hover{background:var(--surface-secondary)}
-.course-primary-action{border-color:var(--blue-600);background:var(--blue-600);color:#fff}
+.course-primary-action{border-color:var(--blue-600);background:var(--blue-600);color:var(--button-text)}
 .course-primary-action:hover{border-color:var(--blue-700);background:var(--blue-700)}
 
 @media(max-width:1120px){
