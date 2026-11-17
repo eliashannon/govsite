@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const selectedRoleStorageKey = 'portal.selectedRole';
+  const accountProfileStorageKey = 'govsiteAccountProfile';
   const navigationEntry = performance.getEntriesByType('navigation')[0];
   if (navigationEntry && navigationEntry.type === 'reload') {
     localStorage.removeItem(selectedRoleStorageKey);
@@ -358,6 +359,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   searchRoleBtn.addEventListener('click', () => {
+    let profile = null;
+    try {
+      profile = JSON.parse(sessionStorage.getItem(accountProfileStorageKey) || 'null');
+    } catch (error) {
+      console.error('Unable to read the temporary account profile.', error);
+    }
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+      window.location.href = 'account.html';
+      return;
+    }
+
     if (!validateFilters()) {
       return;
     }
