@@ -30,8 +30,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const accountProgressRole = document.getElementById("accountProgressRole");
     if (accountProgressRole) {
         const courses = window.PortalData ? window.PortalData.courses : [];
-        const roleCourses = courseRoleName
-            ? courses.filter(course => Array.isArray(course.roles) && course.roles.includes(courseRoleName))
+        const roleCourses = roleName
+            ? courses.filter(course => Array.isArray(course.roles) && course.roles.includes(roleName))
             : courses.filter(course => course.requirement === "Required");
         const completed = getCompletedCourses();
         const requiredCourses = roleCourses.filter(course => course.requirement === "Required");

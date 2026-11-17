@@ -83,6 +83,7 @@
 .field-group select.form-control{width:100%}
 .error-message{margin:16px 0 0;padding:12px 14px;border-radius:10px;background:#fff3f3;border:1px solid #f2c6c6;color:#9b2d2d;font-size:13px;font-weight:600}
 .role-result{margin-bottom:28px}
+.role-save-notice{margin:14px 0 0;color:var(--success);font-size:13px;font-weight:700}
 .role-result-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
 .role-result-header h2{margin:0;font-size:26px}
 .role-summary{font-size:15px;line-height:1.6;color:var(--text-secondary);margin-bottom:20px}

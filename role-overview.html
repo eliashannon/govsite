@@ -22,7 +22,7 @@
     </div>
     <div class="filter-actions">
       <button type="button" id="clearFiltersBtn" class="btn btn-secondary">Clear Filters</button>
-      <button type="button" id="searchRoleBtn" class="btn btn-primary">Search</button>
+      <button type="button" id="searchRoleBtn" class="btn btn-primary">Save Role</button>
     </div>
   </div>
 
@@ -48,6 +48,7 @@
   </div>
 
   <p id="filterError" class="error-message" role="alert" aria-live="polite" hidden></p>
+  <p id="roleSaveNotice" class="role-save-notice" role="status" aria-live="polite" hidden></p>
 </section>
 
 <section id="roleResult" class="card role-result" hidden>
@@ -88,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchRoleBtn = document.getElementById('searchRoleBtn');
   const clearFiltersBtn = document.getElementById('clearFiltersBtn');
   const filterError = document.getElementById('filterError');
+  const roleSaveNotice = document.getElementById('roleSaveNotice');
   const roleResult = document.getElementById('roleResult');
   const roleResultContent = document.getElementById('roleResultContent');
 
@@ -300,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem(selectedRoleStorageKey);
     roleResult.hidden = true;
     roleResultContent.innerHTML = '';
+    roleSaveNotice.hidden = true;
   }
 
   function resetRoleSelection() {
@@ -351,13 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   roleFilter.addEventListener('change', () => {
     clearSavedRole();
-    if (divisionFilter.value && branchFilter.value && roleFilter.value) {
-      localStorage.setItem(selectedRoleStorageKey, JSON.stringify({
-        division: divisionFilter.value,
-        branch: branchFilter.value,
-        role: roleFilter.value
-      }));
-    }
   });
 
   function renderRoleResult(roleName) {
@@ -433,6 +429,8 @@ document.addEventListener('DOMContentLoaded', () => {
       role: roleFilter.value
     }));
     renderRoleResult(roleFilter.value);
+    roleSaveNotice.textContent = `${roleFilter.value} saved. Your Training Center progress now reflects this role.`;
+    roleSaveNotice.hidden = false;
   });
 
   clearFiltersBtn.addEventListener('click', () => {
