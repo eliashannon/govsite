@@ -380,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
       role: roleFilter.value
     }));
     renderRoleResult(roleFilter.value);
-    roleSaveNotice.textContent = `${roleFilter.value} saved. Your Training Center progress now reflects this role.`;
+    roleSaveNotice.textContent = `${roleFilter.value} saved. Your Training Courses progress now reflects this role.`;
     roleSaveNotice.hidden = false;
   });
 

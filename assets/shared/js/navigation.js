@@ -19,7 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const items = [
         {label:"Dashboard",icon:icons.dashboard,href:"index.html",page:"dashboard"},
         {label:"Role Overview",icon:icons.role,href:"role-overview.html",page:"role-overview"},
-        {label:"Training Center",icon:icons.training,href:"training.html",page:"training"},
         {label:"Training Courses",icon:icons.courses,href:"required-training.html",page:"required-training"},
         {label:"TQS Support",icon:icons.support,href:"tqs-support.html",page:"tqs-support"},
         {label:"References",icon:icons.references,href:"key-references.html",page:"references"},
@@ -31,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
         {label:"FAQ",icon:icons.help,href:"#"},
         {label:"Completed Workflows",icon:icons.completed,href:"https://github.com/eliashannon/govsite/actions",workflowCount:true}
     ];
-    const titles = {dashboard:"Dashboard",training:"Training Center","role-overview":"Role Overview","required-training":"Training Courses","tqs-support":"TQS Support",references:"References",contact:"Contact"};
+    const titles = {dashboard:"Dashboard","role-overview":"Role Overview","required-training":"Training Courses","tqs-support":"TQS Support",references:"References",contact:"Contact"};
     if (pageTitle) pageTitle.textContent = titles[currentPage] || "Training Portal";
     if (sidebar) sidebar.innerHTML = `
         <div class="sidebar-brand"><div class="brand-mark" aria-hidden="true">${icons.training}</div><div><div class="brand-name">Training &<br>Qualification Portal</div></div></div>

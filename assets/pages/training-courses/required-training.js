@@ -64,6 +64,49 @@ document.addEventListener("DOMContentLoaded", () => {
     const roleCourses = roleName
         ? catalog.filter(course => Array.isArray(course.roles) && course.roles.includes(roleName))
         : [];
+    const roleProgressName = document.getElementById("roleProgressName");
+    const roleProgressDetail = document.getElementById("roleProgressDetail");
+    const roleProgressPercent = document.getElementById("roleProgressPercent");
+    const roleProgressSummary = document.getElementById("roleProgressSummary");
+    const roleProgressCompleted = document.getElementById("roleProgressCompleted");
+    const roleProgressRemaining = document.getElementById("roleProgressRemaining");
+    const roleProgressTrack = document.getElementById("roleProgressTrack");
+    const roleProgressBar = document.getElementById("roleProgressBar");
+    const updateRoleProgress = () => {
+        if (!hasSignedInAccount || !roleName) {
+            roleProgressName.textContent = "N/A";
+            roleProgressDetail.textContent = hasSignedInAccount
+                ? "Select a role in Role Overview to view qualification progress."
+                : "Sign in and select a role to view qualification progress.";
+            roleProgressPercent.textContent = "N/A";
+            roleProgressSummary.textContent = "N/A";
+            roleProgressCompleted.textContent = "N/A";
+            roleProgressRemaining.textContent = "N/A";
+            roleProgressBar.style.width = "0";
+            roleProgressTrack.removeAttribute("aria-valuenow");
+            roleProgressTrack.setAttribute("aria-valuetext", "N/A");
+            return;
+        }
+        const requiredCourses = roleCourses.filter(course => course.requirement === "Required");
+        const completedRequired = requiredCourses.filter(course => completedIds.includes(course.id));
+        const remainingRequired = requiredCourses.length - completedRequired.length;
+        const percent = requiredCourses.length
+            ? Math.round((completedRequired.length / requiredCourses.length) * 100)
+            : 0;
+        const roleDetails = roleSelection?.role === roleName
+            ? [roleSelection.branch, roleSelection.division].filter(value => typeof value === "string" && value.trim()).join(" · ")
+            : "";
+
+        roleProgressName.textContent = roleName;
+        roleProgressDetail.textContent = roleDetails || "Required course completion for your selected role.";
+        roleProgressPercent.textContent = `${percent}%`;
+        roleProgressSummary.textContent = `${completedRequired.length} of ${requiredCourses.length} required courses completed`;
+        roleProgressCompleted.textContent = `${completedRequired.length} completed`;
+        roleProgressRemaining.textContent = `${remainingRequired} remaining`;
+        roleProgressBar.style.width = `${percent}%`;
+        roleProgressTrack.removeAttribute("aria-valuetext");
+        roleProgressTrack.setAttribute("aria-valuenow", String(percent));
+    };
 
     const searchInput = document.getElementById("trainingSearch");
     const headerSearchInput = document.querySelector("[data-portal-search]");
@@ -195,6 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? `Showing ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filtered.length)} of ${filtered.length} courses`
                 : `Showing 0 of ${filtered.length} courses`;
         updateStats();
+        updateRoleProgress();
         renderPagination(pageCount);
 
         if (!hasSignedInAccount) {

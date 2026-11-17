@@ -11,6 +11,17 @@ body[data-page="required-training"] .page-content.course-catalog-page{font-famil
 .catalog-total strong,.catalog-total small{display:block}
 .catalog-total strong{color:var(--text-primary);font-size:20px;line-height:1.15}
 .catalog-total small{margin-top:3px;color:var(--text-secondary);font-size:12px}
+.role-progress-panel{margin-bottom:21px;padding:20px 22px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-sm)}
+.role-progress-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.role-progress-heading h2{margin:0 0 7px;color:var(--text-primary);font-size:18px;font-weight:600}
+.role-progress-name{display:block;color:var(--navy-800);font-size:16px;font-weight:600}
+.role-progress-detail{margin:3px 0 0;color:var(--text-secondary);font-size:12px}
+.role-progress-percent{color:var(--navy-800);font-size:25px;line-height:1}
+.role-progress-track{height:9px;margin:17px 0 12px;overflow:hidden;border-radius:8px;background:#e6ebf2}
+.role-progress-bar{width:0;height:100%;border-radius:inherit;background:var(--success-indicator);transition:width .28s ease}
+.role-progress-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-secondary);font-size:12px}
+.role-progress-summary>strong{color:var(--text-primary);font-weight:600}
+.role-progress-summary>div{display:flex;gap:14px}
 .catalog-controls{display:grid;grid-template-columns:minmax(240px,1.8fr) minmax(140px,.8fr) minmax(140px,.8fr) minmax(170px,1fr) auto;align-items:end;gap:13px;margin-bottom:22px;padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-sm)}
 .catalog-search,.catalog-filter{display:flex;min-width:0;flex-direction:column;gap:6px}
 .catalog-search label,.catalog-filter label{color:var(--text-secondary);font-size:13px;font-weight:600}
@@ -108,6 +119,11 @@ body[data-page="required-training"] .page-content.course-catalog-page{font-famil
   .course-catalog-header{align-items:flex-start;flex-direction:column;gap:14px}
   .course-catalog-header h1{font-size:28px}
   .catalog-total{min-width:0}
+  .role-progress-panel{padding:16px}
+  .role-progress-heading{gap:12px}
+  .role-progress-heading h2{font-size:16px}
+  .role-progress-percent{font-size:22px}
+  .role-progress-summary{align-items:flex-start;flex-direction:column;gap:5px}
   .catalog-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;padding:13px}
   .catalog-search{grid-column:1/-1}
   .catalog-sort{grid-column:auto}
