@@ -6,6 +6,14 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
+    let signedInProfile = null;
+    try {
+        signedInProfile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
+    } catch (error) {
+        console.error("Unable to read the temporary account profile.", error);
+    }
+    const hasSignedInAccount = Boolean(signedInProfile && typeof signedInProfile === "object");
+
     const storageKeys = {
         completed: "portal.completedCourses",
         inProgress: "portal.inProgressCourses",
@@ -50,7 +58,9 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.removeItem(storageKeys.role);
     }
     const requestedRole = new URLSearchParams(window.location.search).get("role");
-    const roleName = requestedRole || roleSelection?.role || "";
+    const roleName = hasSignedInAccount
+        ? requestedRole || roleSelection?.role || ""
+        : "";
     const roleCourses = roleName
         ? catalog.filter(course => Array.isArray(course.roles) && course.roles.includes(roleName))
         : [];
@@ -92,6 +102,14 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const updateStats = () => {
+        if (!hasSignedInAccount) {
+            document.getElementById("headerCourseCount").textContent = "N/A";
+            document.getElementById("totalCourseStat").textContent = "N/A";
+            document.getElementById("notStartedStat").textContent = "N/A";
+            document.getElementById("inProgressStat").textContent = "N/A";
+            document.getElementById("completedStat").textContent = "N/A";
+            return;
+        }
         const completed = roleCourses.filter(course => getCourseStatus(course) === "Completed").length;
         const inProgress = roleCourses.filter(course => getCourseStatus(course) === "In Progress").length;
         const total = roleCourses.length;
@@ -171,13 +189,18 @@ document.addEventListener("DOMContentLoaded", () => {
         currentPage = Math.min(currentPage, Math.max(pageCount, 1));
         const pageCourses = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
         tableBody.innerHTML = pageCourses.map(renderCourseRow).join("");
-        resultsSummary.textContent = filtered.length
-            ? `Showing ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filtered.length)} of ${filtered.length} courses`
-            : `Showing 0 of ${filtered.length} courses`;
+        resultsSummary.textContent = !hasSignedInAccount
+            ? "N/A"
+            : filtered.length
+                ? `Showing ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filtered.length)} of ${filtered.length} courses`
+                : `Showing 0 of ${filtered.length} courses`;
         updateStats();
         renderPagination(pageCount);
 
-        if (!roleName) {
+        if (!hasSignedInAccount) {
+            emptyState.innerHTML = '<strong>Sign in to view training courses.</strong><span>Your role-based course catalog will appear after you sign in.</span><a href="account.html">Go to sign in</a>';
+            emptyState.hidden = false;
+        } else if (!roleName) {
             emptyState.innerHTML = '<strong>Select a role to see assigned courses.</strong><span>Choose your role in Role Overview to view the course catalog.</span><a href="role-overview.html">Go to Role Overview →</a>';
             emptyState.hidden = false;
         } else if (filtered.length === 0) {
@@ -226,10 +249,14 @@ document.addEventListener("DOMContentLoaded", () => {
     categoryFilter.innerHTML = '<option value="All">All categories</option>' + categories.map(category =>
         `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`
     ).join("");
-    listTitle.textContent = roleName ? `Available Training for ${roleName}` : "Available Training";
-    listSubtitle.textContent = roleName
-        ? "Review role-based course requirements and applicable learning resources."
-        : "Select a role in Role Overview to view applicable training requirements.";
+    listTitle.textContent = !hasSignedInAccount
+        ? "Training Courses"
+        : roleName ? `Available Training for ${roleName}` : "Available Training";
+    listSubtitle.textContent = !hasSignedInAccount
+        ? "Sign in to view your role-based training courses."
+        : roleName
+            ? "Review role-based course requirements and applicable learning resources."
+            : "Select a role in Role Overview to view applicable training requirements.";
 
     [searchInput, headerSearchInput].filter(Boolean).forEach(input => {
         input.addEventListener("input", () => {
@@ -314,7 +341,9 @@ document.addEventListener("DOMContentLoaded", () => {
         actionNotice.hidden = true;
     });
 
-    if (!roleName) {
+    if (!hasSignedInAccount) {
+        document.getElementById("totalCourseStat").textContent = "N/A";
+    } else if (!roleName) {
         const emptyCourses = document.getElementById("totalCourseStat");
         emptyCourses.textContent = "0";
     }

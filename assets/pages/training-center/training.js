@@ -1,6 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
     const completionKey = "portal.completedCourses";
     const defaultCompletedCourses = ["TRN-001", "TRN-002"];
+    let signedInProfile = null;
+    try {
+        signedInProfile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
+    } catch (error) {
+        console.error("Unable to read the temporary account profile.", error);
+    }
+    const hasSignedInAccount = Boolean(signedInProfile && typeof signedInProfile === "object");
 
     function getCompletedCourses() {
         try {
@@ -17,15 +24,17 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem(completionKey, JSON.stringify(completed));
     }
 
-    const roleSelection = (() => {
+    const roleSelection = hasSignedInAccount ? (() => {
         try {
             return JSON.parse(localStorage.getItem("portal.selectedRole") || "null");
         } catch (error) {
             localStorage.removeItem("portal.selectedRole");
             return null;
         }
-    })();
-    const roleName = new URLSearchParams(window.location.search).get("role") || (roleSelection && roleSelection.role);
+    })() : null;
+    const roleName = hasSignedInAccount
+        ? new URLSearchParams(window.location.search).get("role") || (roleSelection && roleSelection.role)
+        : null;
 
     const accountProgressRole = document.getElementById("accountProgressRole");
     if (accountProgressRole) {
@@ -101,9 +110,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("trainingList");
     if (!container || !window.PortalData) return;
     const courses = window.PortalData.courses;
-    const storedRole = JSON.parse(localStorage.getItem("portal.selectedRole") || "null");
+    const storedRole = roleSelection;
     const requestedRole = new URLSearchParams(window.location.search).get("role");
-    const courseRoleName = requestedRole || (storedRole && storedRole.role);
+    const courseRoleName = hasSignedInAccount
+        ? requestedRole || (storedRole && storedRole.role)
+        : null;
     const listTitle = document.getElementById("trainingListTitle");
     const listSubtitle = document.getElementById("trainingListSubtitle");
 

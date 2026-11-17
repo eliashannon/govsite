@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const button = document.getElementById("accountButton");
     const menu = document.getElementById("accountMenu");
     const storageKey = "govsiteAccountProfile";
+    const roleStorageKey = "portal.selectedRole";
     const signInForm = document.getElementById("signInForm");
     const signInNotice = document.getElementById("signInNotice");
     const createAccountForm = document.getElementById("createAccountForm");
@@ -101,6 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
             signOut.className = "account-menu-action";
             signOut.textContent = "Sign out";
             signOut.addEventListener("click", () => {
+                localStorage.removeItem(roleStorageKey);
                 sessionStorage.removeItem(storageKey);
                 profile = null;
                 window.location.href = "account.html";
