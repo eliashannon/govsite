@@ -118,36 +118,76 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Unable to read saved course completions for the dashboard.", error);
     }
 
+    let inProgressIds = [];
+    try {
+        const stored = JSON.parse(localStorage.getItem("portal.inProgressCourses") || "null");
+        if (Array.isArray(stored)) {
+            inProgressIds = stored;
+        } else if (stored !== null) {
+            console.error("Saved in-progress course data is not a list.");
+        }
+    } catch (error) {
+        console.error("Unable to read in-progress courses for the dashboard.", error);
+    }
+
     const requiredCourses = roleCourses.filter(course => course.requirement === "Required");
     const completedCourses = roleCourses.filter(course => completedIds.includes(course.id));
     const completedRequired = requiredCourses.filter(course => completedIds.includes(course.id));
+    const activeCourses = roleCourses.filter(course =>
+        inProgressIds.includes(course.id) && !completedIds.includes(course.id)
+    );
     const progress = requiredCourses.length
         ? Math.round((completedRequired.length / requiredCourses.length) * 100)
         : null;
 
     availableCoursesElement.textContent = String(roleCourses.length);
     completedCoursesElement.textContent = String(completedCourses.length);
-    inProgressCoursesElement.textContent = "N/A";
+    inProgressCoursesElement.textContent = String(activeCourses.length);
     overallProgressElement.textContent = progress === null ? "N/A" : `${progress}%`;
     setStatDescriptions([
         `Courses assigned to ${roleName}`,
         "Courses marked complete",
-        "Active course progress is not tracked",
+        "Courses you've started",
         "Required course completion"
     ]);
 
     if (activeCourseList) {
-        activeCourseList.innerHTML = `
-            <div class="dashboard-empty-state">
-                <span class="empty-state-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"></path><circle cx="12" cy="12" r="10"></circle></svg>
-                </span>
-                <div>
-                    <strong>No course progress available</strong>
-                    <p>Active course progress is not currently tracked here. Browse your role's course catalog to find your next course.</p>
-                    <a class="dashboard-text-link" href="required-training.html">Explore Training Courses →</a>
-                </div>
-            </div>`;
+        if (activeCourses.length) {
+            const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            })[character]);
+            activeCourseList.innerHTML = activeCourses.map(course => {
+                const courseHref = course.link && course.link !== "#" ? course.link : "required-training.html";
+                return `
+                    <article class="active-course-card" data-searchable>
+                        <span class="active-course-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"></path></svg>
+                        </span>
+                        <div class="active-course-copy">
+                            <h3>${escapeHtml(course.title)}</h3>
+                            <p>${escapeHtml(course.description)}</p>
+                            <div class="course-progress-meta"><span>Course status</span><strong>In Progress</strong></div>
+                        </div>
+                        <a class="continue-course-button" href="${escapeHtml(courseHref)}">Continue Course</a>
+                    </article>`;
+            }).join("");
+        } else {
+            activeCourseList.innerHTML = `
+                <div class="dashboard-empty-state">
+                    <span class="empty-state-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"></path><circle cx="12" cy="12" r="10"></circle></svg>
+                    </span>
+                    <div>
+                        <strong>No courses in progress</strong>
+                        <p>Start a course from your role's training catalog and it will appear here.</p>
+                        <a class="dashboard-text-link" href="required-training.html">Explore Training Courses →</a>
+                    </div>
+                </div>`;
+        }
     }
 
     if (announcementList && window.PortalData) {
