@@ -1,0 +1,322 @@
+document.addEventListener("DOMContentLoaded", () => {
+    const tableBody = document.getElementById("trainingList");
+    const catalog = window.PortalData?.courses;
+    if (!tableBody || !Array.isArray(catalog)) {
+        console.error("Unable to load the training course catalog.");
+        return;
+    }
+
+    const storageKeys = {
+        completed: "portal.completedCourses",
+        inProgress: "portal.inProgressCourses",
+        role: "portal.selectedRole"
+    };
+    const defaultCompleted = ["TRN-001", "TRN-002"];
+    const getCompletedCourses = () => {
+        try {
+            const value = JSON.parse(localStorage.getItem(storageKeys.completed) || "null");
+            if (Array.isArray(value)) return value;
+        } catch (error) {
+            console.error("Unable to read completed courses from browser storage.", error);
+            localStorage.removeItem(storageKeys.completed);
+        }
+        localStorage.setItem(storageKeys.completed, JSON.stringify(defaultCompleted));
+        return [...defaultCompleted];
+    };
+    const readInProgressCourses = () => {
+        try {
+            const value = JSON.parse(localStorage.getItem(storageKeys.inProgress) || "null");
+            if (Array.isArray(value)) return value;
+            if (value !== null) {
+                console.error("Stored in-progress course data is not a list.");
+                localStorage.removeItem(storageKeys.inProgress);
+            }
+            return [];
+        } catch (error) {
+            console.error("Unable to read in-progress courses from browser storage.", error);
+            localStorage.removeItem(storageKeys.inProgress);
+            return [];
+        }
+    };
+
+    let completedIds = getCompletedCourses();
+    let inProgressIds = readInProgressCourses();
+
+    let roleSelection = null;
+    try {
+        roleSelection = JSON.parse(localStorage.getItem(storageKeys.role) || "null");
+    } catch (error) {
+        console.error("Unable to read the saved role for the course catalog.", error);
+        localStorage.removeItem(storageKeys.role);
+    }
+    const requestedRole = new URLSearchParams(window.location.search).get("role");
+    const roleName = requestedRole || roleSelection?.role || "";
+    const roleCourses = roleName
+        ? catalog.filter(course => Array.isArray(course.roles) && course.roles.includes(roleName))
+        : [];
+
+    const searchInput = document.getElementById("trainingSearch");
+    const headerSearchInput = document.querySelector("[data-portal-search]");
+    const categoryFilter = document.getElementById("trainingCategory");
+    const statusFilter = document.getElementById("trainingStatus");
+    const sortFilter = document.getElementById("trainingSort");
+    const clearFiltersButton = document.getElementById("clearCourseFilters");
+    const emptyState = document.getElementById("trainingEmptyState");
+    const pagination = document.getElementById("coursePagination");
+    const resultsSummary = document.getElementById("resultsSummary");
+    const listTitle = document.getElementById("trainingListTitle");
+    const listSubtitle = document.getElementById("trainingListSubtitle");
+    const dialog = document.getElementById("courseDetailsDialog");
+    const dialogTitle = document.getElementById("courseDialogTitle");
+    const dialogDescription = document.getElementById("courseDialogDescription");
+    const dialogFields = document.getElementById("courseDialogFields");
+    const actionNotice = document.getElementById("courseActionNotice");
+    const primaryAction = document.getElementById("coursePrimaryAction");
+    const completionToggle = document.getElementById("courseCompletionToggle");
+    const pageSize = 8;
+    let currentPage = 1;
+    let currentCourse = null;
+
+    const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+
+    const getCourseStatus = course => {
+        if (completedIds.includes(course.id)) return "Completed";
+        if (inProgressIds.includes(course.id)) return "In Progress";
+        return "Not Started";
+    };
+
+    const updateStats = () => {
+        const completed = roleCourses.filter(course => getCourseStatus(course) === "Completed").length;
+        const inProgress = roleCourses.filter(course => getCourseStatus(course) === "In Progress").length;
+        const total = roleCourses.length;
+        document.getElementById("headerCourseCount").textContent = String(total);
+        document.getElementById("totalCourseStat").textContent = String(total);
+        document.getElementById("notStartedStat").textContent = String(total - completed - inProgress);
+        document.getElementById("inProgressStat").textContent = String(inProgress);
+        document.getElementById("completedStat").textContent = String(completed);
+    };
+
+    const durationInMinutes = duration => {
+        const match = String(duration).match(/(\d+(?:\.\d+)?)\s*(minute|min|hour|hr)s?/i);
+        if (!match) return null;
+        return Number(match[1]) * (/^(minute|min)/i.test(match[2]) ? 1 : 60);
+    };
+
+    const renderCourseRow = course => {
+        const status = getCourseStatus(course);
+        const statusClass = status.toLowerCase().replaceAll(" ", "-");
+        return `
+            <tr>
+                <td class="course-name-cell" data-label="Course Name">
+                    <strong class="course-name-title">${escapeHtml(course.title)}</strong>
+                    <span class="course-name-description">${escapeHtml(course.description)}</span>
+                </td>
+                <td data-label="Category"><span class="course-category"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"></path></svg>${escapeHtml(course.category)}</span></td>
+                <td class="course-duration" data-label="Duration">${escapeHtml(course.duration)}</td>
+                <td data-label="Status"><span class="course-status course-status-${statusClass}">${status}</span></td>
+                <td data-label="Actions"><div class="course-row-actions"><button class="course-view-button" type="button" data-view-course="${escapeHtml(course.id)}">View Details</button></div></td>
+            </tr>`;
+    };
+
+    const renderPagination = pageCount => {
+        pagination.hidden = pageCount <= 1;
+        if (pageCount <= 1) {
+            pagination.innerHTML = "";
+            return;
+        }
+        const pageButtons = Array.from({ length: pageCount }, (_, index) => {
+            const page = index + 1;
+            return `<button type="button" data-page="${page}" ${page === currentPage ? 'aria-current="page"' : ""}>${page}</button>`;
+        }).join("");
+        pagination.innerHTML = `
+            <button type="button" data-page="${currentPage - 1}" aria-label="Previous page" ${currentPage === 1 ? "disabled" : ""}>‹</button>
+            ${pageButtons}
+            <button type="button" data-page="${currentPage + 1}" aria-label="Next page" ${currentPage === pageCount ? "disabled" : ""}>›</button>`;
+    };
+
+    const render = () => {
+        const query = searchInput.value.trim().toLowerCase();
+        const category = categoryFilter.value;
+        const status = statusFilter.value;
+        const filtered = roleCourses.filter(course => {
+            const searchableText = [
+                course.title, course.description, course.category, course.requirement,
+                course.duration, course.frequency, course.id
+            ].join(" ").toLowerCase();
+            return searchableText.includes(query)
+                && (category === "All" || course.category === category)
+                && (status === "All" || getCourseStatus(course) === status);
+        });
+
+        const sort = sortFilter.value;
+        filtered.sort((left, right) => {
+            if (sort === "name-desc") return right.title.localeCompare(left.title);
+            if (sort === "duration-asc" || sort === "duration-desc") {
+                const leftDuration = durationInMinutes(left.duration);
+                const rightDuration = durationInMinutes(right.duration);
+                if (leftDuration === null) return rightDuration === null ? 0 : 1;
+                if (rightDuration === null) return -1;
+                return (leftDuration - rightDuration) * (sort === "duration-asc" ? 1 : -1);
+            }
+            return left.title.localeCompare(right.title);
+        });
+
+        const pageCount = Math.ceil(filtered.length / pageSize);
+        currentPage = Math.min(currentPage, Math.max(pageCount, 1));
+        const pageCourses = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+        tableBody.innerHTML = pageCourses.map(renderCourseRow).join("");
+        resultsSummary.textContent = filtered.length
+            ? `Showing ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filtered.length)} of ${filtered.length} courses`
+            : `Showing 0 of ${filtered.length} courses`;
+        updateStats();
+        renderPagination(pageCount);
+
+        if (!roleName) {
+            emptyState.innerHTML = '<strong>Select a role to see assigned courses.</strong><span>Choose your role in Role Overview to view the course catalog.</span><a href="role-overview.html">Go to Role Overview →</a>';
+            emptyState.hidden = false;
+        } else if (filtered.length === 0) {
+            emptyState.innerHTML = '<strong>No courses match these filters.</strong><span>Try a different search or clear some filters.</span>';
+            emptyState.hidden = false;
+        } else {
+            emptyState.hidden = true;
+        }
+    };
+
+    const setCourseFields = course => {
+        const fields = [
+            ["Category", course.category],
+            ["Estimated duration", course.duration],
+            ["Requirement", course.requirement],
+            ["Frequency", course.frequency],
+            ["Current status", getCourseStatus(course)]
+        ];
+        dialogFields.innerHTML = fields.map(([label, value]) => `
+            <dl class="course-detail-item"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></dl>
+        `).join("");
+    };
+
+    const hasCourseLink = course => Boolean(course.link && course.link !== "#");
+    const openCourseDetails = course => {
+        currentCourse = course;
+        dialogTitle.textContent = course.title;
+        dialogDescription.textContent = course.description;
+        actionNotice.hidden = true;
+        actionNotice.textContent = "";
+        setCourseFields(course);
+        const status = getCourseStatus(course);
+        primaryAction.textContent = status === "Completed"
+            ? "Review Course"
+            : status === "In Progress" ? "Continue Course" : "Start Course";
+        completionToggle.textContent = status === "Completed" ? "Mark as not completed" : "Mark as completed";
+        if (!dialog.open) dialog.showModal();
+    };
+
+    const saveStatus = () => {
+        localStorage.setItem(storageKeys.completed, JSON.stringify(completedIds));
+        localStorage.setItem(storageKeys.inProgress, JSON.stringify(inProgressIds));
+    };
+
+    const categories = [...new Set(roleCourses.map(course => course.category))].sort((a, b) => a.localeCompare(b));
+    categoryFilter.innerHTML = '<option value="All">All categories</option>' + categories.map(category =>
+        `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`
+    ).join("");
+    listTitle.textContent = roleName ? `Available Training for ${roleName}` : "Available Training";
+    listSubtitle.textContent = roleName
+        ? "Review role-based course requirements and applicable learning resources."
+        : "Select a role in Role Overview to view applicable training requirements.";
+
+    [searchInput, headerSearchInput].filter(Boolean).forEach(input => {
+        input.addEventListener("input", () => {
+            [searchInput, headerSearchInput].filter(Boolean).forEach(otherInput => {
+                if (otherInput !== input) otherInput.value = input.value;
+            });
+            currentPage = 1;
+            render();
+        });
+    });
+    [categoryFilter, statusFilter, sortFilter].forEach(filter => {
+        filter.addEventListener("change", () => {
+            currentPage = 1;
+            render();
+        });
+    });
+    clearFiltersButton.addEventListener("click", () => {
+        searchInput.value = "";
+        if (headerSearchInput) headerSearchInput.value = "";
+        categoryFilter.value = "All";
+        statusFilter.value = "All";
+        sortFilter.value = "name-asc";
+        currentPage = 1;
+        render();
+    });
+    tableBody.addEventListener("click", event => {
+        const button = event.target.closest("[data-view-course]");
+        if (!button) return;
+        const course = roleCourses.find(item => item.id === button.dataset.viewCourse);
+        if (course) openCourseDetails(course);
+    });
+    pagination.addEventListener("click", event => {
+        const button = event.target.closest("[data-page]");
+        if (!button || button.disabled) return;
+        currentPage = Number(button.dataset.page);
+        render();
+    });
+
+    document.getElementById("closeCourseDialog").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", event => {
+        if (event.target === dialog) dialog.close();
+    });
+    primaryAction.addEventListener("click", () => {
+        if (!currentCourse) return;
+        const status = getCourseStatus(currentCourse);
+        if (status === "Not Started") {
+            inProgressIds = [...new Set([...inProgressIds, currentCourse.id])];
+            saveStatus();
+            render();
+            setCourseFields(currentCourse);
+            primaryAction.textContent = "Continue Course";
+            completionToggle.textContent = "Mark as completed";
+            actionNotice.textContent = hasCourseLink(currentCourse)
+                ? "Your course is now in progress."
+                : "Your course is now in progress. Course materials are not linked in this catalog yet.";
+            actionNotice.hidden = false;
+            return;
+        }
+        if (hasCourseLink(currentCourse)) {
+            window.location.href = currentCourse.link;
+            return;
+        }
+        actionNotice.textContent = "Course materials are not linked in this catalog yet.";
+        actionNotice.hidden = false;
+    });
+    completionToggle.addEventListener("click", () => {
+        if (!currentCourse) return;
+        if (completedIds.includes(currentCourse.id)) {
+            completedIds = completedIds.filter(id => id !== currentCourse.id);
+        } else {
+            completedIds = [...new Set([...completedIds, currentCourse.id])];
+            inProgressIds = inProgressIds.filter(id => id !== currentCourse.id);
+        }
+        saveStatus();
+        render();
+        setCourseFields(currentCourse);
+        const status = getCourseStatus(currentCourse);
+        primaryAction.textContent = status === "Completed"
+            ? "Review Course"
+            : status === "In Progress" ? "Continue Course" : "Start Course";
+        completionToggle.textContent = status === "Completed" ? "Mark as not completed" : "Mark as completed";
+        actionNotice.hidden = true;
+    });
+
+    if (!roleName) {
+        const emptyCourses = document.getElementById("totalCourseStat");
+        emptyCourses.textContent = "0";
+    }
+    render();
+});
