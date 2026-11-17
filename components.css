@@ -36,6 +36,23 @@
 .faq-item{border-bottom:1px solid var(--border)}.faq-question{width:100%;padding:15px 0;text-align:left;background:transparent;border:0;font-weight:600;color:var(--text-primary)}
 .faq-answer{padding:0 0 15px;color:var(--text-secondary);font-size:13px}
 .course-card{grid-column:span 4}
+.account-progress-grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:20px;margin-bottom:24px}
+.account-role-card h2{margin:6px 0 8px;font-size:26px}.account-role-card p{min-height:42px;color:var(--text-secondary)}
+.progress-eyebrow{display:block;color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.progress-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.progress-card-header h2{margin:5px 0 16px}.progress-card-header>strong{font-size:32px;color:var(--navy-800)}
+.progress-track{height:10px;border-radius:20px;background:#dfe9f2;overflow:hidden}
+.progress-bar{height:100%;width:0;border-radius:20px;background:linear-gradient(90deg,#2d6691,#55a0ce);transition:width .25s ease}
+.progress-stats{display:grid;grid-template-columns:1fr 1fr;margin-top:16px}
+.progress-stats div{display:flex;flex-direction:column}.progress-stats div+div{border-left:1px solid var(--border);padding-left:20px}
+.progress-stats strong{font-size:22px}.progress-stats span{font-size:12px;color:var(--text-secondary)}
+.progress-content-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.progress-course-list{display:flex;flex-direction:column}
+.progress-course{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
+.progress-course:last-child{border-bottom:0}.progress-course h3{margin:0 0 3px;font-size:15px}.progress-course p{margin:0;font-size:12px;color:var(--text-secondary)}
+.progress-course-icon{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#dff1e7;color:#247046;font-weight:800}
+.progress-course-icon-pending{background:#edf3f8;color:#7890a6}
+.progress-empty{margin:10px 0;color:var(--text-muted)}
 .info-row{display:grid;grid-template-columns:1.8fr .95fr;gap:22px;margin-bottom:28px}
 .announcement-card,.quick-access-card{padding:0}
 .announcement-card .card-header,.quick-access-card .card-header{padding:22px 22px 0}
@@ -75,4 +92,4 @@
 .role-detail-grid li{margin-bottom:8px;line-height:1.5}
 .badge-secondary{background:#edf5ff;color:#214d72}
 @media(max-width:1100px){.course-card{grid-column:span 6}.feature-card h3{font-size:22px}.hero h1{font-size:48px}.info-row{grid-template-columns:1fr}.filter-grid{grid-template-columns:1fr}.role-detail-grid{grid-template-columns:1fr}}
-@media(max-width:760px){.course-card{grid-column:span 1}.feature-grid{grid-template-columns:1fr}.hero{padding:26px 22px}.hero-inner{flex-direction:column;align-items:flex-start}.hero h1{font-size:38px}.hero p{font-size:16px}.topbar{padding:0 15px}.topbar-search{display:none}.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main-area{margin-left:0}.mobile-menu-button{display:inline-flex}.page-content{padding:20px 15px}.breadcrumb{display:none}.training-pathway-inner{grid-template-columns:1fr}.pathway{grid-template-columns:repeat(2,1fr)}.list-item{align-items:flex-start}.quick-access-item{padding:12px 0}.filter-header{flex-direction:column;align-items:flex-start}.filter-actions{width:100%}.filter-actions .btn{flex:1}}
+@media(max-width:760px){.course-card{grid-column:span 1}.feature-grid{grid-template-columns:1fr}.hero{padding:26px 22px}.hero-inner{flex-direction:column;align-items:flex-start}.hero h1{font-size:38px}.hero p{font-size:16px}.topbar{padding:0 15px}.topbar-search{display:none}.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main-area{margin-left:0}.mobile-menu-button{display:inline-flex}.page-content{padding:20px 15px}.breadcrumb{display:none}.training-pathway-inner{grid-template-columns:1fr}.pathway{grid-template-columns:repeat(2,1fr)}.list-item{align-items:flex-start}.quick-access-item{padding:12px 0}.filter-header{flex-direction:column;align-items:flex-start}.filter-actions{width:100%}.filter-actions .btn{flex:1}.account-progress-grid,.progress-content-grid{grid-template-columns:1fr}}
