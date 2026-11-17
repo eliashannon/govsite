@@ -1,187 +1,254 @@
-Website Visual Modernization – Enterprise Design System
+Modernize Existing TQS Support Left Page
 
-I want to significantly improve the visual appearance of my existing training website.
+I want to transform my existing “TQS Support Left” page into a modern, professional Training Qualification Standards tracking system.
 
-The current website looks too plain, predominantly white, and has basic typography. I want it to look like a polished, modern enterprise application.
+IMPORTANT: The website already exists. Only modify the existing TQS Support Left page and its directly associated components or styling. Do not rebuild the website or modify other pages.
 
-This is a VISUAL DESIGN improvement. Preserve all existing functionality.
+The purpose of this page is to allow employees to view the Training Qualification Standards (TQS) associated with their selected role and track their progress by marking individual requirements as complete.
 
-1. Overall Design Direction
+1. Overall Design
 
-Use a combination of:
+Create a modern enterprise interface inspired by professional government qualification management systems.
 
-* Modern enterprise SaaS design.
-* Professional government employee portal.
-* Microsoft-style application layout.
-* Clean, sophisticated corporate training platform.
+Use the existing website design system:
 
-The interface should feel welcoming, professional, organized, and easy to look at for extended periods.
+* Soft blue-gray background (#EEF2F7).
+* White or slightly tinted content cards (#FAFBFD).
+* Deep navy text (#263449).
+* Muted blue primary actions (#5276B9).
+* Muted green for completed requirements (#6EAA88).
+* Soft amber for in-progress requirements (#D5A75D).
+* Subtle borders (#DCE3EC).
+* Inter typography.
+* Clean spacing and consistent alignment.
 
-Avoid making the website look like a generic HTML template.
+The interface should be visually appealing, easy to navigate, and comfortable to use for extended periods.
 
-2. Establish a Consistent Color System
+Avoid excessive white space, oversized headings, harsh colors, and unnecessary decorative elements.
 
-Implement the following color palette throughout the existing website:
+2. Selected Role Display
 
-* Main background: #EEF2F7
-* Sidebar: #18263D
-* Card background: #FAFBFD
-* Primary buttons: #5276B9
-* Secondary accent: #6C9E9A
-* Success indicators: #6EAA88
-* Warning indicators: #D5A75D
-* Primary text: #263449
-* Secondary text: #718096
-* Borders: #DCE3EC
+At the top of the page, prominently display the role the employee previously selected in Role Overview.
 
-IMPORTANT:
+For example:
 
-* Avoid large areas of pure white.
-* Avoid harsh, overly saturated colors.
-* Avoid excessive gradients.
-* Use colors consistently across every page.
-* Maintain sufficient contrast for readability.
-* Use subtle color variations to distinguish different sections.
+“Training Qualification Standards”
 
-3. Typography Modernization
+Selected Role: [Previously Selected Role]
 
-Improve the typography throughout the website.
+Include:
 
-Use Inter or Plus Jakarta Sans.
+* Role title.
+* Short description if available.
+* Role identification or classification if available.
+* A clear indication that the displayed requirements belong to the selected role.
 
-Establish a consistent hierarchy:
+CRITICAL:
+Retrieve the role from the existing role selection functionality. Do not create a separate role selector or hardcode a sample role.
 
-* Main page titles: 28–32px, semibold.
-* Section headings: 18–20px, semibold.
-* Card titles: 15–16px, medium.
-* Body text: 14–15px.
-* Secondary descriptions: 13px.
-* Buttons: 14px, medium weight.
+If no role has been selected, display a professional empty state explaining that the employee needs to select a role in Role Overview first, with a button linking to the existing Role Overview page.
 
-Avoid making every heading bold or using the same text size everywhere.
+3. Overall Qualification Progress
 
-Create clear visual separation between titles, descriptions, labels, and supporting information.
+Below the selected role, create a prominent progress overview.
 
-4. Improve Component Styling
+Display:
 
-Modernize the existing components:
+* Total TQS Requirements.
+* Completed Requirements.
+* In Progress Requirements.
+* Not Started Requirements.
+* Overall Completion Percentage.
 
-CARDS:
+Include a large horizontal progress bar showing the employee’s overall completion.
 
-* Soft background colors.
-* Subtle borders.
-* Light shadows only where appropriate.
-* Consistent padding.
-* 8–12px corner radius.
+Example:
 
-BUTTONS:
+Overall Qualification Progress: 65%
 
-* Consistent primary and secondary styles.
-* Subtle hover transitions.
-* Clear active and disabled states.
-* Avoid oversized or excessively rounded buttons.
+13 of 20 requirements completed.
 
-TABLES:
+The numbers and progress bar must automatically update when individual requirements are marked complete.
 
-* Soft alternating row backgrounds.
-* Clean column headings.
-* Better row spacing.
-* Subtle separators.
-* Consistent status badges.
+Use subtle status colors:
 
-INPUTS:
+* Completed: Muted green.
+* In Progress: Muted blue.
+* Not Started: Neutral gray.
 
-* Modern search fields.
-* Soft gray-blue backgrounds.
-* Clear focus indicators.
-* Consistent border styling.
+Do not use hardcoded statistics. Calculate them from the actual TQS data.
 
-ICONS:
+4. Training Qualification Standards Checklist
 
-* Use Lucide icons consistently.
-* Maintain consistent sizing and stroke weight.
-* Use muted accent colors.
+This is the MOST IMPORTANT part of the page.
 
-5. Navigation and Application Layout
+Display all Training Qualification Standards associated with the selected role in an organized, interactive checklist.
 
-Modernize the existing sidebar and navigation styling.
+Each TQS requirement should have:
 
-* Deep navy sidebar.
-* Clear active-page indicator.
-* Subtle hover backgrounds.
-* Consistent navigation icons.
-* Improved spacing between navigation items.
-* Professional logo and application branding area.
-* Smooth but subtle navigation transitions.
+* Checkbox or completion control.
+* TQS number or identifier, if available.
+* Requirement title.
+* Requirement description.
+* Category or section, if available.
+* Completion status.
+* Optional completion date.
 
-Preserve all existing navigation routes and functionality.
+When an employee clicks a requirement’s checkbox or “Mark Complete” action:
 
-6. Add Visual Depth
+1. Update the requirement’s status to Completed.
+2. Display a green completed indicator.
+3. Update the overall qualification progress.
+4. Update the completed requirements count.
+5. Save the completion state locally.
+6. Preserve the completed status when the page is refreshed.
 
-The website should no longer feel like a completely flat white page.
+When a completed requirement is unchecked, return it to Not Started and recalculate progress.
 
-Use:
+Do not allow one requirement’s completion to accidentally affect another requirement.
 
-* Different background shades to separate content areas.
-* Subtle card elevation.
-* Soft blue-gray section backgrounds.
-* Small accent borders where appropriate.
-* Better spacing between content sections.
-* Consistent visual hierarchy.
+5. Organize Requirements into Sections
 
-Do not overuse shadows, gradients, or decorative elements.
+If the existing TQS data contains categories, sections, or phases, organize requirements accordingly.
 
-7. Consistency Across Existing Pages
+For example:
 
-Apply the same design language to:
+* Section 1: General Requirements
+* Section 2: Technical Knowledge
+* Section 3: Equipment Familiarization
+* Section 4: Practical Training
+* Section 5: Final Qualification
 
-* Dashboard
-* Training Center
-* Role Overview
-* Training Courses
+Each section should be collapsible.
 
-Every page should look like it belongs to the same professional application.
+Show a small completion summary next to each section.
 
-Do not unnecessarily redesign the content or functionality of these pages. Focus on improving their visual presentation.
+Example:
 
-8. Technical Requirements
+Technical Knowledge
+4 of 6 Completed
 
-Before making changes:
+Use an accordion-style layout with clean section headers and subtle expand/collapse animations.
 
-1. Inspect the existing project structure.
-2. Identify the existing global styles and shared components.
-3. Determine how the website currently handles colors, typography, and layout.
-4. Identify opportunities to centralize reusable styling.
+IMPORTANT: Use the actual section names and TQS structure from the existing project. The examples above are illustrative only.
 
-Implementation requirements:
+6. Filtering and Viewing Requirements
 
-* Use reusable CSS variables/design tokens.
-* Reuse existing components.
-* Avoid unnecessary dependencies.
-* Preserve existing routing.
-* Preserve authentication.
-* Preserve all existing page functionality.
+Add simple filter controls above the checklist:
+
+* All Requirements
+* Not Started
+* In Progress
+* Completed
+
+Allow employees to quickly find outstanding requirements.
+
+Include:
+
+* Search by requirement name or identifier.
+* Sort options where appropriate.
+* Clear filters option.
+
+The filters should update the displayed requirements without changing their completion status.
+
+7. Requirement Details
+
+When an employee clicks a requirement title or details action, open a modern modal or expandable detail panel.
+
+Display available information such as:
+
+* Full requirement description.
+* TQS identifier.
+* Learning objectives.
+* Required training activities.
+* Supporting documentation.
+* Related training courses.
+* Completion instructions.
+
+Include a clear “Mark Complete” or “Mark Incomplete” action.
+
+If related training courses already exist in the website, link to the appropriate existing course.
+
+Do not invent requirements, instructions, or qualification information.
+
+8. Completion Experience
+
+When an employee completes a requirement:
+
+* Show a subtle success animation or confirmation.
+* Change the checkbox to a green completed state.
+* Update the progress bar smoothly.
+* Update the section completion count.
+* Display the completion date if appropriate.
+
+When all requirements are completed, display a professional qualification completion state.
+
+For example:
+
+“All Training Qualification Standards Completed”
+
+Include the completed role and final completion date.
+
+Do not automatically issue official certifications or claim formal qualification approval unless that functionality already exists.
+
+9. User Interface Details
+
+Pay attention to the following:
+
+* Modern checkbox designs.
+* Clear completed, in-progress, and not-started indicators.
+* Subtle hover effects.
+* Consistent card styling.
+* Easy-to-read requirement descriptions.
+* Collapsible requirement sections.
+* Responsive mobile layout.
+* Accessible buttons and keyboard interactions.
+* Smooth but restrained transitions.
+
+The page should make it immediately obvious what the employee has completed and what remains outstanding.
+
+10. Technical Requirements
+
+Before modifying anything:
+
+1. Inspect the existing TQS Support Left page.
+2. Identify how roles are selected and stored.
+3. Identify where Training Qualification Standards are stored.
+4. Identify the relationship between selected roles and their associated TQS requirements.
+5. Reuse the existing data structures and functionality.
+
+Implementation restrictions:
+
+* Only modify TQS Support Left and necessary shared components if absolutely required.
+* Preserve the existing Role Overview functionality.
+* Preserve the existing Dashboard.
+* Preserve Training Center.
+* Preserve Training Courses.
+* Do not create duplicate role records or TQS requirements.
 * Do not introduce a backend.
-* Do not remove existing content or features.
-* Avoid duplicating CSS rules.
-* Maintain responsive layouts.
-* Ensure accessibility and readable contrast.
+* Do not introduce unnecessary dependencies.
+* Use the existing application framework.
+* Use localStorage or the existing local persistence approach for completion states.
+* Ensure completion states are associated with the correct employee and selected role.
+* Do not overwrite existing role-selection data.
+* Do not replace real TQS data with invented examples.
 
-If the project already has a styling system, extend it rather than replacing it unnecessarily.
+If information is unavailable, handle it gracefully instead of generating fictional qualification standards.
 
-FINAL DESIGN GOAL
+FINAL OBJECTIVE
 
-Transform the website from a basic white interface into a polished, modern enterprise training application.
+Create a polished, modern, user-friendly TQS tracking interface.
 
-I want the website to feel professionally designed, visually balanced, and comfortable to use for extended periods.
+An employee should be able to:
 
-Prioritize:
+1. See their previously selected role.
+2. View all qualification standards associated with that role.
+3. Understand their overall qualification progress.
+4. Expand sections to review individual requirements.
+5. Mark requirements complete or incomplete.
+6. See progress update immediately.
+7. Return later and see their saved completion status.
 
-1. Eye-friendly colors.
-2. Strong typography.
-3. Visual hierarchy.
-4. Consistent spacing.
-5. Professional component styling.
-6. A cohesive identity across all pages.
+The experience should feel like a professional digital qualification management system, not a basic HTML checklist.
 
-Do not sacrifice usability or existing functionality for aesthetics.
+Only modernize the existing TQS Support Left page while preserving all existing website functionality.
