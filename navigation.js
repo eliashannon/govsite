@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ${quickLinks.map(item => `<a class="nav-link" href="${item.href}"><span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}${item.pipeline?'<br><small class="nav-pipeline" data-build-pipeline>Pipeline #Local</small>':''}</span></a>`).join("")}
         </nav>
         <div class="sidebar-footer">Internal Training Resource<br><span data-build-version></span></div>`;
+    if (window.BuildInfo?.refresh) window.BuildInfo.refresh();
     const menuButton = document.getElementById("mobileMenuButton");
     if (menuButton && sidebar) {
         const overlay = document.createElement("button");

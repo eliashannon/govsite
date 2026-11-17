@@ -5,7 +5,7 @@ validate-portal:
   stage: validate
   script:
     - printf 'window.BuildInfo = {name:"Training & Qualification Portal",version:"1.0.0",environment:"GitLab CI",pipeline:"%s",lastUpdated:"%s"};\n' "$CI_PIPELINE_IID" "$(date -u +%Y-%m-%d)" > build-info.js
-    - printf 'document.addEventListener("DOMContentLoaded", () => {\n    document.querySelectorAll("[data-build-version]").forEach(el => el.textContent = `Version ${window.BuildInfo.version}`);\n    document.querySelectorAll("[data-build-environment]").forEach(el => el.textContent = window.BuildInfo.environment);\n    document.querySelectorAll("[data-build-pipeline]").forEach(el => el.textContent = `Pipeline #${window.BuildInfo.pipeline}`);\n});\n' >> build-info.js
+    - printf 'window.BuildInfo.refresh = () => {\n    document.querySelectorAll("[data-build-version]").forEach(el => el.textContent = `Version ${window.BuildInfo.version}`);\n    document.querySelectorAll("[data-build-environment]").forEach(el => el.textContent = window.BuildInfo.environment);\n    document.querySelectorAll("[data-build-pipeline]").forEach(el => el.textContent = `Pipeline #${window.BuildInfo.pipeline}`);\n};\ndocument.addEventListener("DOMContentLoaded", window.BuildInfo.refresh);\n' >> build-info.js
     - echo "Validating Training Portal project structure..."
     - test -f index.html
     - test -f training.html
