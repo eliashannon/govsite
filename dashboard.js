@@ -41,6 +41,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const completedCoursesElement = document.getElementById("completedCourses");
     const inProgressCoursesElement = document.getElementById("inProgressCourses");
     const overallProgressElement = document.getElementById("overallProgress");
+    const dashboardRoleName = document.getElementById("dashboardRoleName");
+    const dashboardRoleDetail = document.getElementById("dashboardRoleDetail");
     const activeCourseList = document.getElementById("activeCourseList");
     const announcementList = document.getElementById("announcementList");
     availableCoursesElement.textContent = "N/A";
@@ -86,6 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const roleName = typeof selectedRole?.role === "string" ? selectedRole.role.trim() : "";
     if (!roleName) {
+        dashboardRoleName.textContent = "N/A";
+        dashboardRoleDetail.textContent = "Select a role in Role Overview to personalize your dashboard.";
         availableCoursesElement.textContent = "0";
         setStatDescriptions(["Select a role to view courses", "N/A", "N/A", "N/A"]);
         showUnavailableData(
@@ -95,6 +99,11 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         return;
     }
+    dashboardRoleName.textContent = roleName;
+    const roleGroup = [selectedRole.division, selectedRole.branch]
+        .filter(value => typeof value === "string" && value.trim())
+        .join(" · ");
+    dashboardRoleDetail.textContent = roleGroup || "Your selected training role";
 
     const courses = window.PortalData?.courses || [];
     const roleCourses = courses.filter(course =>
