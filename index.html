@@ -31,40 +31,33 @@
     <a class="dashboard-role-button" href="role-overview.html">Change Role <span aria-hidden="true">→</span></a>
   </section>
 
-  <section class="dashboard-progress-section" aria-labelledby="trainingProgressTitle">
-    <div class="section-heading dashboard-progress-heading">
-      <div><p class="dashboard-eyebrow">COURSE OVERVIEW</p><h2 id="trainingProgressTitle">Training Progress</h2></div>
+  <section class="dashboard-panel dashboard-progress-panel" aria-labelledby="trainingProgressTitle">
+    <div class="section-heading">
+      <div><p class="dashboard-eyebrow">COURSE OVERVIEW</p><h2 id="trainingProgressTitle">Training Progress</h2><p id="trainingProgressSummary" class="dashboard-progress-summary">N/A</p></div>
+      <a class="dashboard-text-link" href="required-training.html">Browse Courses <span aria-hidden="true">→</span></a>
     </div>
-    <div class="dashboard-stats" aria-label="Training statistics">
-    <article class="dashboard-stat" data-searchable>
-      <div class="stat-icon stat-icon-blue"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2 7h20M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"></path><path d="M8 12h8M8 16h5"></path></svg></div>
-      <div class="stat-label">Available Courses</div><strong class="stat-value" id="availableCourses">N/A</strong><p>Sign in and select a role</p>
-    </article>
-    <article class="dashboard-stat" data-searchable>
-      <div class="stat-icon stat-icon-green"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 12 2 2 4-4"></path><circle cx="12" cy="12" r="10"></circle></svg></div>
-      <div class="stat-label">Completed Courses</div><strong class="stat-value" id="completedCourses">N/A</strong><p>N/A</p>
-    </article>
-    <article class="dashboard-stat" data-searchable>
-      <div class="stat-icon stat-icon-amber"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg></div>
-      <div class="stat-label">In Progress</div><strong class="stat-value" id="inProgressCourses">N/A</strong><p>N/A</p>
-    </article>
-    <article class="dashboard-stat" data-searchable>
-      <div class="stat-icon stat-icon-violet"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"></path><circle cx="12" cy="12" r="9"></circle></svg></div>
-      <div class="stat-label">Overall Progress</div><strong class="stat-value" id="overallProgress">N/A</strong><p>N/A</p>
-    </article>
+    <div class="dashboard-progress-overview">
+      <div id="dashboardTrainingProgressTrack" class="dashboard-progress-track" role="progressbar" aria-label="Required course completion progress" aria-valuemin="0" aria-valuemax="100" aria-valuetext="N/A"><div id="dashboardTrainingProgressBar" class="dashboard-progress-bar dashboard-training-progress-bar"></div></div>
+      <strong id="overallProgress" class="dashboard-progress-percent">N/A</strong>
+    </div>
+    <div class="dashboard-progress-stats" aria-label="Training course counts">
+      <div><span>Total Courses</span><strong id="availableCourses">N/A</strong></div>
+      <div><span>Completed</span><strong id="completedCourses">N/A</strong></div>
+      <div><span>In Progress</span><strong id="inProgressCourses">N/A</strong></div>
+      <div><span>Not Started</span><strong id="notStartedCourses">N/A</strong></div>
     </div>
   </section>
 
-  <section class="dashboard-panel dashboard-tqs-panel" aria-labelledby="tqsProgressTitle">
+  <section class="dashboard-panel dashboard-progress-panel dashboard-tqs-panel" aria-labelledby="tqsProgressTitle">
     <div class="section-heading">
-      <div><p class="dashboard-eyebrow">ROLE QUALIFICATION</p><h2 id="tqsProgressTitle">TQS Progress</h2><p id="tqsProgressSummary" class="dashboard-tqs-summary">N/A</p></div>
+      <div><p class="dashboard-eyebrow">ROLE QUALIFICATION</p><h2 id="tqsProgressTitle">TQS Progress</h2><p id="tqsProgressSummary" class="dashboard-progress-summary">N/A</p></div>
       <a class="dashboard-text-link" href="tqs-support.html">View TQS Support <span aria-hidden="true">→</span></a>
     </div>
-    <div class="dashboard-tqs-overview">
-      <div id="dashboardTqsProgressTrack" class="dashboard-tqs-track" role="progressbar" aria-label="TQS completion progress" aria-valuemin="0" aria-valuemax="100" aria-valuetext="N/A"><div id="dashboardTqsProgressBar" class="dashboard-tqs-bar"></div></div>
-      <strong id="dashboardTqsProgressPercent">N/A</strong>
+    <div class="dashboard-progress-overview">
+      <div id="dashboardTqsProgressTrack" class="dashboard-progress-track" role="progressbar" aria-label="TQS completion progress" aria-valuemin="0" aria-valuemax="100" aria-valuetext="N/A"><div id="dashboardTqsProgressBar" class="dashboard-progress-bar"></div></div>
+      <strong id="dashboardTqsProgressPercent" class="dashboard-progress-percent">N/A</strong>
     </div>
-    <div class="dashboard-tqs-stats" aria-live="polite">
+    <div class="dashboard-progress-stats" aria-live="polite">
       <div><span>Total Requirements</span><strong id="dashboardTqsTotal">N/A</strong></div>
       <div><span>Completed</span><strong id="dashboardTqsCompleted">N/A</strong></div>
       <div><span>In Progress</span><strong id="dashboardTqsInProgress">N/A</strong></div>

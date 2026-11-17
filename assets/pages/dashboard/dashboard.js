@@ -40,7 +40,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const availableCoursesElement = document.getElementById("availableCourses");
     const completedCoursesElement = document.getElementById("completedCourses");
     const inProgressCoursesElement = document.getElementById("inProgressCourses");
+    const notStartedCoursesElement = document.getElementById("notStartedCourses");
     const overallProgressElement = document.getElementById("overallProgress");
+    const trainingProgressSummary = document.getElementById("trainingProgressSummary");
+    const trainingProgressTrack = document.getElementById("dashboardTrainingProgressTrack");
+    const trainingProgressBar = document.getElementById("dashboardTrainingProgressBar");
     const dashboardRoleName = document.getElementById("dashboardRoleName");
     const dashboardRoleDetail = document.getElementById("dashboardRoleDetail");
     const activeCourseList = document.getElementById("activeCourseList");
@@ -48,13 +52,9 @@ document.addEventListener("DOMContentLoaded", () => {
     availableCoursesElement.textContent = "N/A";
     completedCoursesElement.textContent = "N/A";
     inProgressCoursesElement.textContent = "N/A";
+    notStartedCoursesElement.textContent = "N/A";
     overallProgressElement.textContent = "N/A";
 
-    const setStatDescriptions = descriptions => {
-        document.querySelectorAll(".dashboard-stat p").forEach((description, index) => {
-            description.textContent = descriptions[index];
-        });
-    };
     const showUnavailableData = (message, actionHref, actionLabel) => {
         if (activeCourseList) {
             activeCourseList.innerHTML = `
@@ -71,7 +71,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     if (!isSignedIn) {
-        setStatDescriptions(["N/A", "N/A", "N/A", "N/A"]);
         showUnavailableData(
             "Sign in and select a role to view your training information.",
             "account.html",
@@ -91,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
         dashboardRoleName.textContent = "N/A";
         dashboardRoleDetail.textContent = "Select a role in Role Overview to personalize your dashboard.";
         availableCoursesElement.textContent = "0";
-        setStatDescriptions(["Select a role to view courses", "N/A", "N/A", "N/A"]);
+        trainingProgressSummary.textContent = "Select a role to view course progress.";
         showUnavailableData(
             "Select a role in Role Overview to view your assigned courses and updates.",
             "role-overview.html",
@@ -191,14 +190,17 @@ document.addEventListener("DOMContentLoaded", () => {
     availableCoursesElement.textContent = String(roleCourses.length);
     completedCoursesElement.textContent = String(completedCourses.length);
     inProgressCoursesElement.textContent = String(activeCourses.length);
+    notStartedCoursesElement.textContent = String(roleCourses.length - completedCourses.length - activeCourses.length);
     overallProgressElement.textContent = progress === null ? "N/A" : `${progress}%`;
-    setStatDescriptions([
-        `Courses assigned to ${roleName}`,
-        "Courses marked complete",
-        "Courses you've started",
-        "Required course completion"
-    ]);
-
+    trainingProgressSummary.textContent = `${completedRequired.length} of ${requiredCourses.length} required courses completed`;
+    trainingProgressBar.style.width = `${progress || 0}%`;
+    if (progress === null) {
+        trainingProgressTrack.setAttribute("aria-valuetext", "N/A");
+        trainingProgressTrack.removeAttribute("aria-valuenow");
+    } else {
+        trainingProgressTrack.removeAttribute("aria-valuetext");
+        trainingProgressTrack.setAttribute("aria-valuenow", String(progress));
+    }
     if (activeCourseList) {
         if (activeCourses.length) {
             const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({
