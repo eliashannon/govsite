@@ -15,7 +15,91 @@ document.addEventListener("DOMContentLoaded", () => {
         }).format(now);
     }
 
+    let profile = null;
+    try {
+        profile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
+    } catch (error) {
+        console.error("Unable to read the signed-in profile for the dashboard.", error);
+    }
+    const firstName = typeof profile?.firstName === "string" ? profile.firstName.trim() : "";
+    const lastName = typeof profile?.lastName === "string" ? profile.lastName.trim() : "";
+    const isSignedIn = Boolean(firstName && lastName);
+    const welcomeTitle = document.getElementById("welcomeTitle");
+    const welcomeSubtitle = document.querySelector(".welcome-subtitle");
+    if (welcomeTitle) {
+        welcomeTitle.textContent = isSignedIn
+            ? `Welcome back, ${firstName} ${lastName}!`
+            : "Welcome! Please sign in to view your dashboard.";
+    }
+    if (welcomeSubtitle) {
+        welcomeSubtitle.textContent = isSignedIn
+            ? "Here's your training overview."
+            : "Sign in to access your personalized training information.";
+    }
+
+    const availableCoursesElement = document.getElementById("availableCourses");
+    const completedCoursesElement = document.getElementById("completedCourses");
+    const inProgressCoursesElement = document.getElementById("inProgressCourses");
+    const overallProgressElement = document.getElementById("overallProgress");
+    const activeCourseList = document.getElementById("activeCourseList");
+    const announcementList = document.getElementById("announcementList");
+    availableCoursesElement.textContent = "N/A";
+    completedCoursesElement.textContent = "N/A";
+    inProgressCoursesElement.textContent = "N/A";
+    overallProgressElement.textContent = "N/A";
+
+    const setStatDescriptions = descriptions => {
+        document.querySelectorAll(".dashboard-stat p").forEach((description, index) => {
+            description.textContent = descriptions[index];
+        });
+    };
+    const showUnavailableData = (message, actionHref, actionLabel) => {
+        if (activeCourseList) {
+            activeCourseList.innerHTML = `
+                <div class="dashboard-empty-state">
+                    <span class="empty-state-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"></path><circle cx="12" cy="12" r="10"></circle></svg>
+                    </span>
+                    <div><strong>N/A</strong><p>${message}</p><a class="dashboard-text-link" href="${actionHref}">${actionLabel}</a></div>
+                </div>`;
+        }
+        if (announcementList) {
+            announcementList.innerHTML = '<p class="dashboard-unavailable">N/A</p>';
+        }
+    };
+
+    if (!isSignedIn) {
+        setStatDescriptions(["N/A", "N/A", "N/A", "N/A"]);
+        showUnavailableData(
+            "Sign in and select a role to view your training information.",
+            "account.html",
+            "Sign in →"
+        );
+        return;
+    }
+
+    let selectedRole = null;
+    try {
+        selectedRole = JSON.parse(localStorage.getItem("portal.selectedRole") || "null");
+    } catch (error) {
+        console.error("Unable to read the saved role for the dashboard.", error);
+    }
+    const roleName = typeof selectedRole?.role === "string" ? selectedRole.role.trim() : "";
+    if (!roleName) {
+        availableCoursesElement.textContent = "0";
+        setStatDescriptions(["Select a role to view courses", "N/A", "N/A", "N/A"]);
+        showUnavailableData(
+            "Select a role in Role Overview to view your assigned courses and updates.",
+            "role-overview.html",
+            "Go to Role Overview →"
+        );
+        return;
+    }
+
     const courses = window.PortalData?.courses || [];
+    const roleCourses = courses.filter(course =>
+        Array.isArray(course.roles) && course.roles.includes(roleName)
+    );
     const completionKey = "portal.completedCourses";
     let completedIds = ["TRN-001", "TRN-002"];
     try {
@@ -25,27 +109,24 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Unable to read saved course completions for the dashboard.", error);
     }
 
-    let selectedRole = null;
-    try {
-        selectedRole = JSON.parse(localStorage.getItem("portal.selectedRole") || "null");
-    } catch (error) {
-        console.error("Unable to read the saved role for the dashboard.", error);
-    }
-    const roleCourses = selectedRole?.role
-        ? courses.filter(course => Array.isArray(course.roles) && course.roles.includes(selectedRole.role))
-        : courses;
     const requiredCourses = roleCourses.filter(course => course.requirement === "Required");
     const completedCourses = roleCourses.filter(course => completedIds.includes(course.id));
     const completedRequired = requiredCourses.filter(course => completedIds.includes(course.id));
     const progress = requiredCourses.length
         ? Math.round((completedRequired.length / requiredCourses.length) * 100)
-        : 0;
+        : null;
 
-    document.getElementById("availableCourses").textContent = String(roleCourses.length);
-    document.getElementById("completedCourses").textContent = String(completedCourses.length);
-    document.getElementById("overallProgress").textContent = `${progress}%`;
+    availableCoursesElement.textContent = String(roleCourses.length);
+    completedCoursesElement.textContent = String(completedCourses.length);
+    inProgressCoursesElement.textContent = "N/A";
+    overallProgressElement.textContent = progress === null ? "N/A" : `${progress}%`;
+    setStatDescriptions([
+        `Courses assigned to ${roleName}`,
+        "Courses marked complete",
+        "Active course progress is not tracked",
+        "Required course completion"
+    ]);
 
-    const activeCourseList = document.getElementById("activeCourseList");
     if (activeCourseList) {
         activeCourseList.innerHTML = `
             <div class="dashboard-empty-state">
@@ -53,14 +134,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"></path><circle cx="12" cy="12" r="10"></circle></svg>
                 </span>
                 <div>
-                    <strong>No courses in progress yet</strong>
-                    <p>Active course progress is not currently tracked here. Browse the catalog to find your next course.</p>
+                    <strong>No course progress available</strong>
+                    <p>Active course progress is not currently tracked here. Browse your role's course catalog to find your next course.</p>
                     <a class="dashboard-text-link" href="required-training.html">Explore Training Courses →</a>
                 </div>
             </div>`;
     }
 
-    const announcementList = document.getElementById("announcementList");
     if (announcementList && window.PortalData) {
         announcementList.innerHTML = window.PortalData.announcements.map(announcement => `
             <article class="dashboard-announcement" data-searchable>
