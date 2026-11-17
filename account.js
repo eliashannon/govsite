@@ -69,11 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 createAccountNotice.hidden = false;
                 return;
             }
-            profile = newProfile;
-            renderAccount();
-            createAccountForm.reset();
-            createAccountNotice.textContent = `Account created for ${[profile.firstName, profile.lastName].filter(Boolean).join(" ")}. Your name and work email are saved for this browser session and will be cleared when you refresh. Passcodes are not saved.`;
-            createAccountNotice.hidden = false;
+            window.location.href = "index.html";
         });
     }
 
