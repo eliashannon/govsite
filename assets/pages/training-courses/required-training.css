@@ -1,6 +1,6 @@
 body[data-page="required-training"] .main-area{background:var(--background)}
 body[data-page="required-training"] .portal-title{font-family:"Inter","Segoe UI",Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:-.01em;color:var(--text-primary)}
-body[data-page="required-training"] .page-content.course-catalog-page{max-width:1440px;padding:32px 34px 46px;font-family:"Inter","Segoe UI",Arial,sans-serif}
+body[data-page="required-training"] .page-content.course-catalog-page{font-family:"Inter","Segoe UI",Arial,sans-serif}
 .course-catalog-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:23px}
 .course-catalog-header h1{margin:0 0 8px;color:var(--text-primary);font-size:32px;font-weight:600;letter-spacing:-.035em}
 .course-catalog-header>div:first-child>p:last-child{margin:0;color:var(--text-secondary);font-size:15px}
@@ -97,7 +97,6 @@ body[data-page="required-training"] .page-content.course-catalog-page{max-width:
 .course-primary-action:hover{border-color:var(--blue-700);background:var(--blue-700)}
 
 @media(max-width:1120px){
-  body[data-page="required-training"] .page-content.course-catalog-page{padding-right:24px;padding-left:24px}
   .catalog-controls{grid-template-columns:minmax(220px,1.5fr) repeat(2,minmax(135px,.8fr));}
   .catalog-sort{grid-column:2}
   .catalog-clear-button{grid-column:3;justify-self:start}
@@ -106,7 +105,6 @@ body[data-page="required-training"] .page-content.course-catalog-page{max-width:
   .course-table th,.course-table td{padding-right:10px;padding-left:10px}
 }
 @media(max-width:760px){
-  body[data-page="required-training"] .page-content.course-catalog-page{padding:22px 15px 34px}
   .course-catalog-header{align-items:flex-start;flex-direction:column;gap:14px}
   .course-catalog-header h1{font-size:28px}
   .catalog-total{min-width:0}

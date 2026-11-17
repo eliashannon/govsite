@@ -1,5 +1,5 @@
 body[data-page="dashboard"] .main-area{background:var(--background)}
-body[data-page="dashboard"] .dashboard-content{max-width:1440px;padding:34px 36px 48px;font-family:"Inter","Segoe UI",Arial,sans-serif}
+body[data-page="dashboard"] .dashboard-content{font-family:"Inter","Segoe UI",Arial,sans-serif}
 body[data-page="dashboard"] .topbar{background:rgba(250,251,253,.96);border-color:var(--border)}
 body[data-page="dashboard"] .portal-title{font-family:"Inter","Segoe UI",Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:-.01em;color:var(--text-primary)}
 body[data-page="dashboard"] .topbar-search{width:min(310px,28vw)}
@@ -106,7 +106,6 @@ body[data-page="dashboard"] .dashboard-account .account-avatar{width:36px;height
 .dashboard-unavailable{margin:8px 0;color:var(--text-secondary);font-size:13px}
 
 @media(max-width:1100px){
-  body[data-page="dashboard"] .dashboard-content{padding-right:24px;padding-left:24px}
   .dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .dashboard-main-grid{grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr)}
   .dashboard-pathway{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -117,7 +116,6 @@ body[data-page="dashboard"] .dashboard-account .account-avatar{width:36px;height
   body[data-page="dashboard"] .topbar-search{display:none}
 }
 @media(max-width:600px){
-  body[data-page="dashboard"] .dashboard-content{padding:24px 15px 34px}
   body[data-page="dashboard"] .portal-title{font-size:15px}
   .dashboard-welcome{align-items:flex-start;flex-direction:column;gap:14px;margin-bottom:20px}
   .dashboard-welcome h1{font-size:27px}

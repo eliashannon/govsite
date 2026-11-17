@@ -18,12 +18,15 @@
 .topbar-actions{display:flex;align-items:center;gap:14px}.icon-button{position:relative;width:38px;height:38px;border:1px solid var(--border);background:var(--surface);border-radius:10px;display:grid;place-items:center;color:var(--navy-800);box-shadow:none;transition:background .18s ease,border-color .18s ease}
 .icon-button:hover{background:var(--surface-secondary);border-color:var(--border-dark)}
 .icon-button .badge-count{position:absolute;right:-2px;top:-2px;background:#e64e4e;color:white;border-radius:50%;font-size:10px;font-weight:700;width:16px;height:16px;display:grid;place-items:center;border:2px solid white}
-.page-content{max-width:var(--content-max-width);margin:0 auto;padding:28px 20px 40px}.page-heading{margin-bottom:26px}.page-heading h1{margin-bottom:6px}.page-heading p{margin-bottom:0}
+.page-content{max-width:var(--content-max-width);margin:0 auto;padding:34px 36px 48px}.page-heading{margin-bottom:26px}.page-heading h1{margin-bottom:6px}.page-heading p{margin-bottom:0}
 .content-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:22px}
 .col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}
 .mobile-menu-button{display:inline-flex}
 body.sidebar-collapsed .main-area{margin-left:0}
 body.sidebar-collapsed .sidebar{transform:translateX(-100%)}
+@media(max-width:1100px){
+    .page-content{padding-right:24px;padding-left:24px}
+}
 @media(max-width:900px){
     .sidebar{top:var(--header-height);transform:translateX(-100%)}
     .sidebar.open{transform:translateX(0)}
