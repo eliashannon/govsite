@@ -139,6 +139,55 @@ body[data-page="required-training"] .page-content.course-catalog-page{max-width:
   .course-dialog-actions{flex-direction:column-reverse;padding-right:17px;padding-left:17px}
   .course-dialog-actions button{width:100%}
 }
+@media(min-width:761px){
+  body[data-page="required-training"] .page-content.course-catalog-page{padding-top:38px;padding-bottom:54px}
+  .course-catalog-header{margin-bottom:27px}
+  .course-catalog-header h1{font-size:34px}
+  .course-catalog-header>div:first-child>p:last-child{font-size:15px}
+  .catalog-eyebrow{font-size:10px}
+  .catalog-total{gap:13px;min-width:190px;padding:15px 18px}
+  .catalog-total-icon{width:42px;height:42px}
+  .catalog-total-icon svg{width:21px;height:21px}
+  .catalog-total strong{font-size:20px}
+  .catalog-total small{font-size:12px}
+  .catalog-controls{gap:15px;margin-bottom:23px;padding:20px}
+  .catalog-search,.catalog-filter{gap:8px}
+  .catalog-search label,.catalog-filter label{font-size:12px}
+  .catalog-search-input input,.catalog-filter select{height:44px;font-size:13px}
+  .catalog-search-input input{padding-left:41px}
+  .catalog-search-input svg{left:14px;width:19px;height:19px}
+  .catalog-filter select{padding-left:12px}
+  .catalog-clear-button{height:44px;padding:0 15px;font-size:12px}
+  .course-stat-grid{gap:16px;margin-bottom:24px}
+  .course-stat-card{gap:15px;padding:19px 20px}
+  .course-stat-icon{flex-basis:44px;width:44px;height:44px}
+  .course-stat-icon svg{width:21px;height:21px}
+  .course-stat-label{font-size:12px}
+  .course-stat-card strong{font-size:27px}
+  .course-stat-card small{font-size:11px}
+  .course-table-heading{padding:23px 25px 18px}
+  .course-table-heading h2{font-size:19px}
+  .course-table-heading p:not(.catalog-eyebrow),.results-summary{font-size:12px}
+  .course-table th{padding-top:13px;padding-bottom:13px;font-size:10px}
+  .course-table td{padding-top:16px;padding-bottom:16px;font-size:12px}
+  .course-name-title{font-size:14px}
+  .course-name-description{font-size:11px}
+  .course-category,.course-duration{font-size:12px}
+  .course-category svg{width:16px;height:16px}
+  .course-status{padding:5px 9px;font-size:10px}
+  .course-row-actions{gap:9px}
+  .course-view-button{padding:8px 11px;font-size:11px}
+  .course-complete-button{font-size:11px}
+  .course-empty-state{padding:44px 24px;font-size:14px}
+  .course-empty-state strong{font-size:15px}
+  .course-pagination{gap:8px;padding:15px}
+  .course-pagination button{min-width:34px;height:34px;font-size:12px}
+  .course-catalog-note{margin-top:16px;font-size:11px}
+}
+@media(min-width:761px) and (max-width:1120px){
+  .course-stat-grid{gap:11px}
+  .course-stat-card{gap:10px;padding:16px 12px}
+}
 @media(prefers-reduced-motion:reduce){
   .course-stat-card,.course-dialog[open],.catalog-clear-button,.course-view-button,.course-secondary-action,.course-primary-action{animation:none;transition:none}
   .course-stat-card:hover{transform:none}
