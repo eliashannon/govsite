@@ -1,5 +1,7 @@
 (() => {
     const key = "govsiteAccountProfile";
+    const generationKey = "govsiteSignOutGeneration";
+    const sessionGenerationKey = "govsiteSessionGeneration";
     const base = new URL("../../..", document.currentScript.src);
     const pages = new Set([
         "index.html", "role-overview.html", "required-training.html", "training.html",
@@ -14,6 +16,15 @@
                 || typeof profile.email !== "string" || !profile.email.trim()
                 || typeof profile.firstName !== "string" || !profile.firstName.trim()
                 || typeof profile.lastName !== "string" || !profile.lastName.trim()) return null;
+            const generation = localStorage.getItem(generationKey) || "";
+            const sessionGeneration = sessionStorage.getItem(sessionGenerationKey);
+            if (sessionGeneration === null && !generation) {
+                sessionStorage.setItem(sessionGenerationKey, generation);
+            } else if (sessionGeneration !== generation) {
+                sessionStorage.removeItem(key);
+                sessionStorage.removeItem(sessionGenerationKey);
+                return null;
+            }
             return profile;
         } catch (error) {
             console.error("Unable to read the browser session.", error);
@@ -58,7 +69,23 @@
         }
     }
 
-    window.PortalAuth = Object.freeze({readSession, safeDestination, enforce});
+    function startSession(profile) {
+        sessionStorage.setItem(sessionGenerationKey, localStorage.getItem(generationKey) || "");
+        sessionStorage.setItem(key, JSON.stringify(profile));
+    }
+
+    function signOut() {
+        const generation = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join("");
+        localStorage.setItem(generationKey, generation);
+        sessionStorage.removeItem(key);
+        sessionStorage.removeItem(sessionGenerationKey);
+        window.location.replace(new URL("account.html", base).href);
+    }
+
+    window.PortalAuth = Object.freeze({readSession, safeDestination, enforce, startSession, signOut});
     enforce();
     window.addEventListener("pageshow", event => { if (event.persisted) enforce(); });
+    window.addEventListener("storage", event => {
+        if (event.storageArea === localStorage && event.key === generationKey) enforce();
+    });
 })();

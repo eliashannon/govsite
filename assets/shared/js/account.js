@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const storageKey = "govsiteAccountProfile";
     const accountsKey = "govsitePrototypeAccounts";
     const legacyCredentials = {
         email: "elias@navy.mil",
@@ -39,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return toHex(new Uint8Array(hash));
     };
     const enterPortal = (profile, destination) => {
-        sessionStorage.setItem(storageKey, JSON.stringify(profile));
+        window.PortalAuth.startSession(profile);
         window.location.replace(destination);
     };
     const showAccountPanel = (shouldFocus = false) => {
@@ -171,9 +170,8 @@ document.addEventListener("DOMContentLoaded", () => {
     signOut.textContent = "Sign Out";
     signOut.addEventListener("click", () => {
         try {
-            sessionStorage.removeItem(storageKey);
+            window.PortalAuth.signOut();
             closeMenu(false);
-            window.location.replace("account.html");
         } catch (error) {
             console.error("Unable to clear the browser session.");
             signOut.textContent = "Unable to sign out. Please try again.";

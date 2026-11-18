@@ -220,3 +220,68 @@ test("menu keyboard controls and sign-out preserve progress and protect cached p
     assert.match(setup(`https://example.test/govsite/${page}`, session, local).window.location.replaced, /account\.html/);
   }
 });
+
+test("signing out invalidates other open portal tabs and their cached pages", () => {
+    const local = storage({"portal.inProgressCourses":"saved-progress"});
+    const firstSession = storage({[sessionKey]: JSON.stringify(profile)});
+    const secondSession = storage({[sessionKey]: JSON.stringify(profile)});
+    const first = setup("https://example.test/govsite/index.html", firstSession, local);
+    const second = setup("https://example.test/govsite/training.html?course=sample", secondSession, local);
+    const button = first.elements.accountButton = new Element();
+    const menu = first.elements.accountMenu = new Element();
+    menu.hidden = true;
+    button[".account-avatar"] = new Element();
+    button["span:last-child"] = new Element();
+    vm.runInNewContext(source("assets/shared/js/account.js"), first.context);
+    first.documentEvents.DOMContentLoaded();
+    menu.children[0].dispatch("click");
+
+    assert.equal(firstSession.getItem(sessionKey), null);
+    assert.match(first.window.location.replaced, /\/govsite\/account\.html$/);
+    second.windowEvents.storage({key:"govsiteSignOutGeneration", storageArea:local});
+    assert.equal(secondSession.getItem(sessionKey), null);
+    assert.match(second.window.location.replaced, /\/govsite\/account\.html/);
+    assert.equal(second.document.documentElement.style.visibility, "hidden");
+    assert.equal(local.getItem("portal.inProgressCourses"), "saved-progress");
+    assert.match(setup("https://example.test/govsite/index.html", secondSession, local).window.location.replaced, /account\.html/);
+});
+
+test("a stale tab is rejected on reload and a new sign-in remains valid", async () => {
+    const local = storage({"portal.inProgressCourses":"saved-progress"});
+    const stale = storage({[sessionKey]: JSON.stringify(profile)});
+    const legacy = storage({[sessionKey]: JSON.stringify(profile)});
+    const signingOut = setup("https://example.test/govsite/index.html", storage({[sessionKey]: JSON.stringify(profile)}), local);
+    setup("https://example.test/govsite/index.html", stale, local);
+    signingOut.window.PortalAuth.signOut();
+
+    const reloaded = setup("https://example.test/govsite/required-training.html", stale, local);
+    assert.match(reloaded.window.location.replaced, /account\.html/);
+    assert.equal(stale.getItem(sessionKey), null);
+    assert.match(setup("https://example.test/govsite/index.html", legacy, local).window.location.replaced, /account\.html/);
+    const login = accountPage(stale, local);
+    login.elements.demoSignIn.dispatch("click");
+    await login.pending;
+    const signedIn = setup("https://example.test/govsite/index.html", stale, local);
+    assert.equal(signedIn.window.location.replaced, undefined);
+    signedIn.windowEvents.storage({key:"govsiteSignOutGeneration", storageArea:local});
+    assert.equal(signedIn.window.location.replaced, undefined);
+    assert.equal(local.getItem("portal.inProgressCourses"), "saved-progress");
+});
+
+test("sign-out reports a storage failure without hiding the menu", () => {
+    const local = storage();
+    const session = storage({[sessionKey]: JSON.stringify(profile)});
+    const app = setup("https://example.test/govsite/index.html", session, local);
+    const button = app.elements.accountButton = new Element();
+    const menu = app.elements.accountMenu = new Element();
+    menu.hidden = true;
+    vm.runInNewContext(source("assets/shared/js/account.js"), app.context);
+    app.documentEvents.DOMContentLoaded();
+    button.dispatch("click");
+    local.setItem = () => { throw new Error("storage unavailable"); };
+    menu.children[0].dispatch("click");
+    assert.equal(menu.hidden, false);
+    assert.match(menu.children[0].textContent, /Unable to sign out/);
+    assert.notEqual(session.getItem(sessionKey), null);
+    assert.equal(app.window.location.replaced, undefined);
+});
