@@ -9,6 +9,7 @@
 .nav-link{display:flex;align-items:center;gap:12px;padding:11px 14px;margin-bottom:4px;color:var(--text-secondary);border-radius:8px;font-size:14px;transition:background .18s ease,color .18s ease;border-left:3px solid transparent}
 .nav-workflow-count{display:block;margin-top:2px;font-size:11px;opacity:.75}
 .nav-link:hover{background:var(--surface-secondary);color:var(--text-primary);text-decoration:none}.nav-link.active{background:rgba(102,139,203,.2);color:var(--text-primary);border-left-color:var(--blue-500);padding-left:11px}
+.nav-link-nested{margin:0 0 4px 18px;width:calc(100% - 18px);padding-left:12px;font-size:13px}.nav-link-nested .nav-icon{flex-basis:18px;width:18px}.nav-link-nested .nav-icon svg{width:16px;height:16px}
 .nav-link-disabled{cursor:default;opacity:.72}.nav-link-disabled:hover{background:transparent;color:var(--text-secondary)}
 .nav-icon{display:grid;flex:0 0 20px;width:20px;place-items:center;color:var(--text-muted)}.nav-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.nav-link.active .nav-icon{color:var(--accent-secondary)}
 .sidebar-footer{padding:18px 20px;border-top:1px solid rgba(232,238,247,.12);color:var(--text-secondary);font-size:11px;line-height:1.4}

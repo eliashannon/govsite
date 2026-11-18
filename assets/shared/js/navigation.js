@@ -23,17 +23,33 @@ document.addEventListener("DOMContentLoaded", () => {
         {label:"References",icon:icons.references,href:"key-references.html",page:"references"},
         {label:"Contact / Help",icon:icons.contact,href:"contact.html",page:"contact"}
     ];
+    let profile = null;
+    try {
+        profile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
+    } catch (error) {
+        sessionStorage.removeItem("govsiteAccountProfile");
+    }
+    const isMaster = Boolean(profile && profile.isMaster === true);
+    if (isMaster) {
+        items.splice(4, 0, {
+            label:"AI Training Content Manager",
+            icon:icons.completed,
+            href:"ai-training-content-manager.html",
+            page:"ai-training-content-manager",
+            nested:true
+        });
+    }
     const quickLinks = [
         {label:"Policy Updates",icon:icons.updates,href:"#"},
         {label:"FAQ",icon:icons.help,href:"faq.html"},
         {label:"Completed Workflows",icon:icons.completed,workflowCount:true,disabled:true}
     ];
-    const titles = {dashboard:"Dashboard","role-overview":"Role Overview","required-training":"Training Courses","tqs-support":"TQS Support",references:"References",contact:"Contact",faq:"FAQ"};
+    const titles = {dashboard:"Dashboard","role-overview":"Role Overview","required-training":"Training Courses","tqs-support":"TQS Support","ai-training-content-manager":"AI Training Content Manager",references:"References",contact:"Contact",faq:"FAQ"};
     if (pageTitle) pageTitle.textContent = titles[currentPage] || "Training Portal";
     if (sidebar) sidebar.innerHTML = `
         <div class="sidebar-brand"><div class="brand-mark" aria-hidden="true">${icons.training}</div><div><div class="brand-name">Training &<br>Qualification Portal</div></div></div>
         <nav class="sidebar-nav" aria-label="Main navigation"><div class="nav-label">Main Menu</div>
-        ${items.map(item => `<a class="nav-link ${item.page===currentPage?"active":""}" href="${item.href}" ${item.page===currentPage?'aria-current="page"':""}><span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}</span></a>`).join("")}
+        ${items.map(item => `<a class="nav-link ${item.nested?"nav-link-nested":""} ${item.page===currentPage?"active":""}" href="${item.href}" ${item.page===currentPage?'aria-current="page"':""}><span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}</span></a>`).join("")}
         <div class="nav-label">Quick Links</div>
         ${quickLinks.map(item => {
             const content = `<span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}${item.workflowCount?'<br><small class="nav-workflow-count" data-workflow-count>Loading…</small>':''}</span>`;

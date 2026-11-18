@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Training Portal | AI Training Content Manager</title>
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261110-3"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261117-1"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css">
+</head>
+<body data-page="ai-training-content-manager">
+<div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
+<header class="topbar"><div class="topbar-left"><button class="btn btn-secondary mobile-menu-button" id="mobileMenuButton" aria-label="Open navigation">☰</button><img class="navsea-logo" src="assets/shared/images/navsea%20logo.jpg" alt="NAVSEA, Naval Sea Systems Command"><span class="portal-title">C Department Training Portal</span></div>
+<div class="topbar-right"><div class="topbar-search search-box"><input type="search" placeholder="Search training content..." data-ai-content-search aria-label="Search training content"><span aria-hidden="true">⌕</span></div>
+<div style="position:relative"><button class="account-button" id="accountButton" aria-expanded="false" aria-controls="accountMenu"><span class="account-avatar">U</span><span>Account ▾</span></button><div class="account-menu" id="accountMenu" hidden><a href="contact.html">Contact Support</a><a href="index.html">Dashboard</a></div></div></div></header>
+<main class="page-content ai-manager-page">
+  <section class="ai-manager-heading">
+    <div><p class="tqs-eyebrow">MASTER ACCOUNT TOOL</p><h1>AI Training Content Manager</h1><p>Draft, review, and organize role-based training content.</p></div>
+    <button id="newContentButton" class="btn btn-primary" type="button">+ New Training Content</button>
+  </section>
+
+  <section class="ai-manager-grid">
+    <aside class="ai-manager-panel ai-draft-panel">
+      <div class="ai-panel-heading"><div><span class="tqs-label">AI DRAFT ASSISTANT</span><h2>Create course draft</h2></div><span class="ai-status">LOCAL ASSISTANT</span></div>
+      <form id="aiDraftForm">
+        <label for="draftTitle">Training title</label><input id="draftTitle" class="form-control" type="text" placeholder="Example: Cybersecurity Incident Response" required>
+        <label for="draftRole">Target role</label><input id="draftRole" class="form-control" type="text" placeholder="Example: IT Support Analyst" required>
+        <label for="draftNotes">Training details or source notes</label><textarea id="draftNotes" class="form-control" rows="5" placeholder="Describe objectives, required procedures, duration, or reference materials."></textarea>
+        <button id="generateDraftButton" class="btn btn-primary" type="submit">Generate Draft</button>
+      </form>
+      <div id="draftResult" class="ai-draft-result" hidden>
+        <div><span class="tqs-label">GENERATED SUMMARY</span><button id="useDraftButton" type="button">Use in editor</button></div>
+        <h3 id="draftResultTitle"></h3><p id="draftResultDescription"></p>
+        <dl><div><dt>Category</dt><dd id="draftResultCategory"></dd></div><div><dt>Duration</dt><dd id="draftResultDuration"></dd></div></dl>
+      </div>
+    </aside>
+
+    <section class="ai-manager-panel ai-library-panel">
+      <div class="ai-panel-heading ai-library-heading"><div><span class="tqs-label">TRAINING LIBRARY</span><h2>Managed content</h2></div><span id="contentCount" class="ai-content-count">0 items</span></div>
+      <div class="ai-library-toolbar"><input id="contentSearch" type="search" class="form-control" placeholder="Search title or role"><select id="contentFilter" class="form-control"><option value="All">All statuses</option><option value="Draft">Draft</option><option value="Published">Published</option><option value="Archived">Archived</option></select></div>
+      <div id="contentList" class="ai-content-list"></div>
+    </section>
+  </section>
+
+  <dialog id="contentDialog" class="ai-content-dialog" aria-labelledby="contentDialogTitle">
+    <form id="contentForm">
+      <div class="ai-dialog-header"><div><span class="tqs-label">TRAINING CONTENT</span><h2 id="contentDialogTitle">New training content</h2></div><button id="closeContentDialog" type="button" aria-label="Close">×</button></div>
+      <input id="contentId" type="hidden">
+      <div class="ai-form-grid">
+        <label>Title<input id="contentTitle" class="form-control" type="text" required></label>
+        <label>Target role<input id="contentRole" class="form-control" type="text" required></label>
+        <label>Category<input id="contentCategory" class="form-control" type="text" required></label>
+        <label>Duration<input id="contentDuration" class="form-control" type="text" placeholder="Example: 2 hours" required></label>
+        <label class="ai-full-field">Description<textarea id="contentDescription" class="form-control" rows="5" required></textarea></label>
+        <label>Status<select id="contentStatus" class="form-control"><option>Draft</option><option>Published</option><option>Archived</option></select></label>
+      </div>
+      <div class="ai-dialog-actions"><button id="deleteContentButton" class="btn ai-delete-button" type="button" hidden>Delete</button><span></span><button id="cancelContentButton" class="btn btn-secondary" type="button">Cancel</button><button class="btn btn-primary" type="submit">Save Content</button></div>
+    </form>
+  </dialog>
+</main></div></div>
+<script src="assets/shared/js/data.js"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-1"></script><script src="assets/shared/js/account.js?v=20261118-1"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js"></script>
+</body>
+</html>

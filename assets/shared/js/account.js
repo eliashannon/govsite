@@ -16,11 +16,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const pageTitle = document.getElementById("accountPageTitle");
     const pageDescription = document.getElementById("accountPageDescription");
 
-    const navigationEntry = performance.getEntriesByType("navigation")[0];
-    if (navigationEntry && navigationEntry.type === "reload") {
-        sessionStorage.removeItem(storageKey);
-    }
-
     const showAccountPanel = (shouldFocus = false) => {
         const creatingAccount = window.location.hash === "#create-account";
         if (signInPanel) signInPanel.hidden = creatingAccount;
@@ -52,7 +47,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 sessionStorage.setItem(storageKey, JSON.stringify({
                     firstName: "Elias",
                     lastName: "Hannon",
-                    email: demoCredentials.email
+                    email: demoCredentials.email,
+                    isMaster: true
                 }));
             } catch (error) {
                 console.error("Unable to save the demo account profile.", error);
