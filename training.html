@@ -2,11 +2,46 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="refresh" content="0;url=required-training.html">
-<title>Training Portal | Training Courses</title>
+<title>Training Portal | Course</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-5"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/training-courses/training.css?v=20261118-1">
 </head>
-<body>
-<p>Training Center has moved. <a href="required-training.html">Go to Training Courses</a>.</p>
-<script>window.location.replace("required-training.html");</script>
+<body data-page="training">
+<div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
+<header class="topbar"><div class="topbar-left"><button class="btn btn-secondary mobile-menu-button" id="mobileMenuButton" aria-label="Open navigation">☰</button><img class="navsea-logo" src="assets/shared/images/navsea%20logo.jpg" alt="NAVSEA, Naval Sea Systems Command"><span class="portal-title">C Department Training Portal</span></div>
+<div class="topbar-right"><div class="topbar-search search-box"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input type="search" placeholder="Search courses..." data-portal-search aria-label="Search courses"></div>
+<div style="position:relative"><button class="account-button" id="accountButton" aria-expanded="false" aria-controls="accountMenu"><span class="account-avatar">U</span><span>Account ▾</span></button><div class="account-menu" id="accountMenu" hidden><a href="contact.html">Contact Support</a><a href="index.html">Dashboard</a></div></div></div></header>
+<main class="page-content training-course-page">
+  <div id="trainingError" class="training-error" role="alert" hidden></div>
+  <div id="trainingApp" hidden>
+    <header class="training-course-header">
+      <div>
+        <p class="catalog-eyebrow">COURSE</p>
+        <h1 id="courseTitle"></h1>
+        <p id="courseDescription" class="training-course-description"></p>
+      </div>
+      <button id="resetCourseProgress" type="button" class="training-reset-button">Development: Reset Progress</button>
+    </header>
+    <div class="training-course-meta" aria-label="Course information">
+      <dl><dt>Category</dt><dd id="courseCategory"></dd></dl>
+      <dl><dt>Difficulty</dt><dd id="courseDifficulty"></dd></dl>
+      <dl><dt>Estimated duration</dt><dd id="courseDuration"></dd></dl>
+    </div>
+    <section class="training-objectives" aria-labelledby="objectivesTitle"><h2 id="objectivesTitle">Learning Objectives</h2><ul id="courseObjectives"></ul></section>
+    <section class="training-progress-section" aria-label="Course progress">
+      <div class="training-progress-heading"><strong>Course Progress</strong><span id="courseProgressLabel">0%</span></div>
+      <div id="courseProgressBar" class="training-progress-track" role="progressbar" aria-label="Course module progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="courseProgressFill" class="training-progress-fill"></div></div>
+    </section>
+    <div class="training-layout">
+      <aside class="training-module-sidebar" aria-label="Course modules">
+        <h2>Modules</h2>
+        <nav><ol id="moduleNavigation" class="training-module-list"></ol></nav>
+      </aside>
+      <article id="moduleContent" class="training-module-content" aria-live="polite"></article>
+    </div>
+  </div>
+</main>
+</div></div>
+<script src="assets/shared/js/navigation.js?v=20261118-3"></script><script src="assets/shared/js/account.js?v=20261118-3"></script><script src="assets/pages/training-courses/training.js?v=20261118-1"></script>
 </body>
 </html>

@@ -198,6 +198,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const renderCourseRow = course => {
         const status = getCourseStatus(course);
         const statusClass = status.toLowerCase().replaceAll(" ", "-");
+        const courseHref = `training.html?course=${encodeURIComponent(course.id)}`;
         return `
             <tr>
                 <td class="course-name-cell" data-label="Course Name">
@@ -207,7 +208,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td data-label="Category"><span class="course-category"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"></path></svg>${escapeHtml(course.category)}</span></td>
                 <td class="course-duration" data-label="Duration">${escapeHtml(course.duration)}</td>
                 <td data-label="Status"><span class="course-status course-status-${statusClass}">${status}</span></td>
-                <td data-label="Actions"><div class="course-row-actions"><button class="course-view-button" type="button" data-view-course="${escapeHtml(course.id)}">View Details</button></div></td>
+                <td data-label="Actions"><div class="course-row-actions"><a class="course-view-button" href="${courseHref}" data-view-course="${escapeHtml(course.id)}">View Details</a></div></td>
             </tr>`;
     };
 
@@ -418,10 +419,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         refreshCatalogue();
     });
     tableBody.addEventListener("click", event => {
-        const button = event.target.closest("[data-view-course]");
-        if (!button) return;
-        const course = roleCourses.find(item => item.id === button.dataset.viewCourse);
-        if (course) openCourseDetails(course);
+        const link = event.target.closest("[data-view-course]");
+        if (!link) return;
+        // Use the real link destination so the dynamic training page works in all browsers.
+        window.location.href = link.getAttribute("href");
     });
     pagination.addEventListener("click", event => {
         const button = event.target.closest("[data-page]");
@@ -436,26 +437,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     primaryAction.addEventListener("click", () => {
         if (!currentCourse) return;
-        const status = getCourseStatus(currentCourse);
-        if (status === "Not Started") {
-            inProgressIds = [...new Set([...inProgressIds, currentCourse.id])];
-            saveStatus();
-            render();
-            setCourseFields(currentCourse);
-            primaryAction.textContent = "Continue Course";
-            completionToggle.textContent = "Mark as completed";
-            actionNotice.textContent = hasCourseLink(currentCourse)
-                ? "Your course is now in progress."
-                : "Your course is now in progress. Course materials are not linked in this catalog yet.";
-            actionNotice.hidden = false;
-            return;
-        }
-        if (hasCourseLink(currentCourse)) {
-            window.location.href = currentCourse.link;
-            return;
-        }
-        actionNotice.textContent = "Course materials are not linked in this catalog yet.";
-        actionNotice.hidden = false;
+        window.location.href = `training.html?course=${encodeURIComponent(currentCourse.id)}`;
     });
     completionToggle.addEventListener("click", () => {
         if (!currentCourse) return;

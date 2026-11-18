@@ -39,7 +39,9 @@ Git internals and empty, untracked directories are omitted.
 |   |   |   `-- tqs-support.js
 |   |   `-- training-courses
 |   |       |-- required-training.css
-|   |       `-- required-training.js
+|   |       |-- required-training.js
+|   |       |-- training.css
+|   |       `-- training.js
 |   |-- shared
 |       |-- css
 |       |   |-- components.css
@@ -55,6 +57,8 @@ Git internals and empty, untracked directories are omitted.
 |           |-- data.js
 |           |-- navigation.js
 |           `-- search.js
+|-- data
+|   `-- courses.json
 |-- contact.html
 |-- faq.html
 |-- index.html
