@@ -143,6 +143,31 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             console.error("Unable to persist training progress.", error);
         }
+        syncCatalogStatus();
+    }
+
+    function syncCatalogStatus() {
+        if (previewMode) return;
+        try {
+            const completed = JSON.parse(localStorage.getItem("portal.completedCourses") || "[]");
+            const inProgress = JSON.parse(localStorage.getItem("portal.inProgressCourses") || "[]");
+            let completedIds = Array.isArray(completed) ? completed.filter(id => typeof id === "string") : [];
+            let inProgressIds = Array.isArray(inProgress) ? inProgress.filter(id => typeof id === "string") : [];
+            if (progress.courseCompleted) {
+                completedIds = [...new Set([...completedIds, selectedCourse.id])];
+                inProgressIds = inProgressIds.filter(id => id !== selectedCourse.id);
+            } else if (progress.continuedModuleIds.length > 0) {
+                inProgressIds = [...new Set([...inProgressIds, selectedCourse.id])];
+                completedIds = completedIds.filter(id => id !== selectedCourse.id);
+            } else {
+                inProgressIds = inProgressIds.filter(id => id !== selectedCourse.id);
+                completedIds = completedIds.filter(id => id !== selectedCourse.id);
+            }
+            localStorage.setItem("portal.completedCourses", JSON.stringify(completedIds));
+            localStorage.setItem("portal.inProgressCourses", JSON.stringify(inProgressIds));
+        } catch (error) {
+            console.error("Unable to synchronize course status with Training Courses.", error);
+        }
     }
 
     function getFirstIncompleteModule() {
@@ -507,6 +532,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Unable to reset training progress.", error);
         }
         progress = loadCourseProgress(selectedCourse);
+        syncCatalogStatus();
         const url = new URL(window.location.href);
         url.searchParams.set("course", selectedCourse.id);
         url.searchParams.delete("module");
@@ -639,6 +665,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         }
         progress = loadCourseProgress(selectedCourse);
+        syncCatalogStatus();
         renderCourseHeader();
         renderProgress();
         app.hidden = false;

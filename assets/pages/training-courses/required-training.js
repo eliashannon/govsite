@@ -120,6 +120,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let completedIds = getCompletedCourses();
     let inProgressIds = readInProgressCourses();
+    let trainingProgressStore = {};
+    try {
+        const storedProgress = JSON.parse(localStorage.getItem("trainingProgress") || "{}");
+        if (storedProgress && typeof storedProgress === "object" && !Array.isArray(storedProgress)) {
+            trainingProgressStore = storedProgress;
+        }
+    } catch (error) {
+        console.error("Unable to read module progress for the course catalog.", error);
+    }
 
     let roleSelection = null;
     try {
@@ -242,7 +251,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     })[character]);
 
     const getCourseStatus = course => {
+        const moduleProgress = trainingProgressStore[course.id];
+        if (moduleProgress && typeof moduleProgress === "object"
+            && moduleProgress.courseCompleted === true
+            && Array.isArray(moduleProgress.completedModuleIds)
+            && moduleProgress.completedModuleIds.length === course.modules?.length) {
+            if (!completedIds.includes(course.id)) {
+                completedIds = [...new Set([...completedIds, course.id])];
+                inProgressIds = inProgressIds.filter(id => id !== course.id);
+                saveStatus();
+            }
+            return "Completed";
+        }
         if (completedIds.includes(course.id)) return "Completed";
+        if (moduleProgress && typeof moduleProgress === "object"
+            && Array.isArray(moduleProgress.continuedModuleIds)
+            && moduleProgress.continuedModuleIds.length > 0) {
+            if (!inProgressIds.includes(course.id)) {
+                inProgressIds = [...new Set([...inProgressIds, course.id])];
+                saveStatus();
+            }
+            return "In Progress";
+        }
         if (inProgressIds.includes(course.id)) return "In Progress";
         return "Not Started";
     };
@@ -514,6 +544,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     primaryAction.addEventListener("click", () => {
         if (!currentCourse) return;
+        if (!completedIds.includes(currentCourse.id) && !inProgressIds.includes(currentCourse.id)) {
+            inProgressIds = [...new Set([...inProgressIds, currentCourse.id])];
+            saveStatus();
+        }
         window.location.href = `training.html?course=${encodeURIComponent(currentCourse.id)}`;
     });
     completionToggle.addEventListener("click", () => {

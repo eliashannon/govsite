@@ -108,6 +108,7 @@ test("course player shows module states, renders structured material, and comple
 
     p.button("Continue").click();
     assert.equal(p.elements.courseProgressLabel.textContent, "20%");
+    assert.ok(JSON.parse(p.localStorage.getItem("portal.inProgressCourses")).includes(p.course.id));
     p.window.location.searchParams.set("module", "module-5");
     p.events.popstate();
     assert.equal(p.window.location.searchParams.get("module"), "module-2");
@@ -133,6 +134,8 @@ test("course player shows module states, renders structured material, and comple
     assert.equal(p.elements.courseCompletionReturn.href, "required-training.html");
     assert.equal(p.elements.courseCompletion.focused, true);
     assert.equal(p.button("Course Completed").disabled, true);
+    assert.ok(JSON.parse(p.localStorage.getItem("portal.completedCourses")).includes(p.course.id));
+    assert.ok(!JSON.parse(p.localStorage.getItem("portal.inProgressCourses")).includes(p.course.id));
     p.sidebar(0).click();
     assert.equal(p.elements.courseProgressLabel.textContent, "100%");
     assert.equal(p.sidebar(0).disabled, false);
@@ -148,6 +151,8 @@ test("review preview has learner navigation without changing learner progress an
     p.button("Mark Complete").click();
     assert.equal(p.elements.courseCompletionReturn.href, "ai-training-content-manager.html");
     assert.equal(p.localStorage.getItem("trainingProgress"), null);
+    assert.equal(p.localStorage.getItem("portal.completedCourses"), null);
+    assert.equal(p.localStorage.getItem("portal.inProgressCourses"), null);
     assert.equal(JSON.parse(p.sessionStorage.getItem("trainingPreviewProgress"))[p.course.id].courseCompleted, true);
     p.elements.approvePreviewCourse.click();
     await new Promise(resolve => setImmediate(resolve));
