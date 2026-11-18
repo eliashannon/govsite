@@ -19,7 +19,7 @@
 
   <aside class="manager-prototype-notice" aria-label="Prototype processing and storage notice">
     <strong>Local prototype — no AI service is connected.</strong>
-    <span>PDF/DOCX text extraction and rule-based classification run in this browser. Original files and workflow data stay in this browser. Publishing updates this browser's training catalog only; export and source-control the JSON package and original handbooks separately for shared deployment.</span>
+    <span>PDF/DOCX text extraction and rule-based classification run in this browser. Original files and workflow data stay in this browser. Publishing updates this browser's training catalog only; export and source-control the JSON package and original handbooks separately for shared deployment. Master-only approval checks run in this browser; this static prototype has no server-side authorization.</span>
     <span>Bundled parser notices: <a href="assets/pages/ai-training-content-manager/vendor/PDFJS-LICENSE.txt" target="_blank" rel="noopener">PDF.js license</a> and <a href="assets/pages/ai-training-content-manager/vendor/MAMMOTH-LICENSE.txt" target="_blank" rel="noopener">Mammoth.js license</a>.</span>
   </aside>
   <p id="managerNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
@@ -74,14 +74,27 @@
       <p class="module-source-summary" id="moduleSourceSummary"></p>
       <label for="moduleTitle">Module title <span>(administrative label only)</span></label>
       <input id="moduleTitle" class="form-control" type="text" maxlength="160" required>
-      <fieldset class="module-fieldset"><legend>Link to existing portal roles</legend><p>Choose the roles that should see this published module.</p><div id="moduleRoleOptions" class="module-options"></div></fieldset>
       <fieldset class="module-fieldset"><legend>Link to existing TQS requirements</legend><p>These links do not create or change qualification requirements.</p><div id="moduleTqsOptions" class="module-options"></div></fieldset>
       <p id="moduleDialogNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
-      <div class="ai-dialog-actions"><span></span><button id="cancelModuleButton" class="btn btn-secondary" type="button">Cancel</button><button class="btn btn-primary" type="submit">Save unpublished module</button></div>
+      <div class="ai-dialog-actions"><span></span><button id="cancelModuleButton" class="btn btn-secondary" type="button">Cancel</button><button class="btn btn-primary" type="submit">Save draft for approval</button></div>
+    </form>
+  </dialog>
+  <dialog id="assignmentDialog" class="ai-content-dialog module-dialog" aria-labelledby="assignmentDialogTitle">
+    <form id="assignmentForm">
+      <div class="ai-dialog-header"><div><span class="tqs-label">COURSE APPROVAL</span><h2 id="assignmentDialogTitle">Approve and assign course</h2></div><button id="closeAssignmentDialog" type="button" aria-label="Close">×</button></div>
+      <p class="module-source-summary">Choose the required organization path. The course will be published to Training Courses after this approval is saved.</p>
+      <label for="assignmentDivision">Division</label>
+      <select id="assignmentDivision" class="form-control" required><option value="">Select Division</option></select>
+      <label for="assignmentBranch">Branch</label>
+      <select id="assignmentBranch" class="form-control" required disabled><option value="">Select Branch</option></select>
+      <label for="assignmentRole">Role</label>
+      <select id="assignmentRole" class="form-control" required disabled><option value="">Select Role</option></select>
+      <p id="assignmentDialogNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
+      <div class="ai-dialog-actions"><span></span><button id="cancelAssignmentButton" class="btn btn-secondary" type="button">Cancel</button><button class="btn btn-primary" type="submit">Approve and publish</button></div>
     </form>
   </dialog>
 </main></div></div>
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
-<script src="assets/shared/js/data.js?v=20261118-2"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-5"></script>
+<script src="assets/shared/js/data.js?v=20261118-3"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-6"></script>
 </body>
 </html>

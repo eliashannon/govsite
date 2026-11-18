@@ -62,9 +62,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     const roleName = hasSignedInAccount
         ? requestedRole || roleSelection?.role || ""
         : "";
-    const roleCourses = roleName
-        ? catalog.filter(course => Array.isArray(course.roles) && course.roles.includes(roleName))
-        : [];
+    const trainingDivisionFilter = document.getElementById("trainingDivision");
+    const trainingBranchFilter = document.getElementById("trainingBranch");
+    const trainingRoleFilter = document.getElementById("trainingRole");
+    const organizationHierarchy = window.PortalData.organizationHierarchy || {};
+    const hasAssignmentFilter = () => Boolean(
+        trainingDivisionFilter.value || trainingBranchFilter.value || trainingRoleFilter.value
+    );
+    const getCoursesForSelection = () => {
+        if (!hasSignedInAccount) return [];
+        if (hasAssignmentFilter()) {
+            return catalog.filter(course => {
+                const assignment = course.assignment || course;
+                return (!trainingDivisionFilter.value || assignment.division === trainingDivisionFilter.value)
+                    && (!trainingBranchFilter.value || assignment.branch === trainingBranchFilter.value)
+                    && (!trainingRoleFilter.value || assignment.role === trainingRoleFilter.value);
+            });
+        }
+        return roleName
+            ? catalog.filter(course => Array.isArray(course.roles) && course.roles.includes(roleName))
+            : [];
+    };
+    let roleCourses = getCoursesForSelection();
     const roleProgressName = document.getElementById("roleProgressName");
     const roleProgressDetail = document.getElementById("roleProgressDetail");
     const roleProgressPercent = document.getElementById("roleProgressPercent");
@@ -74,7 +93,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const roleProgressTrack = document.getElementById("roleProgressTrack");
     const roleProgressBar = document.getElementById("roleProgressBar");
     const updateRoleProgress = () => {
-        if (!hasSignedInAccount || !roleName) {
+        const progressRoleName = trainingRoleFilter.value || roleName;
+        if (!hasSignedInAccount || !progressRoleName) {
             roleProgressName.textContent = "N/A";
             roleProgressDetail.textContent = hasSignedInAccount
                 ? "Select a role in Role Overview to view qualification progress."
@@ -88,17 +108,22 @@ document.addEventListener("DOMContentLoaded", async () => {
             roleProgressTrack.setAttribute("aria-valuetext", "N/A");
             return;
         }
-        const requiredCourses = roleCourses.filter(course => course.requirement === "Required");
+        const selectedRoleCourses = roleCourses.filter(course =>
+            Array.isArray(course.roles) && course.roles.includes(progressRoleName)
+        );
+        const requiredCourses = selectedRoleCourses.filter(course => course.requirement === "Required");
         const completedRequired = requiredCourses.filter(course => completedIds.includes(course.id));
         const remainingRequired = requiredCourses.length - completedRequired.length;
         const percent = requiredCourses.length
             ? Math.round((completedRequired.length / requiredCourses.length) * 100)
             : 0;
-        const roleDetails = roleSelection?.role === roleName
+        const roleDetails = trainingRoleFilter.value
+            ? [trainingDivisionFilter.value, trainingBranchFilter.value].filter(Boolean).join(" · ")
+            : roleSelection?.role === progressRoleName
             ? [roleSelection.branch, roleSelection.division].filter(value => typeof value === "string" && value.trim()).join(" · ")
             : "";
 
-        roleProgressName.textContent = roleName;
+        roleProgressName.textContent = progressRoleName;
         roleProgressDetail.textContent = roleDetails || "Required course completion for your selected role.";
         roleProgressPercent.textContent = `${percent}%`;
         roleProgressSummary.textContent = `${completedRequired.length} of ${requiredCourses.length} required courses completed`;
@@ -209,7 +234,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const filtered = roleCourses.filter(course => {
             const searchableText = [
                 course.title, course.description, course.category, course.requirement,
-                course.duration, course.frequency, course.id
+                course.duration, course.frequency, course.id,
+                course.division, course.branch, course.role
             ].join(" ").toLowerCase();
             return searchableText.includes(query)
                 && (category === "All" || course.category === category)
@@ -241,11 +267,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateStats();
         updateRoleProgress();
         renderPagination(pageCount);
+        if (hasAssignmentFilter()) {
+            listTitle.textContent = trainingRoleFilter.value
+                ? `Training Courses for ${trainingRoleFilter.value}`
+                : trainingBranchFilter.value || trainingDivisionFilter.value;
+            listSubtitle.textContent = [
+                trainingDivisionFilter.value,
+                trainingBranchFilter.value,
+                trainingRoleFilter.value
+            ].filter(Boolean).join(" · ");
+        } else {
+            listTitle.textContent = !hasSignedInAccount
+                ? "Training Courses"
+                : roleName ? `Available Training for ${roleName}` : "Available Training";
+            listSubtitle.textContent = !hasSignedInAccount
+                ? "Sign in to view your role-based training courses."
+                : roleName
+                    ? "Review role-based course requirements and applicable learning resources."
+                    : "Select a role in Role Overview or use the assignment filters to browse courses.";
+        }
 
         if (!hasSignedInAccount) {
             emptyState.innerHTML = '<strong>Sign in to view training courses.</strong><span>Your role-based course catalog will appear after you sign in.</span><a href="account.html">Go to sign in</a>';
             emptyState.hidden = false;
-        } else if (!roleName) {
+        } else if (!roleName && !hasAssignmentFilter()) {
             emptyState.innerHTML = '<strong>Select a role to see assigned courses.</strong><span>Choose your role in Role Overview to view the course catalog.</span><a href="role-overview.html">Go to Role Overview →</a>';
             emptyState.hidden = false;
         } else if (filtered.length === 0) {
@@ -259,6 +304,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const setCourseFields = course => {
         const fields = [
             ["Category", course.category],
+            ...(course.assignment || course.division ? [[
+                "Assigned to",
+                [course.assignment?.division || course.division, course.assignment?.branch || course.branch, course.assignment?.role || course.role]
+                    .filter(Boolean).join(" / ")
+            ]] : []),
             ["Estimated duration", course.duration],
             ["Requirement", course.requirement],
             ["Frequency", course.frequency],
@@ -296,18 +346,50 @@ document.addEventListener("DOMContentLoaded", async () => {
         localStorage.setItem(storageKeys.inProgress, JSON.stringify(inProgressIds));
     };
 
-    const categories = [...new Set(roleCourses.map(course => course.category))].sort((a, b) => a.localeCompare(b));
-    categoryFilter.innerHTML = '<option value="All">All categories</option>' + categories.map(category =>
-        `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`
-    ).join("");
-    listTitle.textContent = !hasSignedInAccount
-        ? "Training Courses"
-        : roleName ? `Available Training for ${roleName}` : "Available Training";
-    listSubtitle.textContent = !hasSignedInAccount
-        ? "Sign in to view your role-based training courses."
-        : roleName
-            ? "Review role-based course requirements and applicable learning resources."
-            : "Select a role in Role Overview to view applicable training requirements.";
+    const setOptions = (select, placeholder, values) => {
+        select.innerHTML = `<option value="">${placeholder}</option>` + values.map(value =>
+            `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
+        ).join("");
+    };
+    const populateBranchFilter = () => {
+        const branches = Object.keys(organizationHierarchy[trainingDivisionFilter.value] || {});
+        setOptions(trainingBranchFilter, "All branches", branches);
+        trainingBranchFilter.disabled = !trainingDivisionFilter.value;
+        setOptions(trainingRoleFilter, "All roles", []);
+        trainingRoleFilter.disabled = true;
+    };
+    const populateRoleFilter = () => {
+        const roles = organizationHierarchy[trainingDivisionFilter.value]?.[trainingBranchFilter.value] || [];
+        setOptions(trainingRoleFilter, "All roles", roles);
+        trainingRoleFilter.disabled = !trainingBranchFilter.value;
+    };
+    const updateCategoryOptions = () => {
+        const currentCategory = categoryFilter.value || "All";
+        const categories = [...new Set(roleCourses.map(course => course.category))].sort((a, b) => a.localeCompare(b));
+        categoryFilter.innerHTML = '<option value="All">All categories</option>' + categories.map(category =>
+            `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`
+        ).join("");
+        categoryFilter.value = categories.includes(currentCategory) ? currentCategory : "All";
+    };
+    const refreshCatalogue = () => {
+        roleCourses = getCoursesForSelection();
+        updateCategoryOptions();
+        currentPage = 1;
+        render();
+    };
+
+    setOptions(trainingDivisionFilter, "All divisions", Object.keys(organizationHierarchy));
+    populateBranchFilter();
+    updateCategoryOptions();
+    trainingDivisionFilter.addEventListener("change", () => {
+        populateBranchFilter();
+        refreshCatalogue();
+    });
+    trainingBranchFilter.addEventListener("change", () => {
+        populateRoleFilter();
+        refreshCatalogue();
+    });
+    trainingRoleFilter.addEventListener("change", refreshCatalogue);
 
     [searchInput, headerSearchInput].filter(Boolean).forEach(input => {
         input.addEventListener("input", () => {
@@ -330,8 +412,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         categoryFilter.value = "All";
         statusFilter.value = "All";
         sortFilter.value = "name-asc";
+        trainingDivisionFilter.value = "";
+        populateBranchFilter();
         currentPage = 1;
-        render();
+        refreshCatalogue();
     });
     tableBody.addEventListener("click", event => {
         const button = event.target.closest("[data-view-course]");

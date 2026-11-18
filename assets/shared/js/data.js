@@ -1,4 +1,24 @@
 window.PortalData = {
+    organizationHierarchy: {
+        Operations: {
+            Logistics: ["Operations Supervisor", "Fleet Coordinator", "Warehouse Lead"],
+            "Safety & Compliance": ["Safety Officer", "Compliance Analyst", "Incident Coordinator"],
+            Facilities: ["Facilities Manager", "Maintenance Technician", "Grounds Supervisor"]
+        },
+        Administration: {
+            "Human Resources": ["HR Generalist", "Recruitment Specialist", "Benefits Coordinator"],
+            Finance: ["Accounting Technician", "Budget Analyst", "Procurement Specialist"],
+            "Executive Support": ["Executive Assistant", "Office Manager", "Program Coordinator"]
+        },
+        "Technical Services": {
+            IT: ["IT Support Analyst", "Systems Administrator", "Network Technician"],
+            Engineering: ["Engineering Technician", "Project Engineer", "Quality Engineer"],
+            Communications: ["Communications Specialist", "Public Affairs Officer", "Digital Media Coordinator"]
+        },
+        "Test Division": {
+            "Test Branch": ["Test Role"]
+        }
+    },
     announcements: [
         {title:"Training Portal Launch",description:"Welcome to the Training and Qualification Portal.",date:"November 2026",type:"General"},
         {title:"Training Requirements",description:"Review applicable training requirements and qualification guidance.",date:"November 2026",type:"Reminder"},
@@ -169,6 +189,11 @@ window.PortalData = {
             const moduleCourses = publishableModules.map(module => {
                 const sourceItems = module.sourceContentIds.map(id => sourceById.get(id));
                 const courseId = `HANDBOOK-${module.id}`;
+                const assignment = module.assignment || {
+                    division: module.division || "",
+                    branch: module.branch || "",
+                    role: module.role || (Array.isArray(module.roleIds) ? module.roleIds[0] : "")
+                };
                 const course = {
                     id: courseId,
                     title: module.title,
@@ -178,7 +203,11 @@ window.PortalData = {
                     duration: "Not specified in source",
                     frequency: "Not specified in source",
                     link: `required-training.html?course=${encodeURIComponent(courseId)}`,
-                    roles: module.roleIds,
+                    roles: assignment.role ? [assignment.role] : (module.roleIds || []),
+                    assignment,
+                    division: assignment.division,
+                    branch: assignment.branch,
+                    role: assignment.role,
                     sourceContentIds: module.sourceContentIds,
                     tqsRequirementIds: module.tqsRequirementIds || [],
                     originalDocuments: [...new Set(sourceItems.map(item => item.documentId))],
@@ -195,7 +224,8 @@ window.PortalData = {
                 id: module.id,
                 title: module.title,
                 courseId: course.id,
-                roleIds: module.roleIds,
+                roleIds: course.roles,
+                assignment: course.assignment,
                 tqsRequirementIds: course.tqsRequirementIds,
                 sourceContentIds: module.sourceContentIds
             }));

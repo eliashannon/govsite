@@ -4,7 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | Training Courses</title>
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261110-3"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/training-courses/required-training.css">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261110-3"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/training-courses/required-training.css?v=20261118-4">
 </head>
 <body data-page="required-training">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -42,6 +42,18 @@
     <div class="catalog-search">
       <label for="trainingSearch">Search courses</label>
       <div class="catalog-search-input"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input id="trainingSearch" type="search" placeholder="Search courses by title, category, or keyword…"></div>
+    </div>
+    <div class="catalog-filter">
+      <label for="trainingDivision">Division</label>
+      <select id="trainingDivision" class="form-control"><option value="">All divisions</option></select>
+    </div>
+    <div class="catalog-filter">
+      <label for="trainingBranch">Branch</label>
+      <select id="trainingBranch" class="form-control" disabled><option value="">All branches</option></select>
+    </div>
+    <div class="catalog-filter">
+      <label for="trainingRole">Role</label>
+      <select id="trainingRole" class="form-control" disabled><option value="">All roles</option></select>
     </div>
     <div class="catalog-filter">
       <label for="trainingCategory">Category</label>
@@ -121,5 +133,5 @@
   </div>
 </dialog>
 </main></div></div>
-<script src="assets/shared/js/data.js?v=20261118-2"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-2"></script><script src="assets/pages/training-courses/required-training.js?v=20261118-3"></script>
+<script src="assets/shared/js/data.js?v=20261118-3"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-2"></script><script src="assets/pages/training-courses/required-training.js?v=20261118-4"></script>
 </body></html>

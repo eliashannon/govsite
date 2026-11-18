@@ -36,6 +36,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const moduleDialog = document.getElementById("moduleDialog");
     const moduleForm = document.getElementById("moduleForm");
     const moduleDialogNotice = document.getElementById("moduleDialogNotice");
+    const assignmentDialog = document.getElementById("assignmentDialog");
+    const assignmentForm = document.getElementById("assignmentForm");
+    const assignmentDialogNotice = document.getElementById("assignmentDialogNotice");
+    const assignmentDivision = document.getElementById("assignmentDivision");
+    const assignmentBranch = document.getElementById("assignmentBranch");
+    const assignmentRole = document.getElementById("assignmentRole");
+    let pendingApprovalModuleId = null;
     const selectedContentIds = new Set();
     const maximumFileSize = 75 * 1024 * 1024;
     const state = {
@@ -64,6 +71,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         target.hidden = !message;
         target.classList.toggle("is-error", isError);
     };
+    const isMasterUser = () => profile.isMaster === true
+        && profile.email.toLowerCase() === "elias@navy.mil";
+    const requireMaster = target => {
+        if (isMasterUser()) return true;
+        showNotice("Only the master account can approve or publish training courses.", true, target);
+        return false;
+    };
     const statusClass = status => ({
         "Processed": "status-processed",
         "Needs review": "status-review",
@@ -73,6 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         "Pending Review": "status-pending",
         "Approved": "status-approved",
         "Rejected": "status-rejected",
+        "Pending Approval": "status-pending",
         "Unpublished": "status-unpublished",
         "Published": "status-published"
     }[status] || "");
@@ -266,25 +281,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         moduleList.innerHTML = [...state.modules]
             .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
             .map(module => {
-                const validSourceCount = module.sourceContentIds.filter(id =>
+                const sourceContentIds = Array.isArray(module.sourceContentIds) ? module.sourceContentIds : [];
+                const roleIds = Array.isArray(module.roleIds) ? module.roleIds : [];
+                const validSourceCount = sourceContentIds.filter(id =>
                     state.sourceContent.some(item => item.id === id) && findReview(id).status === "Approved"
                 ).length;
-                const isPublished = module.publicationStatus === "Published" && validSourceCount === module.sourceContentIds.length;
+                const isPublished = module.publicationStatus === "Published" && validSourceCount === sourceContentIds.length;
+                const assignment = module.assignment || {};
+                const assignmentLabel = [assignment.division || module.division, assignment.branch || module.branch, assignment.role || roleIds.join(", ")]
+                    .filter(Boolean).join(" / ");
+                const approvalStatus = module.approvalStatus
+                    || (isPublished ? "Approved" : module.publicationStatus === "Pending Approval" ? "Pending Approval" : "Unpublished");
                 return `
                     <article class="module-card">
                         <div class="module-card-copy">
                             <h3>${escapeHtml(module.title)}</h3>
                             <p>${escapeHtml(module.category)} · Created ${escapeHtml(dateTime(module.createdAt))}</p>
-                            <p class="module-source-count">${validSourceCount} of ${module.sourceContentIds.length} source items remain approved · Roles: ${escapeHtml(module.roleIds.join(", "))}</p>
+                            <p class="module-source-count">${validSourceCount} of ${sourceContentIds.length} source items remain approved${assignmentLabel ? ` · Assignment: ${escapeHtml(assignmentLabel)}` : ""}</p>
                             <div class="module-card-meta">${statusBadge(isPublished ? "Published" : "Unpublished")}
-                                <span>${module.tqsRequirementIds.length} linked TQS ${module.tqsRequirementIds.length === 1 ? "requirement" : "requirements"}</span>
+                                ${!isPublished ? statusBadge(approvalStatus) : ""}
+                                <span>${(module.tqsRequirementIds || []).length} linked TQS ${(module.tqsRequirementIds || []).length === 1 ? "requirement" : "requirements"}</span>
                             </div>
                         </div>
                         <div class="module-actions">
                             <button class="manager-small-button" type="button" data-preview-module="${escapeHtml(module.id)}">Preview sources</button>
                             ${isPublished
                                 ? `<button class="manager-small-button" type="button" data-unpublish-module="${escapeHtml(module.id)}">Unpublish</button>`
-                                : `<button class="manager-small-button" type="button" data-publish-module="${escapeHtml(module.id)}" ${validSourceCount !== module.sourceContentIds.length ? "disabled" : ""}>Publish locally</button>`}
+                                : `<button class="manager-small-button" type="button" data-publish-module="${escapeHtml(module.id)}" ${validSourceCount !== sourceContentIds.length || !sourceContentIds.length ? "disabled" : ""}>Approve &amp; assign</button>`}
                         </div>
                     </article>`;
             }).join("");
@@ -376,6 +399,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     const updateReviewStatus = async (contentIds, status) => {
+        if (!requireMaster()) return;
         const validIds = [...new Set(contentIds)].filter(id => state.sourceContent.some(item => item.id === id));
         if (!validIds.length) return;
         const reviewedAt = new Date().toISOString();
@@ -523,22 +547,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const openModuleDialog = () => {
         const sourceIds = [...selectedContentIds];
+        if (!requireMaster()) return;
         if (!selectedAreApproved()) {
             showNotice("Select one or more approved source items before creating a module.", true);
             return;
         }
-        const roleIds = [...new Set(window.PortalData.courses
-            .filter(course => !course.id.startsWith("HANDBOOK-") && Array.isArray(course.roles))
-            .flatMap(course => course.roles))].sort((left, right) => left.localeCompare(right));
         const tqsRequirements = window.PortalData.courses.filter(course =>
             course.requirement === "Required" && !course.id.startsWith("HANDBOOK-")
         );
         document.getElementById("moduleSourceSummary").textContent =
             `${sourceIds.length} approved item(s) will be included as extracted. Their source text cannot be edited in this manager.`;
         document.getElementById("moduleTitle").value = "";
-        document.getElementById("moduleRoleOptions").innerHTML = roleIds.map(role => `
-            <label class="module-option"><input type="checkbox" name="moduleRole" value="${escapeHtml(role)}"><span>${escapeHtml(role)}</span></label>
-        `).join("");
         document.getElementById("moduleTqsOptions").innerHTML = tqsRequirements.map(course => `
             <label class="module-option"><input type="checkbox" name="moduleTqs" value="${escapeHtml(course.id)}"><span>${escapeHtml(course.id)} — ${escapeHtml(course.title)}</span></label>
         `).join("");
@@ -548,12 +567,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const createModule = async event => {
         event.preventDefault();
+        if (!requireMaster(moduleDialogNotice)) return;
         const title = document.getElementById("moduleTitle").value.trim();
-        const roleIds = [...moduleForm.querySelectorAll('input[name="moduleRole"]:checked')].map(input => input.value);
         const tqsRequirementIds = [...moduleForm.querySelectorAll('input[name="moduleTqs"]:checked')].map(input => input.value);
         const sourceContentIds = [...selectedContentIds].filter(id => findReview(id).status === "Approved");
-        if (!title || !roleIds.length || !sourceContentIds.length) {
-            showNotice("Enter a module title, select at least one role, and keep at least one approved source item selected.", true, moduleDialogNotice);
+        if (!title || !sourceContentIds.length) {
+            showNotice("Enter a module title and keep at least one approved source item selected.", true, moduleDialogNotice);
             return;
         }
         const categories = [...new Set(sourceContentIds.map(id => findMetadata(id)?.category).filter(Boolean))];
@@ -562,11 +581,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             title,
             category: categories.length === 1 ? categories[0] : "Handbook-based",
             sourceContentIds,
-            roleIds,
+            roleIds: [],
             tqsRequirementIds,
             createdAt: new Date().toISOString(),
             createdBy: profile.email,
-            publicationStatus: "Unpublished",
+            approvalStatus: "Pending Approval",
+            approvedAt: null,
+            approvedBy: null,
+            assignment: null,
+            publicationStatus: "Pending Approval",
             publishedAt: null
         };
         try {
@@ -575,43 +598,120 @@ document.addEventListener("DOMContentLoaded", async () => {
             sourceContentIds.forEach(id => selectedContentIds.delete(id));
             moduleDialog.close();
             render();
-            showNotice(`Module "${module.title}" saved as unpublished. Publish it explicitly after reviewing its source links.`);
+            showNotice(`Draft "${module.title}" is pending master approval.`);
         } catch (error) {
             console.error("Unable to save the training module.", error);
             showNotice(error instanceof Error ? error.message : String(error), true, moduleDialogNotice);
         }
     };
 
-    const changePublication = async (moduleId, shouldPublish) => {
+    const openAssignmentDialog = moduleId => {
+        if (!requireMaster(assignmentDialogNotice)) return;
         const module = state.modules.find(item => item.id === moduleId);
         if (!module) return;
-        if (shouldPublish) {
-            const allApproved = module.sourceContentIds.length > 0 && module.sourceContentIds.every(id =>
-                state.sourceContent.some(item => item.id === id) && findReview(id).status === "Approved"
-            );
-            if (!allApproved) {
-                showNotice("This module cannot be published until every source item is available and approved.", true);
-                return;
-            }
-            if (!module.roleIds.length) {
-                showNotice("This module cannot be published until at least one role is linked.", true);
-                return;
-            }
+        const sourceContentIds = Array.isArray(module.sourceContentIds) ? module.sourceContentIds : [];
+        const allApproved = sourceContentIds.length > 0 && sourceContentIds.every(id =>
+            state.sourceContent.some(item => item.id === id) && findReview(id).status === "Approved"
+        );
+        if (!allApproved) {
+            showNotice("This course cannot be approved until every source item is available and approved.", true);
+            return;
+        }
+        pendingApprovalModuleId = moduleId;
+        const hierarchy = window.PortalData.organizationHierarchy;
+        assignmentDivision.innerHTML = '<option value="">Select Division</option>' + Object.keys(hierarchy).map(division =>
+            `<option value="${escapeHtml(division)}">${escapeHtml(division)}</option>`
+        ).join("");
+        assignmentBranch.innerHTML = '<option value="">Select Branch</option>';
+        assignmentBranch.disabled = true;
+        assignmentRole.innerHTML = '<option value="">Select Role</option>';
+        assignmentRole.disabled = true;
+        assignmentForm.reset();
+        showNotice("", false, assignmentDialogNotice);
+        assignmentDialog.showModal();
+    };
+
+    const populateAssignmentBranches = () => {
+        const hierarchy = window.PortalData.organizationHierarchy;
+        const branches = hierarchy[assignmentDivision.value] || {};
+        assignmentBranch.innerHTML = '<option value="">Select Branch</option>' + Object.keys(branches).map(branch =>
+            `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`
+        ).join("");
+        assignmentBranch.disabled = !assignmentDivision.value;
+        assignmentRole.innerHTML = '<option value="">Select Role</option>';
+        assignmentRole.disabled = true;
+    };
+
+    const populateAssignmentRoles = () => {
+        const roles = window.PortalData.organizationHierarchy[assignmentDivision.value]?.[assignmentBranch.value] || [];
+        assignmentRole.innerHTML = '<option value="">Select Role</option>' + roles.map(role =>
+            `<option value="${escapeHtml(role)}">${escapeHtml(role)}</option>`
+        ).join("");
+        assignmentRole.disabled = !assignmentBranch.value;
+    };
+
+    const approveAndPublishModule = async event => {
+        event.preventDefault();
+        if (!requireMaster(assignmentDialogNotice)) return;
+        const module = state.modules.find(item => item.id === pendingApprovalModuleId);
+        const {value: division} = assignmentDivision;
+        const {value: branch} = assignmentBranch;
+        const {value: role} = assignmentRole;
+        const hierarchy = window.PortalData.organizationHierarchy;
+        if (!module || !division || !branch || !role || !hierarchy[division]?.[branch]?.includes(role)) {
+            showNotice("Select a valid Division, Branch, and Role before approving this course.", true, assignmentDialogNotice);
+            return;
+        }
+        const sourceContentIds = Array.isArray(module.sourceContentIds) ? module.sourceContentIds : [];
+        const allApproved = sourceContentIds.length > 0 && sourceContentIds.every(id =>
+            state.sourceContent.some(item => item.id === id) && findReview(id).status === "Approved"
+        );
+        if (!allApproved) {
+            showNotice("This course cannot be approved until every source item is available and approved.", true, assignmentDialogNotice);
+            return;
         }
         const changedAt = new Date().toISOString();
         const updated = {
             ...module,
-            publicationStatus: shouldPublish ? "Published" : "Unpublished",
-            publishedAt: shouldPublish ? changedAt : null,
-            unpublishedAt: shouldPublish ? null : changedAt
+            approvalStatus: "Approved",
+            approvedAt: changedAt,
+            approvedBy: profile.email,
+            assignment: {division, branch, role},
+            division,
+            branch,
+            role,
+            roleIds: [role],
+            publicationStatus: "Published",
+            publishedAt: changedAt,
+            unpublishedAt: null
         };
         try {
             await syncPublishedState([updated]);
-            showNotice(shouldPublish
-                ? `Published "${updated.title}" to this browser's training catalog. It is not deployed to other users.`
-                : `Unpublished "${updated.title}" from this browser's training catalog.`);
+            assignmentDialog.close();
+            pendingApprovalModuleId = null;
+            showNotice(`Approved and published "${updated.title}" for ${division} / ${branch} / ${role} in this browser's training catalog.`);
         } catch (error) {
-            console.error("Unable to update module publication status.", error);
+            console.error("Unable to approve and publish the training course.", error);
+            showNotice(error instanceof Error ? error.message : String(error), true, assignmentDialogNotice);
+        }
+    };
+
+    const unpublishModule = async moduleId => {
+        if (!requireMaster()) return;
+        const module = state.modules.find(item => item.id === moduleId);
+        if (!module) return;
+        const changedAt = new Date().toISOString();
+        const updated = {
+            ...module,
+            publicationStatus: "Unpublished",
+            publishedAt: null,
+            unpublishedAt: changedAt
+        };
+        try {
+            await syncPublishedState([updated]);
+            showNotice(`Unpublished "${updated.title}" from this browser's training catalog.`);
+        } catch (error) {
+            console.error("Unable to unpublish the training course.", error);
             showNotice(error instanceof Error ? error.message : String(error), true);
         }
     };
@@ -629,8 +729,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("previewMetadata").innerHTML = [
             ["Module ID", module.id],
             ["Category", module.category],
-            ["Roles", module.roleIds.join(", ")],
-            ["TQS links", module.tqsRequirementIds.join(", ") || "None"],
+            ["Assignment", module.assignment
+                ? `${module.assignment.division} / ${module.assignment.branch} / ${module.assignment.role}`
+                : "Not assigned"],
+            ["Approval", module.approvalStatus || "Pending Approval"],
+            ["TQS links", (module.tqsRequirementIds || []).join(", ") || "None"],
             ["Source items", `${sources.length} of ${module.sourceContentIds.length}`],
             ["Publication", module.publicationStatus]
         ].map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("");
@@ -776,11 +879,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         const publishButton = event.target.closest("[data-publish-module]");
         if (publishButton) {
-            changePublication(publishButton.dataset.publishModule, true);
+            openAssignmentDialog(publishButton.dataset.publishModule);
             return;
         }
         const unpublishButton = event.target.closest("[data-unpublish-module]");
-        if (unpublishButton) changePublication(unpublishButton.dataset.unpublishModule, false);
+        if (unpublishButton) unpublishModule(unpublishButton.dataset.unpublishModule);
     });
     document.getElementById("exportPackageButton").addEventListener("click", exportPackage);
     document.getElementById("closeModuleDialog").addEventListener("click", () => moduleDialog.close());
@@ -792,6 +895,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         createModule(event).catch(error => {
             console.error("Unable to create the training module.", error);
             showNotice(error instanceof Error ? error.message : String(error), true, moduleDialogNotice);
+        });
+    });
+    assignmentDivision.addEventListener("change", populateAssignmentBranches);
+    assignmentBranch.addEventListener("change", populateAssignmentRoles);
+    document.getElementById("closeAssignmentDialog").addEventListener("click", () => assignmentDialog.close());
+    document.getElementById("cancelAssignmentButton").addEventListener("click", () => assignmentDialog.close());
+    assignmentDialog.addEventListener("click", event => {
+        if (event.target === assignmentDialog) assignmentDialog.close();
+    });
+    assignmentForm.addEventListener("submit", event => {
+        approveAndPublishModule(event).catch(error => {
+            console.error("Unable to approve and publish the training course.", error);
+            showNotice(error instanceof Error ? error.message : String(error), true, assignmentDialogNotice);
         });
     });
 

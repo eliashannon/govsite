@@ -5,23 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (navigationEntry && navigationEntry.type === 'reload') {
     localStorage.removeItem(selectedRoleStorageKey);
   }
-  const roleCatalog = {
-    'Operations': {
-      'Logistics': ['Operations Supervisor', 'Fleet Coordinator', 'Warehouse Lead'],
-      'Safety & Compliance': ['Safety Officer', 'Compliance Analyst', 'Incident Coordinator'],
-      'Facilities': ['Facilities Manager', 'Maintenance Technician', 'Grounds Supervisor']
-    },
-    'Administration': {
-      'Human Resources': ['HR Generalist', 'Recruitment Specialist', 'Benefits Coordinator'],
-      'Finance': ['Accounting Technician', 'Budget Analyst', 'Procurement Specialist'],
-      'Executive Support': ['Executive Assistant', 'Office Manager', 'Program Coordinator']
-    },
-    'Technical Services': {
-      'IT': ['IT Support Analyst', 'Systems Administrator', 'Network Technician'],
-      'Engineering': ['Engineering Technician', 'Project Engineer', 'Quality Engineer'],
-      'Communications': ['Communications Specialist', 'Public Affairs Officer', 'Digital Media Coordinator']
-    }
-  };
+  const roleCatalog = window.PortalData?.organizationHierarchy || {};
 
   const divisionFilter = document.getElementById('divisionFilter');
   const branchFilter = document.getElementById('branchFilter');
@@ -299,6 +283,20 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderRoleResult(roleName) {
     const profile = roleProfiles[roleName];
     if (!profile) {
+      if (roleName !== 'Test Role') {
+        return;
+      }
+      roleResult.hidden = false;
+      roleResultContent.innerHTML = `
+        <div class="role-result-header">
+          <div><span class="badge">${divisionFilter.value}</span><span class="badge badge-secondary" style="margin-left:8px;">${branchFilter.value}</span></div>
+          <div class="filter-actions role-actions">
+            <a href="required-training.html" class="btn btn-primary">View Training Courses →</a>
+          </div>
+        </div>
+        <h2>${roleName}</h2>
+        <p class="role-summary">No role-specific information or courses are preloaded for this test role. Newly approved courses assigned here will appear in Training Courses.</p>
+      `;
       return;
     }
 
