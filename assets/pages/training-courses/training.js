@@ -42,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function loadCourses() {
         try {
+            if (window.PortalDataReady) await window.PortalDataReady;
             const response = await fetch("data/courses.json", { cache: "no-store" });
             if (!response.ok) throw new Error(`Courses could not be loaded (${response.status}).`);
             const data = await response.json();
@@ -57,7 +58,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const localCourses = Object.values(localStore).filter(course =>
                 isPlainObject(course) && course.status === "published" && validateCourse(course)
             );
+            const portalCourses = Array.isArray(window.PortalData?.courses)
+                ? window.PortalData.courses.filter(validateCourse)
+                : [];
             const merged = new Map(courses.map(course => [course.id, course]));
+            portalCourses.forEach(course => merged.set(course.id, course));
             localCourses.forEach(course => merged.set(course.id, course));
             courses = [...merged.values()];
             if (courses.length === 0) throw new Error("No valid courses were found.");

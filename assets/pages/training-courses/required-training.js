@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!Array.isArray(data?.courses)) return window.PortalData?.courses || [];
             const portalCourses = window.PortalData?.courses || [];
             const portalById = new Map(portalCourses.map(course => [course.id, course]));
-            return data.courses.map(course => {
+            const builtIn = data.courses.map(course => {
                 const portalCourse = portalById.get(course.id) || {};
                 return {
                     ...portalCourse,
@@ -18,6 +18,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                     roles: portalCourse.roles || []
                 };
             });
+            const merged = new Map(builtIn.map(course => [course.id, course]));
+            portalCourses.forEach(course => merged.set(course.id, course));
+            return [...merged.values()];
         } catch (error) {
             console.error("Unable to load built-in course JSON.", error);
             return window.PortalData?.courses || [];

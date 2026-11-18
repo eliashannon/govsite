@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const dialog = document.getElementById("courseDraftDialog");
     const previewDialog = document.getElementById("coursePreviewDialog");
     let draft = null;
-    let publishedCourseIds = new Set();
 
     const slug = value => String(value || "").toLowerCase().trim()
         .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -54,6 +53,81 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!course) return;
         course.status = "archived";
         saveLocalCourse(course);
+    }
+
+    function formatModuleSourceText(module) {
+        const lines = [`${module.sourceModuleNumber ? `${module.sourceModuleNumber} ` : ""}${module.title || "Untitled module"}`];
+        (Array.isArray(module.content) ? module.content : []).forEach(block => {
+            if (!block || typeof block !== "object") return;
+            if (block.type === "heading" || block.type === "paragraph") lines.push(block.text || "");
+            else if (block.type === "list") lines.push(...(Array.isArray(block.items) ? block.items : []));
+            else if (block.type === "callout") lines.push([block.title, block.text].filter(Boolean).join(": "));
+            else if (block.type === "link") lines.push(`${block.text || "Link"}: ${block.url || ""}`);
+            else if (block.type === "image") lines.push(block.alt || "Image");
+            else if (block.type === "table") {
+                if (Array.isArray(block.headers)) lines.push(block.headers.join(" | "));
+                (Array.isArray(block.rows) ? block.rows : []).forEach(row => {
+                    if (Array.isArray(row)) lines.push(row.join(" | "));
+                });
+            }
+        });
+        return lines.filter(line => typeof line === "string" && line.trim()).join("\n\n");
+    }
+
+    async function sendCourseToContentExplorer(course, reviewStatus) {
+        if (!window.TrainingContentStore || !Array.isArray(course.modules) || !course.modules.length) {
+            throw new Error("Content Explorer storage is unavailable or the course has no modules.");
+        }
+        await window.PortalDataReady;
+        const records = course.modules.map((module, index) => {
+            const courseKey = slug(course.id) || "course";
+            const moduleKey = slug(module.id) || String(index + 1);
+            const documentId = `course-json-${courseKey}`;
+            const contentId = `${documentId}-${moduleKey}`;
+            const source = module.source && typeof module.source === "object" ? module.source : {};
+            const originalDocumentName = source.fileName || course.source?.fileName || `${course.id}.json`;
+            const sourceNumber = module.sourceModuleNumber || String(index + 1);
+            return {
+                source: {
+                    id: contentId,
+                    documentId,
+                    originalDocumentName,
+                    pageNumber: Number.isFinite(source.page) ? source.page : null,
+                    sectionNumber: source.section || sourceNumber,
+                    sourceText: formatModuleSourceText(module),
+                    importedCourseId: course.id,
+                    importedModuleId: module.id,
+                    structuredContent: module.content
+                },
+                metadata: {
+                    contentId,
+                    category: course.category || "Imported course",
+                    contentType: "Structured course module",
+                    headingPath: [course.title || course.id, `${sourceNumber} ${module.title || "Untitled module"}`],
+                    confidence: "Needs review",
+                    warnings: ["Imported course JSON. Verify source attribution and content before approval."]
+                },
+                review: {
+                    contentId,
+                    status: reviewStatus,
+                    reviewedAt: reviewStatus === "Approved" ? new Date().toISOString() : null,
+                    reviewer: reviewStatus === "Approved" ? "Master course approval" : ""
+                }
+            };
+        });
+        await window.TrainingContentStore.saveMany({
+            sourceContent: records.map(item => item.source),
+            organizationMetadata: records.map(item => item.metadata),
+            reviews: records.map(item => item.review)
+        });
+        window.dispatchEvent(new CustomEvent("training-content-imported", {
+            detail: {
+                sourceContent: records.map(item => item.source),
+                organizationMetadata: records.map(item => item.metadata),
+                reviews: records.map(item => item.review)
+            }
+        }));
+        return records.length;
     }
 
     const saveDraftStore = () => {
@@ -748,7 +822,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showDraftNotice("Draft saved in browser storage only. It is not an authoritative or secure repository.");
     };
 
-    const statusTransition = status => {
+    const statusTransition = async status => {
         if (!draft) return;
         if (status === "published" && draft.status !== "approved") {
             showDraftNotice("Publishing requires an approved course.", true);
@@ -781,6 +855,18 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("courseDraftStatus").value = status;
         }
         saveDraftStore();
+        if (status === "published") {
+            try {
+                const count = await sendCourseToContentExplorer(canonicalCourse(), "Approved");
+                renderSavedLocalCourses();
+                showDraftNotice(`Published "${draft.title}" to this browser's course catalog and added ${count} approved module source(s) to Content Explorer.`);
+                return;
+            } catch (error) {
+                console.error("The course was saved locally but could not be added to Content Explorer.", error);
+                showDraftNotice(`The course was published locally, but Content Explorer could not be updated: ${error.message}`, true);
+                return;
+            }
+        }
         validateDraftCourse();
         showDraftNotice(`Course status set to ${draft.status}.`);
     };
@@ -852,10 +938,14 @@ document.addEventListener("DOMContentLoaded", () => {
         validateDraftCourse();
     });
     document.getElementById("saveCourseDraftButton").addEventListener("click", saveDraft);
-    document.getElementById("reviewCourseDraftButton").addEventListener("click", () => statusTransition("needs-review"));
-    document.getElementById("approveCourseDraftButton").addEventListener("click", () => statusTransition("approved"));
-    document.getElementById("publishCourseDraftButton").addEventListener("click", () => statusTransition("published"));
-    document.getElementById("archiveCourseDraftButton").addEventListener("click", () => statusTransition("archived"));
+    document.getElementById("reviewCourseDraftButton").addEventListener("click", () => statusTransition("needs-review")
+        .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to submit for review.", true)));
+    document.getElementById("approveCourseDraftButton").addEventListener("click", () => statusTransition("approved")
+        .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to approve course.", true)));
+    document.getElementById("publishCourseDraftButton").addEventListener("click", () => statusTransition("published")
+        .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to publish course.", true)));
+    document.getElementById("archiveCourseDraftButton").addEventListener("click", () => statusTransition("archived")
+        .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to archive course.", true)));
     document.getElementById("exportCourseDraftButton").addEventListener("click", () => {
         if (!draft) return;
         if (!["approved","published"].includes(draft.status)) {
@@ -961,12 +1051,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 throw new Error("The JSON does not contain a valid course object.");
             }
             const normalized = normalizeParsedDraft(course);
-            normalized.status = ["draft","needs-review","approved","published","archived"].includes(normalized.status)
-                ? normalized.status : "draft";
+            normalized.status = "draft";
             saveLocalCourse(normalized);
+            let explorerCount = 0;
+            if (document.getElementById("sendImportToExplorer").checked) {
+                explorerCount = await sendCourseToContentExplorer(normalized, "Pending Review");
+            }
             renderSavedLocalCourses();
             openDraftEditor(normalized);
-            showDraftNotice(`Imported local course ${normalized.id}.`);
+            showDraftNotice(explorerCount
+                ? `Imported ${normalized.id} as a draft and sent ${explorerCount} module source(s) to Content Explorer for review.`
+                : `Imported ${normalized.id} as a draft.`);
         } catch (error) {
             showDraftNotice(error instanceof Error ? error.message : "Unable to import course JSON.", true);
         } finally {
@@ -974,15 +1069,5 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    fetch("data/courses.json").then(response => {
-        if (!response.ok) throw new Error("Existing course IDs could not be checked.");
-        return response.json();
-    }).then(data => {
-        if (Array.isArray(data?.courses)) {
-            data.courses.forEach(course => {
-                if (typeof course?.id === "string") publishedCourseIds.add(course.id);
-            });
-        }
-    }).catch(error => console.error("Unable to load existing course IDs for duplicate validation.", error));
     renderSavedLocalCourses();
 });

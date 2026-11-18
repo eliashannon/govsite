@@ -368,6 +368,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderModules();
     };
 
+    window.addEventListener("training-content-imported", event => {
+        const {sourceContent = [], organizationMetadata = [], reviews = []} = event.detail || {};
+        const mergeBy = (target, incoming, key) => {
+            incoming.forEach(record => {
+                const index = target.findIndex(item => item[key] === record[key]);
+                if (index < 0) target.push(record);
+                else target[index] = record;
+            });
+        };
+        mergeBy(state.sourceContent, sourceContent, "id");
+        mergeBy(state.organizationMetadata, organizationMetadata, "contentId");
+        mergeBy(state.reviews, reviews, "contentId");
+        contentSearch.value = "";
+        categoryFilter.value = "All";
+        reviewFilter.value = "All";
+        render();
+        showNotice(`${sourceContent.length} course module source(s) added to Content Explorer.`);
+    });
+
     const openOriginal = async (documentId, pageNumber = null, shouldDownload = false) => {
         try {
             const storedFile = await store.getOriginal(documentId);

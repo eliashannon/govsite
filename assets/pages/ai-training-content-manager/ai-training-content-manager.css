@@ -143,6 +143,8 @@
 .prototype-storage-description{margin:0 20px 10px;color:var(--text-secondary);font-size:12px}
 .prototype-course-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 20px 12px}
 .prototype-course-toolbar .btn{font-size:12px}
+.import-to-explorer-option{display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:12px}
+.import-to-explorer-option input{accent-color:var(--blue-600)}
 .prototype-course-storage-panel>label{display:block;margin:0 20px 6px;color:var(--text-secondary);font-size:12px;font-weight:600}
 #savedLocalCourses{width:calc(100% - 40px);margin:0 20px;height:auto}
 .course-preview-content-block img{max-height:320px;border:1px solid var(--border)}

@@ -198,7 +198,35 @@ window.PortalData = {
                     id: courseId,
                     title: module.title,
                     description: sourceItems.map(item => item.sourceText).join("\n\n"),
+                    shortDescription: `Approved local prototype course: ${module.title}`,
                     category: module.category || "Handbook-based",
+                    durationMinutes: Number(module.durationMinutes) || 10,
+                    difficulty: module.difficulty || "Beginner",
+                    version: module.version || "1.0",
+                    learningObjectives: Array.isArray(module.learningObjectives) ? module.learningObjectives : [],
+                    roleAssignments: assignment.role ? [{
+                        divisionId: String(assignment.division || "").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
+                        branchId: String(assignment.branch || "").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
+                        roleId: String(assignment.role || "").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
+                        required: module.requirement !== "Optional"
+                    }] : [],
+                    status: "published",
+                    source: {fileName: sourceItems[0]?.originalDocumentName || ""},
+                    modules: [{
+                        id: `${courseId}-module-1`,
+                        title: module.title,
+                        order: 1,
+                        estimatedMinutes: Number(module.durationMinutes) || 10,
+                        learningObjectives: Array.isArray(module.learningObjectives) ? module.learningObjectives : [],
+                        content: sourceItems.flatMap(item => Array.isArray(item.structuredContent)
+                            ? item.structuredContent
+                            : [{type:"paragraph", text:item.sourceText}]),
+                        source: {
+                            fileName: sourceItems[0]?.originalDocumentName || "",
+                            ...(sourceItems[0]?.pageNumber ? {page:sourceItems[0].pageNumber} : {}),
+                            ...(sourceItems[0]?.sectionNumber ? {section:sourceItems[0].sectionNumber} : {})
+                        }
+                    }],
                     requirement: "Optional",
                     duration: "Not specified in source",
                     frequency: "Not specified in source",
