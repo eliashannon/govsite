@@ -1,0 +1,179 @@
+COURSE
+Course ID: workplace-ergonomics-basics
+Course Title: Workplace Ergonomics and Safe Computer Use
+Short Description: An introductory course on safe and comfortable computer workstation practices.
+Category: Workplace Safety
+Difficulty: Beginner
+Duration Minutes: 45
+Version: 1.0
+Division: Operations
+Branch: Administrative Support
+Role: Office Support Specialist
+
+COURSE DESCRIPTION
+This course introduces basic ergonomic principles for personnel who use computers and other electronic equipment during their workday. It explains how to arrange a workstation, recognize common discomfort indicators, and report equipment or environmental concerns.
+
+This synthetic handbook is intended only for testing the training content manager and does not establish official organizational policy.
+
+LEARNING OBJECTIVES
+Identify the primary components of an ergonomic workstation.
+Adjust a workstation to support a neutral working posture.
+Recognize common signs of discomfort related to workstation setup.
+Apply safe computer-use habits during the workday.
+Report unresolved workstation concerns through the appropriate organizational process.
+SOURCE INFORMATION
+Source File Name: synthetic-workplace-ergonomics-handbook.docx
+Source Type: Synthetic test handbook
+Source Classification: UNCLASSIFIED
+Source Version: 1.0
+Prepared For: AI Training Content Manager testing
+Author: Synthetic Training Content
+Date: 2026-11-18
+
+MODULE 1.1: Introduction to Ergonomics
+MODULE OBJECTIVES
+Define workplace ergonomics.
+Explain why workstation setup matters.
+Identify the relationship between work habits and physical comfort.
+CONTENT
+Ergonomics is the practice of fitting work activities, tools, and environments to the people who use them. A well-arranged workspace can help personnel work more comfortably and perform routine tasks more effectively.
+
+Computer-based work often involves repeated movements and extended periods of sitting or standing. Small adjustments to the workstation and regular changes in position can support safer work habits.
+
+KEY POINT
+Ergonomics is not limited to expensive equipment. Many improvements can be made by adjusting the position of existing equipment and changing work habits.
+
+LIST OF BASIC ERGONOMIC PRINCIPLES
+Keep frequently used items within comfortable reach.
+Avoid holding the neck or shoulders in one position for extended periods.
+Adjust the workstation to fit the individual user.
+Change position periodically.
+Report equipment problems that cannot be corrected through normal adjustments.
+REFERENCES
+General ergonomic information: https://www.osha.gov/ergonomics [1]
+Computer workstation guidance: https://www.osha.gov/etools/computer-workstations [2]
+MODULE 1.2: Workstation Setup
+MODULE OBJECTIVES
+Describe a neutral working posture.
+Position the monitor correctly.
+Adjust the chair, keyboard, and mouse area.
+Identify workstation conditions that may require correction.
+CONTENT
+A workstation should allow the user to maintain a comfortable and neutral posture. The head should remain generally balanced over the shoulders, the shoulders should remain relaxed, and the elbows should remain near the body.
+
+The monitor should be positioned so that the user can view the screen without repeatedly bending the neck forward or looking sharply upward. The keyboard and pointing device should be positioned so the user can operate them without excessive reaching.
+
+WORKSTATION CHECKLIST
+Place the monitor directly in front of the user.
+Position the top portion of the screen near eye level.
+Keep the keyboard and mouse within easy reach.
+Keep the wrists in a comfortable position.
+Adjust the chair so the feet are supported.
+Keep frequently used documents and tools within reach.
+Remove obstacles from the area used to enter and exit the workstation.
+CALLOUT
+Title: Adjustment Before Replacement
+Variant: Info
+
+Before requesting new equipment, check whether the current chair, monitor, keyboard, or mouse can be adjusted to provide a more comfortable working position.
+
+TABLE: BASIC WORKSTATION REVIEW
+4 rows x 3 cols
+Monitor
+Can the screen be viewed without bending the neck?
+Adjust monitor height or viewing distance.
+Chair
+Are the feet supported comfortably?
+Adjust chair height or use an approved footrest.
+Keyboard
+Can the keyboard be used without excessive reaching?
+Move the keyboard closer to the user.
+Mouse
+Is the mouse within comfortable reach?
+Position the mouse beside the keyboard.
+REFERENCES
+Computer workstation checklist: https://www.osha.gov/etools/computer-workstations [2]
+MODULE 1.3: Safe Computer-Use Habits
+MODULE OBJECTIVES
+Explain why position changes are important.
+Identify habits that may reduce unnecessary strain.
+Describe how to organize routine computer tasks.
+CONTENT
+Remaining in one position for a long period may contribute to discomfort. Personnel should vary their position when practical and use natural pauses in the workday to stand, move, or perform another task.
+
+Short pauses should not interfere with mission requirements or scheduled work. The purpose of a position change is to avoid unnecessary static posture and encourage reasonable movement throughout the workday.
+
+RECOMMENDED WORK HABITS
+Look away from the screen periodically.
+Stand or change position during natural task transitions.
+Avoid gripping the mouse unnecessarily tightly.
+Keep frequently used keyboard shortcuts available when appropriate.
+Organize work materials to reduce repeated reaching.
+Report discomfort that continues after reasonable workstation adjustments.
+KEY POINT
+A workstation adjustment is most effective when combined with healthy work habits. Equipment alone does not replace regular attention to posture and movement.
+
+EXAMPLE SCENARIO
+A personnel support specialist notices that the monitor is positioned to the side of the desk. The specialist frequently turns the head while entering information.
+
+The recommended first step is to move the monitor directly in front of the user and adjust its height and viewing distance. If discomfort continues, the specialist should report the concern through the approved workplace process.
+
+MODULE 1.4: Identifying and Reporting Concerns
+MODULE OBJECTIVES
+Recognize common workstation concerns.
+Distinguish between a normal adjustment and an equipment problem.
+Identify information to include when reporting a concern.
+CONTENT
+Common workstation concerns may include an unstable chair, damaged equipment, insufficient workspace, glare on the monitor, or difficulty viewing the screen in a neutral position.
+
+The user should first make reasonable adjustments that are permitted by local procedures. If the concern cannot be corrected safely or if equipment appears damaged, the user should stop using the equipment when necessary and report the issue through the appropriate organizational process.
+
+REPORTING INFORMATION
+When reporting a workstation concern, include:
+
+The location of the workstation.
+The equipment or condition involved.
+The task being performed.
+The adjustment already attempted.
+Whether the concern affects normal work.
+Whether the equipment appears damaged or unsafe.
+CALLOUT
+Title: Do Not Use Damaged Equipment
+Variant: Warning
+
+Do not continue using equipment that is visibly damaged, unstable, or creating an immediate safety concern. Follow the applicable reporting process and notify the responsible support organization.
+
+REPORTING WORKFLOW
+Identify the workstation concern.
+Make a permitted adjustment if the issue is an ordinary setup problem.
+Stop using equipment that appears damaged or unsafe.
+Notify the appropriate supervisor or support organization.
+Document the location and nature of the concern.
+Follow up if the concern remains unresolved.
+REFERENCES
+Workplace safety information: https://www.osha.gov/workplace-safety [3]
+MODULE 1.5: Course Review
+MODULE OBJECTIVES
+Summarize the main principles of ergonomic workstation use.
+Identify one improvement that can be applied to a workstation.
+Explain when a concern should be reported.
+CONTENT
+A safe and comfortable computer workstation begins with an arrangement that fits the user. The monitor, chair, keyboard, mouse, and frequently used materials should be positioned to reduce unnecessary reaching, bending, and extended static posture.
+
+Users should make reasonable adjustments, change position periodically, and report damaged equipment or unresolved concerns through the applicable organizational process.
+
+KNOWLEDGE REVIEW SUMMARY
+Before completing this course, the learner should be able to answer the following questions:
+
+What is the purpose of ergonomics?
+Why should the monitor be positioned directly in front of the user?
+Why are regular position changes useful?
+What information should be included in a workstation concern report?
+When should damaged equipment be removed from use?
+FINAL KEY POINT
+The goal of ergonomic practice is to support a workstation and work routine that are appropriate for the user, the task, and the work environment.
+
+REFERENCES
+General ergonomic information: https://www.osha.gov/ergonomics [1]
+Computer workstation guidance: https://www.osha.gov/etools/computer-workstations [2]
+Workplace safety information: https://www.osha.gov/workplace-safety [3]
