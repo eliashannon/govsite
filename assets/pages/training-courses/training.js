@@ -24,24 +24,17 @@ document.addEventListener("DOMContentLoaded", () => {
         errorBox.append(text, link);
     }
 
-    function isPlainObject(value) {
-        return value !== null && typeof value === "object" && !Array.isArray(value);
-    }
+    const isPlainObject = window.CourseSchema.isObject;
+    const validateCourse = course => window.CourseSchema.validateCourse(course).length === 0;
+    const validatePublishedCourse = course => window.CourseSchema.validateCourse(course, {
+        complete:true, hierarchy:window.PortalData?.organizationHierarchy
+    });
 
-    function validateCourse(course) {
-        if (!isPlainObject(course) || typeof course.id !== "string" || !course.id.trim()) return false;
-        if (typeof course.title !== "string" || !course.title.trim()) return false;
-        if (!Array.isArray(course.modules) || course.modules.length === 0) return false;
-        const moduleIds = new Set();
-        for (const module of course.modules) {
-            if (!isPlainObject(module) || typeof module.id !== "string" || !module.id.trim()) return false;
-            if (typeof module.title !== "string" || !module.title.trim()) return false;
-            if (!Number.isFinite(module.order) || !Number.isFinite(module.estimatedMinutes)) return false;
-            if (!Array.isArray(module.content)) return false;
-            if (moduleIds.has(module.id)) return false;
-            moduleIds.add(module.id);
-        }
-        return true;
+    function publishLocalCourse(course) {
+        if (course.status !== "approved") throw new Error("Only an approved course can be published.");
+        const errors = validatePublishedCourse(course);
+        if (errors.length) throw new Error(`Course validation failed: ${errors.join(" ")}`);
+        return {...course, status:"published"};
     }
 
     async function loadCourses() {
@@ -60,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("Unable to load local prototype courses.", error);
             }
             const localCourses = Object.values(localStore).filter(course =>
-                isPlainObject(course) && course.status === "published" && validateCourse(course)
+                isPlainObject(course) && course.status === "published" && validatePublishedCourse(course).length === 0
             );
             const portalCourses = Array.isArray(window.PortalData?.courses)
                 ? window.PortalData.courses.filter(validateCourse)
@@ -112,6 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (rawContinued.includes(module.id)) continued.push(module.id);
             else break;
         }
+        if (continued.length === course.modules.length && raw.courseCompleted !== true) continued.pop();
 
         const continuedIds = new Set(continued);
         const completed = continued;
@@ -160,21 +154,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return progress.unlockedModuleIds.includes(moduleId);
     }
 
-    function isSafeProtocol(urlValue, allowRelative) {
-        if (typeof urlValue !== "string" || !urlValue.trim()) return false;
-        const value = urlValue.trim();
-        if (/^(javascript|data|vbscript):/i.test(value)) return false;
-        if (/^[a-z][a-z0-9+.-]*:/i.test(value)) {
-            try {
-                const parsed = new URL(value);
-                return parsed.protocol === "https:" || parsed.protocol === "http:";
-            } catch (_) {
-                return false;
-            }
-        }
-        return allowRelative;
-    }
-
     function renderCourseHeader() {
         document.title = `${selectedCourse.title} | Training Portal`;
         document.getElementById("courseTitle").textContent = selectedCourse.title;
@@ -202,9 +181,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const percent = Math.max(0, Math.min(100, Math.round(rawPercent)));
         document.getElementById("courseProgressLabel").textContent = `${percent}%`;
         document.getElementById("courseProgressFill").style.width = `${percent}%`;
+        document.getElementById("courseProgressDetail").textContent = `${completedCount} of ${total} modules continued`;
         const track = document.getElementById("courseProgressBar");
         track.setAttribute("aria-valuenow", String(percent));
         track.setAttribute("aria-valuetext", `${percent}% of course modules completed`);
+        const completion = document.getElementById("courseCompletion");
+        completion.hidden = !progress.courseCompleted;
+        if (progress.courseCompleted) {
+            document.getElementById("courseCompletionTitle").textContent = selectedCourse.title;
+            const returnLink = document.getElementById("courseCompletionReturn");
+            returnLink.href = previewMode ? "ai-training-content-manager.html" : "required-training.html";
+            returnLink.textContent = previewMode ? "Return to Content Explorer" : "Return to Training Courses";
+        }
     }
 
     function renderModuleSidebar() {
@@ -223,18 +211,21 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!unlocked) button.classList.add("locked");
             button.disabled = !unlocked;
             if (current) button.setAttribute("aria-current", "page");
+            const moduleNumber = typeof module.sourceModuleNumber === "string" && module.sourceModuleNumber.trim()
+                ? module.sourceModuleNumber : String(index + 1);
             button.setAttribute("aria-label",
-                `Module ${index + 1} of ${selectedCourse.modules.length}: ${module.title}${completed ? ", completed" : !unlocked ? ", locked" : ""}`);
+                `Module ${moduleNumber}: ${module.title}${current ? ", current" : ""}${completed ? ", completed" : !unlocked ? ", locked" : ""}`);
 
             const position = document.createElement("span");
             position.className = "training-module-position";
-            position.textContent = completed ? "✓" : String(index + 1);
+            position.setAttribute("aria-hidden", "true");
+            position.textContent = completed ? "✓" : !unlocked ? "🔒" : current ? "●" : String(index + 1);
             const title = document.createElement("span");
             title.className = "training-module-title";
-            title.textContent = module.title;
+            title.textContent = `${moduleNumber} ${module.title}`;
             const state = document.createElement("span");
             state.className = "training-module-state";
-            state.textContent = completed ? "Completed" : current ? "Current" : !unlocked ? "Locked" : "Available";
+            state.textContent = current && completed ? "Current · Completed" : current ? "Current module" : completed ? "Completed" : !unlocked ? "Locked" : "Available";
             button.append(position, title, state);
             if (unlocked) button.addEventListener("click", () => navigateToModule(index, true));
             item.append(button);
@@ -318,7 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return callout;
         }
         if (block.type === "link") {
-            if (!isSafeProtocol(block.url, true)) return null;
+            if (!window.CourseSchema.safeUrl(block.url)) return null;
             const link = document.createElement("a");
             link.textContent = typeof block.text === "string" ? block.text : block.url;
             link.href = block.url;
@@ -334,7 +325,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return link;
         }
         if (block.type === "image") {
-            if (!isSafeProtocol(block.src, true)) return null;
+            if (!window.CourseSchema.safeUrl(block.src, true)) return null;
             const image = document.createElement("img");
             image.src = block.src;
             image.alt = typeof block.alt === "string" ? block.alt : "";
@@ -371,6 +362,8 @@ document.addEventListener("DOMContentLoaded", () => {
         renderProgress();
         renderModuleSidebar();
         renderModuleContent();
+        document.getElementById("courseCompletion").focus({preventScroll:true});
+        scrollToCourseTop();
     }
 
     function renderModuleContent() {
@@ -378,13 +371,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const content = document.getElementById("moduleContent");
         content.replaceChildren();
 
+        const moduleLabel = document.createElement("p");
+        moduleLabel.className = "training-module-label";
+        const sourceNumber = typeof module.sourceModuleNumber === "string" && module.sourceModuleNumber.trim()
+            ? module.sourceModuleNumber : String(currentModuleIndex + 1);
+        moduleLabel.textContent = `Module ${sourceNumber}${currentModuleIndex === selectedCourse.modules.length - 1 ? " · Final module" : ""}`;
+        content.append(moduleLabel);
+
         const heading = document.createElement("h2");
         heading.textContent = module.title;
         content.append(heading);
 
+        const objectives = document.createElement("section");
+        objectives.className = "training-module-objectives";
         const objectivesLabel = document.createElement("h3");
         objectivesLabel.textContent = "Module Objectives";
-        content.append(objectivesLabel);
+        objectives.append(objectivesLabel);
         const objectiveList = document.createElement("ul");
         if (Array.isArray(module.learningObjectives)) {
             module.learningObjectives.forEach(objective => {
@@ -394,13 +396,36 @@ document.addEventListener("DOMContentLoaded", () => {
                 objectiveList.append(item);
             });
         }
-        content.append(objectiveList);
+        objectives.append(objectiveList);
+        content.append(objectives);
 
+        const material = document.createElement("section");
+        material.className = "training-material";
+        const materialLabel = document.createElement("h3");
+        materialLabel.textContent = "Training Material";
+        material.append(materialLabel);
         if (Array.isArray(module.content)) {
             module.content.forEach(block => {
                 const element = renderContentBlock(block);
-                if (element) content.append(element);
+                if (element?.tagName === "TABLE") {
+                    const container = document.createElement("div");
+                    container.className = "training-table-scroll";
+                    container.append(element);
+                    material.append(container);
+                } else if (element) material.append(element);
             });
+        }
+        content.append(material);
+
+        if (currentModuleIndex === selectedCourse.modules.length - 1 && !progress.courseCompleted) {
+            const reminder = document.createElement("aside");
+            reminder.className = "training-callout training-callout-info";
+            const title = document.createElement("strong");
+            title.textContent = "Ready to complete?";
+            const text = document.createElement("p");
+            text.textContent = "Review the material above, then select Mark Complete to finish this course.";
+            reminder.append(title, text);
+            content.append(reminder);
         }
 
         // Future test/SQL database integration can be inserted here before handleContinue advances.
@@ -443,18 +468,23 @@ document.addEventListener("DOMContentLoaded", () => {
         content.append(controls);
     }
 
-    function navigateToModule(index, addHistory) {
+    function scrollToCourseTop() {
+        const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        window.scrollTo({top:0, behavior:reducedMotion ? "auto" : "smooth"});
+    }
+
+    function navigateToModule(index, addHistory, recordLastViewed = true) {
         if (!Number.isInteger(index) || index < 0 || index >= selectedCourse.modules.length) return;
         const module = selectedCourse.modules[index];
         if (!isModuleUnlocked(module.id)) {
             const permitted = getFirstIncompleteModule();
             const permittedIndex = selectedCourse.modules.findIndex(item => item.id === permitted.id);
-            navigateToModule(permittedIndex, addHistory);
+            navigateToModule(permittedIndex, addHistory, recordLastViewed);
             return;
         }
         currentModuleIndex = index;
         progress.currentModuleId = module.id;
-        progress.lastViewedModuleId = module.id;
+        if (recordLastViewed) progress.lastViewedModuleId = module.id;
         saveCourseProgress();
         renderModuleSidebar();
         renderModuleContent();
@@ -464,7 +494,7 @@ document.addEventListener("DOMContentLoaded", () => {
         url.searchParams.set("module", module.id);
         if (addHistory) history.pushState({ courseId: selectedCourse.id, moduleId: module.id }, "", url);
         else history.replaceState({ courseId: selectedCourse.id, moduleId: module.id }, "", url);
-        document.getElementById("moduleContent").scrollIntoView({ behavior: "smooth", block: "start" });
+        scrollToCourseTop();
     }
 
     function resetCourseProgress() {
@@ -526,43 +556,72 @@ document.addEventListener("DOMContentLoaded", () => {
             controls.hidden = false;
             const approve = document.getElementById("approvePreviewCourse");
             const reject = document.getElementById("rejectPreviewCourse");
-            approve.hidden = reject.hidden = previewType === "editor";
-            approve.disabled = reject.disabled = previewType === "editor" || selectedCourse.status !== "needs-review";
-            if (previewType === "editor") {
-                document.getElementById("courseReviewNotice").textContent = "Editor preview only. Submit the draft to Content Explorer for approval.";
-            } else if (selectedCourse.status !== "needs-review") {
-                document.getElementById("courseReviewNotice").textContent = `Course status: ${selectedCourse.status}. Submit it for review to change its decision.`;
-            }
-            const decide = async status => {
-                approve.disabled = reject.disabled = true;
-                const notice = document.getElementById("courseReviewNotice");
+            const publish = document.getElementById("publishPreviewCourse");
+            const notice = document.getElementById("courseReviewNotice");
+            const renderReviewControls = () => {
+                approve.hidden = previewType === "editor" || selectedCourse.status !== "needs-review";
+                reject.hidden = previewType === "editor" || !["needs-review", "approved"].includes(selectedCourse.status);
+                publish.hidden = previewType === "editor" || selectedCourse.status !== "approved";
+                approve.disabled = reject.disabled = publish.disabled = false;
+                const errors = previewType === "editor" ? [] : validatePublishedCourse(selectedCourse);
+                approve.disabled = publish.disabled = errors.length > 0;
+                notice.textContent = previewType === "editor"
+                    ? "Editor preview only. Submit the draft to Content Explorer for approval."
+                    : errors.length
+                        ? `Course validation failed: ${errors.join(" ")}`
+                        : `Course status: ${selectedCourse.status}. ${selectedCourse.status === "approved" ? "Publish when ready." : ""}`;
+            };
+            renderReviewControls();
+            const decide = async action => {
+                approve.disabled = reject.disabled = publish.disabled = true;
                 try {
+                    const currentProfile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
+                    if (!currentProfile || currentProfile.isMaster !== true || typeof currentProfile.email !== "string"
+                        || currentProfile.email.toLowerCase() !== "elias@navy.mil") {
+                        throw new Error("Only the master account can approve or publish a course.");
+                    }
                     const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
-                    if (JSON.stringify(records[selectedCourse.id]) !== JSON.stringify(selectedCourse) || selectedCourse.status !== "needs-review") {
+                    if (JSON.stringify(records[selectedCourse.id]) !== JSON.stringify(selectedCourse)) {
                         throw new Error("The course changed since this preview opened. Return to Content Explorer and reopen it.");
                     }
-                    const updated = {...selectedCourse, status: status === "Approved" ? "published" : "rejected"};
+                    if ((action === "approve" && selectedCourse.status !== "needs-review")
+                        || (action === "publish" && selectedCourse.status !== "approved")
+                        || (action === "reject" && !["needs-review", "approved"].includes(selectedCourse.status))) {
+                        throw new Error("This action is not available for the current course status.");
+                    }
+                    if (action !== "reject") {
+                        const errors = validatePublishedCourse(selectedCourse);
+                        if (errors.length) throw new Error(`Course validation failed: ${errors.join(" ")}`);
+                    }
+                    const updated = action === "publish"
+                        ? publishLocalCourse(selectedCourse)
+                        : {...selectedCourse, status: action === "approve" ? "approved" : "rejected"};
                     records[selectedCourse.id] = updated;
                     localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
                     try {
-                        await window.TrainingContentStore.saveMany({reviews: [{
+                        if (action !== "publish") await window.TrainingContentStore.saveMany({reviews: [{
                             contentId: `structured-course-${selectedCourse.id}`,
-                            status, reviewedAt: new Date().toISOString(), reviewer: profile.email
+                            status: action === "approve" ? "Approved" : "Rejected", reviewedAt: new Date().toISOString(), reviewer: profile.email
                         }]});
                     } catch (error) {
                         records[selectedCourse.id] = selectedCourse;
                         localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
                         throw error;
                     }
-                    window.location.href = "ai-training-content-manager.html";
+                    selectedCourse = updated;
+                    renderReviewControls();
                 } catch (error) {
                     console.error("Unable to save the course decision.", error);
                     notice.textContent = error instanceof Error ? error.message : "Unable to save the course decision.";
-                    approve.disabled = reject.disabled = false;
+                    if (!/changed since this preview|Only the master account/.test(notice.textContent)) {
+                        reject.disabled = false;
+                        approve.disabled = publish.disabled = validatePublishedCourse(selectedCourse).length > 0;
+                    }
                 }
             };
-            approve.addEventListener("click", () => decide("Approved"));
-            reject.addEventListener("click", () => decide("Rejected"));
+            approve.addEventListener("click", () => decide("approve"));
+            reject.addEventListener("click", () => decide("reject"));
+            publish.addEventListener("click", () => decide("publish"));
         } else {
         const loaded = await loadCourses();
         if (!loaded) return;
@@ -586,7 +645,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const requestedId = new URLSearchParams(window.location.search).get("module");
         let initialIndex = -1;
-        if (requestedId) {
+        const isReload = performance.getEntriesByType?.("navigation")[0]?.type === "reload";
+        if (requestedId && !isReload) {
             const requestedIndex = selectedCourse.modules.findIndex(module => module.id === requestedId);
             if (requestedIndex >= 0 && isModuleUnlocked(requestedId)) initialIndex = requestedIndex;
         }
@@ -595,7 +655,7 @@ document.addEventListener("DOMContentLoaded", () => {
             initialIndex = selectedCourse.modules.findIndex(module => module.id === permitted.id);
         }
         document.getElementById("resetCourseProgress").addEventListener("click", resetCourseProgress);
-        navigateToModule(initialIndex, false);
+        navigateToModule(initialIndex, false, false);
     }
 
     initialize();

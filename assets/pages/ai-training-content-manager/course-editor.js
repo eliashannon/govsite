@@ -1,4 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
+    let profile;
+    try {
+        profile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
+    } catch (error) {
+        console.error("Unable to read the current account profile.", error);
+    }
+    if (!profile || profile.isMaster !== true || typeof profile.email !== "string"
+        || profile.email.toLowerCase() !== "elias@navy.mil") return;
     const STORAGE_KEY = "trainingManagerCourses";
     const dialog = document.getElementById("courseDraftDialog");
     let draft = null;
@@ -23,15 +31,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return readDraftStore();
     }
 
-    function saveLocalCourse(course) {
+    function saveLocalCourse(course, key = course?.id) {
         if (!course || typeof course.id !== "string") return;
         const records = loadLocalCourses();
-        records[course.id] = course;
+        records[key] = course;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     }
 
     function getLocalCourse(courseId) {
-        return loadLocalCourses()[courseId] || null;
+        const courses = loadLocalCourses();
+        return Object.hasOwn(courses, courseId) ? courses[courseId] : null;
     }
 
     function deleteLocalCourse(courseId) {
@@ -67,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return lines.filter(line => typeof line === "string" && line.trim()).join("\n\n");
     }
 
-    async function sendCourseToContentExplorer(course, reviewStatus) {
+    async function sendCourseToContentExplorer(course, reviewStatus, previousCourseId = "") {
         if (!window.TrainingContentStore || !Array.isArray(course.modules) || !course.modules.length) {
             throw new Error("Content Explorer storage is unavailable or the course has no modules.");
         }
@@ -93,11 +102,13 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             review: {contentId, status: reviewStatus, reviewedAt: null, reviewer: ""}
         }];
+        const oldIds = previousCourseId && previousCourseId !== course.id ? [`structured-course-${previousCourseId}`] : [];
         await window.TrainingContentStore.saveMany({
             sourceContent: records.map(item => item.source),
             organizationMetadata: records.map(item => item.metadata),
             reviews: records.map(item => item.review)
-        });
+        }, oldIds.length ? {sourceContent:oldIds, organizationMetadata:oldIds, reviews:oldIds} : {});
+        if (oldIds.length) window.dispatchEvent(new CustomEvent("training-content-removed", {detail:{contentIds:oldIds}}));
         window.dispatchEvent(new CustomEvent("training-content-imported", {
             detail: {
                 sourceContent: records.map(item => item.source),
@@ -110,16 +121,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const saveDraftStore = () => {
         if (!draft) return;
-        if (!draft.id) {
-            const suggestedId = slug(draft.title);
-            draft.id = suggestedId || `draft-course-${Date.now().toString(36)}`;
-            document.getElementById("courseEditorId").value = draft.id;
+        const key = draft.id || editingCourseId || makeId("draft");
+        const records = loadLocalCourses();
+        if (["__proto__", "constructor", "prototype"].includes(key.toLowerCase())) {
+            throw new Error("Choose a course ID that is not a reserved name.");
         }
-        if (getLocalCourse(draft.id) && draft.id !== editingCourseId) {
+        if (Object.hasOwn(records, key) && key !== editingCourseId) {
             throw new Error("Course ID already exists in local storage. Choose a different ID.");
         }
         const course = canonicalCourse();
-        saveLocalCourse(course);
+        if (editingCourseId && editingCourseId !== key) delete records[editingCourseId];
+        records[key] = course;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        return key;
     };
 
     const showDraftNotice = (message, isError = false) => {
@@ -149,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const normalizeParsedDraft = parsed => {
         const normalized = {...createBlankDraft(parsed.source?.fileName || ""), ...parsed};
         normalized.modules = (Array.isArray(parsed.modules) ? parsed.modules : []).map((module, index) => ({
-            id: module.id || makeId("module"),
+            id: module.id || "",
             sourceModuleNumber: module.sourceModuleNumber || String(index + 1),
             title: module.title || "",
             order: index + 1,
@@ -233,6 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     } else if (property === "level") {
                         current[property] = Number(input.value) || 2;
                     } else current[property] = input.value;
+                    validateDraftCourse();
                 });
                 fieldLabel.append(input);
                 fields.append(fieldLabel);
@@ -269,6 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 : selected === "table" ? {type:selected,headers:[],rows:[[]]}
                 : {type:selected,text:""};
             renderModules();
+            validateDraftCourse();
         });
         renderFields();
 
@@ -282,6 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!window.confirm("Delete this content block?")) return;
             draft.modules[moduleIndex].content.splice(blockIndex, 1);
             renderModules();
+            validateDraftCourse();
         });
         actions.append(deleteButton);
         wrapper.append(select, fields, actions);
@@ -320,6 +337,13 @@ document.addEventListener("DOMContentLoaded", () => {
             card.dataset.moduleIndex = String(moduleIndex);
             const header = document.createElement("div");
             header.className = "course-module-card-header";
+            const idLabel = document.createElement("label");
+            idLabel.textContent = "Module ID";
+            const moduleId = document.createElement("input");
+            moduleId.className = "form-control";
+            moduleId.value = module.id || "";
+            moduleId.addEventListener("input", () => { module.id = moduleId.value.trim(); validateDraftCourse(); });
+            idLabel.append(moduleId);
             const titleLabel = document.createElement("label");
             titleLabel.textContent = "Module title";
             const title = document.createElement("input");
@@ -387,6 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 draft.modules.forEach((item, index) => { item.order = index + 1; });
                 draft.warnings.push("A module split may have ambiguous source attribution; verify source traceability.");
                 renderModules();
+                validateDraftCourse();
             });
             action("Merge", "Merge with the next module", () => {
                 if (moduleIndex === draft.modules.length - 1) return;
@@ -398,14 +423,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 draft.modules.forEach((item, index) => { item.order = index + 1; });
                 draft.warnings.push("Merged modules may have ambiguous source attribution; verify source traceability.");
                 renderModules();
+                validateDraftCourse();
             });
             action("Delete", "Delete module", () => {
                 if (!window.confirm("Delete this module and all of its content blocks?")) return;
                 draft.modules.splice(moduleIndex, 1);
                 draft.modules.forEach((item, index) => { item.order = index + 1; });
                 renderModules();
+                validateDraftCourse();
             });
-            header.append(titleLabel, sourceLabel, durationLabel, actions);
+            header.append(idLabel, titleLabel, sourceLabel, durationLabel, actions);
 
             const objectives = document.createElement("div");
             objectives.className = "course-module-objectives";
@@ -431,6 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
             addBlock.addEventListener("click", () => {
                 module.content.push({type:"paragraph",text:""});
                 renderModules();
+                validateDraftCourse();
             });
             contentEditor.append(addBlock);
             card.append(header, objectives, contentEditor);
@@ -438,69 +466,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    const isValidCourseId = value => /^[a-z0-9][a-z0-9_-]*$/.test(value);
-    const isSafeProtocol = urlValue => {
-        if (typeof urlValue !== "string" || !urlValue.trim()) return false;
-        const value = urlValue.trim();
-        if (/^(javascript|data|vbscript):/i.test(value)) return false;
-        if (/^[a-z][a-z0-9+.-]*:/i.test(value)) {
-            try {
-                const protocol = new URL(value).protocol;
-                return protocol === "http:" || protocol === "https:";
-            } catch (_) {
-                return false;
-            }
-        }
-        return value.startsWith("/") || value.includes("/") || value.includes(".") || true;
-    };
-
     function validateDraftCourse() {
         if (!draft) return {errors:[],warnings:[]};
         readCourseFields();
-        const errors = [];
-        if (!draft.id) errors.push("Missing course ID.");
-        else if (!isValidCourseId(draft.id)) errors.push("Course ID must use lowercase letters, numbers, hyphens, or underscores.");
+        const errors = window.CourseSchema.validateCourse(draft, {complete:true, hierarchy:window.PortalData?.organizationHierarchy});
         if (draft.id && getLocalCourse(draft.id) && draft.id !== editingCourseId) errors.push("Course ID already exists in local storage.");
-        if (!draft.title) errors.push("Missing course title.");
-        if (!draft.description) errors.push("Missing course description.");
-        if (!draft.category) errors.push("Missing course category.");
-        if (!draft.difficulty) errors.push("Missing course difficulty.");
-        if (!Number.isFinite(draft.durationMinutes) || draft.durationMinutes <= 0) errors.push("Duration must be a positive number of minutes.");
-        if (!draft.learningObjectives.length) errors.push("Add at least one course learning objective.");
-        if (!draft.modules.length) errors.push("Add at least one module.");
-        if (!draft.roleAssignments.length) errors.push("Add at least one Division, Branch, and Role assignment.");
-
-        const moduleIds = new Set();
-        draft.modules.forEach((module, index) => {
-            const label = `Module ${module.sourceModuleNumber || index + 1}`;
-            if (!module.id) errors.push(`${label} has no valid module ID.`);
-            if (moduleIds.has(module.id)) errors.push(`Duplicate module ID: ${module.id}.`);
-            moduleIds.add(module.id);
-            if (!module.title) errors.push(`${label} has no title.`);
-            if (!Array.isArray(module.content) || !module.content.length) errors.push(`${label} has no content.`);
-            module.content.forEach((block, blockIndex) => {
-                if (!["heading","paragraph","list","callout","link","image","table"].includes(block.type)) {
-                    errors.push(`${label} block ${blockIndex + 1} has an unsupported type.`);
-                }
-                if (block.type === "link" && !isSafeProtocol(block.url)) errors.push(`${label} contains an unsafe or missing link.`);
-                if (block.type === "image" && (typeof block.src !== "string" || !block.src.trim())) errors.push(`${label} has an image with no source.`);
-            });
-        });
-        const duplicateAssignments = new Set();
-        draft.roleAssignments.forEach(assignment => {
-            const key = `${assignment.divisionId}|${assignment.branchId}|${assignment.roleId}`;
-            if (duplicateAssignments.has(key)) errors.push(`Duplicate role assignment: ${key.replace(/\|/g," / ")}.`);
-            duplicateAssignments.add(key);
-            const hierarchy = window.PortalData?.organizationHierarchy || {};
-            const division = Object.keys(hierarchy).find(name => slug(name) === assignment.divisionId);
-            const branch = division && Object.keys(hierarchy[division]).find(name => slug(name) === assignment.branchId);
-            if (!branch || !hierarchy[division][branch].some(role => slug(role) === assignment.roleId)) {
-                errors.push(`Assignment ${key.replace(/\|/g, " / ")} is not in the organization hierarchy. Remove it and select a valid assignment.`);
-            }
-        });
-        if ((window.PortalData?.courses || []).some(course => course.id.toLowerCase() === draft.id.toLowerCase())) {
-            errors.push("Course ID conflicts with an existing catalog course.");
-        }
         const warnings = [...(draft.warnings || [])];
         if (!draft.source?.fileName) warnings.push("No source filename was recorded.");
         if (!draft.modules.some(module => (module.learningObjectives || []).length)) warnings.push("No module objectives were found.");
@@ -542,14 +512,9 @@ document.addEventListener("DOMContentLoaded", () => {
             order: index + 1,
             estimatedMinutes: Number(module.estimatedMinutes) || 10,
             learningObjectives: [...module.learningObjectives],
-            content: module.content.map(block => {
-                if (!["heading","paragraph","list","callout","link","image","table"].includes(block.type)) return null;
-                if (block.type === "link" && !isSafeProtocol(block.url)) return null;
-                if (block.type === "image" && (!block.src || !block.src.trim())) return null;
-                return JSON.parse(JSON.stringify(block));
-            }).filter(Boolean),
+            content: JSON.parse(JSON.stringify(module.content)),
             source: {
-                fileName: draft.source?.fileName || "",
+                fileName: module.source?.fileName || draft.source?.fileName || "",
                 ...(module.source?.page ? {page:module.source.page} : {}),
                 ...(module.sourceModuleNumber ? {section:module.sourceModuleNumber} : {})
             }
@@ -674,8 +639,17 @@ document.addEventListener("DOMContentLoaded", () => {
         populateAssignmentDivision();
         renderAssignments();
         renderModules();
-        validateDraftCourse();
+        const result = validateDraftCourse();
         dialog.showModal();
+        if (result.errors.length) {
+            const firstMissing = [
+                ["courseEditorId", draft.id], ["courseEditorTitle", draft.title],
+                ["courseEditorDescription", draft.description], ["courseEditorCategory", draft.category],
+                ["courseEditorDifficulty", draft.difficulty], ["courseEditorDuration", draft.durationMinutes],
+                ["courseEditorObjectives", draft.learningObjectives.length]
+            ].find(([, value]) => !value);
+            if (firstMissing) document.getElementById(firstMissing[0]).focus();
+        }
     };
 
     const downloadJson = (data, fileName) => {
@@ -688,31 +662,33 @@ document.addEventListener("DOMContentLoaded", () => {
         window.setTimeout(() => URL.revokeObjectURL(url), 30000);
     };
 
-    const saveDraft = () => {
+    const saveDraft = async () => {
         if (!draft) return;
         readCourseFields();
         if (draft.id && getLocalCourse(draft.id) && draft.id !== editingCourseId) {
             showDraftNotice("Course ID already exists in local storage. Choose a different ID.", true);
             return;
         }
-        if (editingCourseId && draft.id !== editingCourseId) {
-            showDraftNotice("Changing the ID of a saved course is not supported. Create a new draft instead.", true);
-            return;
-        }
-        if (getLocalCourse(draft.id)?.status === "published"
+        const previous = getLocalCourse(editingCourseId);
+        if (previous?.status === "published"
             && !window.confirm("Saving this draft removes the published course from this browser's catalog until it is approved again. Continue?")) return;
+        const previousStore = localStorage.getItem(STORAGE_KEY);
+        const previousEditingId = editingCourseId;
         const previousStatus = draft.status;
         draft.status = "draft";
         document.getElementById("courseDraftStatus").value = "draft";
         try {
-            saveDraftStore();
+            editingCourseId = saveDraftStore();
+            if (previous?.id && previous.id !== draft.id) await removeCourseEntries([previous.id]);
         } catch (error) {
+            if (previousStore === null) localStorage.removeItem(STORAGE_KEY);
+            else localStorage.setItem(STORAGE_KEY, previousStore);
+            editingCourseId = previousEditingId;
             draft.status = previousStatus;
             document.getElementById("courseDraftStatus").value = previousStatus;
             showDraftNotice(error instanceof Error ? error.message : "Unable to save the course draft.", true);
             return;
         }
-        editingCourseId = draft.id;
         window.dispatchEvent(new Event("training-course-changed"));
         validateDraftCourse();
         showDraftNotice("Draft saved in browser storage only. It is not an authoritative or secure repository.");
@@ -726,35 +702,51 @@ document.addEventListener("DOMContentLoaded", () => {
                 showDraftNotice(`Submission blocked: ${result.errors.join(" ")}`, true);
                 return;
             }
-            if (editingCourseId && draft.id !== editingCourseId) {
-                showDraftNotice("Changing the ID of a saved course is not supported. Create a new draft instead.", true);
-                return;
-            }
-            if (getLocalCourse(draft.id)?.status === "published"
+            if (getLocalCourse(editingCourseId)?.status === "published"
                 && !window.confirm("Submitting changes removes the published course from this browser's catalog until it is approved again. Continue?")) return;
         }
-        const previous = getLocalCourse(draft.id);
+        const previousStore = localStorage.getItem(STORAGE_KEY);
+        const previousEditingId = editingCourseId;
+        const previous = getLocalCourse(previousEditingId);
+        const previousStatus = draft.status;
         draft.status = status;
         document.getElementById("courseDraftStatus").value = status;
-        saveDraftStore();
-        editingCourseId = draft.id;
+        try {
+            editingCourseId = saveDraftStore();
+        } catch (error) {
+            draft.status = previousStatus;
+            document.getElementById("courseDraftStatus").value = previousStatus;
+            throw error;
+        }
         if (status === "needs-review") {
             try {
-                await sendCourseToContentExplorer(canonicalCourse(), "Pending Review");
+                await sendCourseToContentExplorer(canonicalCourse(), "Pending Review", previous?.id);
                 renderSavedLocalCourses();
                 dialog.close();
                 showDraftNotice(`"${draft.title}" is in Content Explorer for review. It is not yet in Training Courses.`);
                 return;
             } catch (error) {
-                if (previous) saveLocalCourse(previous);
-                else deleteLocalCourse(draft.id);
-                draft.status = previous?.status || "draft";
+                if (previousStore === null) localStorage.removeItem(STORAGE_KEY);
+                else localStorage.setItem(STORAGE_KEY, previousStore);
+                draft.status = previousStatus;
                 document.getElementById("courseDraftStatus").value = draft.status;
-                editingCourseId = previous ? previous.id : null;
+                editingCourseId = previousEditingId;
                 validateDraftCourse();
                 console.error("Unable to submit the course to Content Explorer.", error);
                 showDraftNotice(`Unable to submit the course: ${error.message}`, true);
                 return;
+            }
+            if (previous?.id && previous.id !== draft.id) {
+                try {
+                    await removeCourseEntries([previous.id]);
+                } catch (error) {
+                    if (previousStore === null) localStorage.removeItem(STORAGE_KEY);
+                    else localStorage.setItem(STORAGE_KEY, previousStore);
+                    draft.status = previousStatus;
+                    document.getElementById("courseDraftStatus").value = previousStatus;
+                    editingCourseId = previousEditingId;
+                    throw error;
+                }
             }
         }
         validateDraftCourse();
@@ -879,14 +871,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const select = document.getElementById("savedLocalCourses");
         select.replaceChildren();
         const records = loadLocalCourses();
-        Object.values(records).forEach(course => {
+        Object.entries(records).forEach(([key, course]) => {
             if (!course || typeof course !== "object") return;
             const option = document.createElement("option");
-            option.value = course.id;
-            option.textContent = `${course.title || course.id} — ${course.status || "draft"} — v${course.version || "1.0"}`;
+            option.value = key;
+            option.textContent = `${course.title || course.id || "Untitled draft"} — ${course.status || "draft"} — v${course.version || "1.0"}`;
             select.append(option);
         });
         const hasSelection = Boolean(select.value);
+        document.getElementById("openSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
@@ -898,6 +891,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     document.getElementById("savedLocalCourses").addEventListener("change", event => {
         const hasSelection = Boolean(event.target.value);
+        document.getElementById("openSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
@@ -905,17 +899,25 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("savedLocalCourses").addEventListener("dblclick", event => {
         const course = getLocalCourse(event.target.value);
         if (course) {
-            openDraftEditor(course, course.id);
-            showDraftNotice(`Opened local course ${course.id}.`);
+            openDraftEditor(course, event.target.value);
+            showDraftNotice(`Opened local course ${course.id || "(no ID yet)"}.`);
         }
     });
-    const removeCourseEntries = async courseIds => {
+    document.getElementById("openSelectedLocalCourseButton").addEventListener("click", () => {
+        const key = document.getElementById("savedLocalCourses").value;
+        const course = getLocalCourse(key);
+        if (course) {
+            openDraftEditor(course, key);
+            showDraftNotice(`Opened local course ${course.id || "(no ID yet)"}.`);
+        } else showDraftNotice("The selected course is no longer available.", true);
+    });
+    async function removeCourseEntries(courseIds) {
         const contentIds = courseIds.map(id => `structured-course-${id}`);
         await window.TrainingContentStore.saveMany({}, {
             sourceContent: contentIds, organizationMetadata: contentIds, reviews: contentIds
         });
         window.dispatchEvent(new CustomEvent("training-content-removed", {detail: {contentIds}}));
-    };
+    }
 
     document.getElementById("deleteSelectedLocalCourseButton").addEventListener("click", async () => {
         const courseId = document.getElementById("savedLocalCourses").value;

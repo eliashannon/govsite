@@ -122,7 +122,7 @@
 .course-assignment-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface-secondary);font-size:12px}
 .course-module-editor{display:grid;gap:10px;margin-bottom:10px}
 .course-module-card{padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-secondary)}
-.course-module-card-header{display:grid;grid-template-columns:minmax(150px,1fr) 120px 120px auto;gap:8px;align-items:end}
+.course-module-card-header{display:grid;grid-template-columns:minmax(130px,1fr) minmax(150px,1fr) 100px 100px auto;gap:8px;align-items:end}
 .course-module-card-actions{display:flex;justify-content:flex-end;gap:5px}
 .course-module-card-actions button{min-height:32px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--blue-700);font-size:11px}
 .course-module-objectives,.course-module-content-editor{margin-top:10px}

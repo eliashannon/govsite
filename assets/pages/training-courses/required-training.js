@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 };
             });
             const merged = new Map(builtIn.map(course => [course.id, course]));
-            portalCourses.forEach(course => merged.set(course.id, course));
+            portalCourses.forEach(course => { if (!merged.has(course.id)) merged.set(course.id, course); });
             return [...merged.values()];
         } catch (error) {
             console.error("Unable to load built-in course JSON.", error);
@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 course && typeof course === "object"
                 && course.status === "published"
                 && typeof course.id === "string"
+                && window.CourseSchema.validateCourse(course, {complete:true, hierarchy:window.PortalData?.organizationHierarchy}).length === 0
             ).map(course => {
                 const hierarchy = window.PortalData?.organizationHierarchy || {};
                 const roleNames = [];

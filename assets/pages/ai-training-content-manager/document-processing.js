@@ -217,7 +217,7 @@
         let callout = null;
 
         const addCourseLink = line => {
-            const linkMatch = line.match(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|[A-Za-z0-9_./-]+)\)/i);
+            const linkMatch = line.match(/^\[([^\]]+)\]\(([^)]*)\)$/);
             if (linkMatch) return {type:"link", text:linkMatch[1], url:linkMatch[2]};
             const bareMatch = line.match(/^(?:(.*?)\s*:\s*)?(https?:\/\/\S+?)(?:\s+\[\d+\])?$/i);
             if (bareMatch) return {type:"link", text:bareMatch[1] || "Open reference", url:bareMatch[2]};
@@ -228,6 +228,17 @@
         lines.forEach(rawLine => {
             const line = safeLine(rawLine);
             if (!line) return;
+            if (currentModule && line.startsWith("[IMAGE] ")) {
+                const image = JSON.parse(line.slice(8));
+                currentModule.content.push({type:"image", src:image.src, alt:image.alt});
+                return;
+            }
+            if (currentModule && line.startsWith("[HEADING] ")) {
+                const heading = JSON.parse(line.slice(10));
+                currentModule.content.push({type:"heading", level:heading.level, text:heading.text});
+                section = "CONTENT";
+                return;
+            }
             if (textTable) {
                 textTable.cells.push(line);
                 if (textTable.cells.length === textTable.rows * textTable.cols) {
@@ -315,7 +326,10 @@
             if (/^SHORT\s+DESCRIPTION\s*:/i.test(line) && !currentModule) { course.shortDescription = line.replace(/^SHORT\s+DESCRIPTION\s*:\s*/i,"").trim(); return; }
             if (section === "SOURCE INFORMATION" && !currentModule) {
                 const field = line.match(/^([^:]+):\s*(.*)$/);
-                if (field) course.source[field[1].trim()] = field[2].trim();
+                if (field) {
+                    course.source[field[1].trim()] = field[2].trim();
+                    if (/^Source Classification$/i.test(field[1].trim())) course.source.classification = field[2].trim();
+                }
                 return;
             }
             if (/^CATEGORY\s*:/i.test(line)) { course.category = line.replace(/^CATEGORY\s*:\s*/i,"").trim(); return; }
@@ -379,8 +393,6 @@
             }] : [];
         }
         delete course._division; delete course._branch; delete course._role;
-        const validIdBase = course.title.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-        if (!/^[a-z0-9][a-z0-9_-]*$/.test(course.id) && validIdBase) course.id = validIdBase;
         course.modules.forEach((module, index) => {
             if (!module.id) module.id = `${course.id || "course"}-module-${module.sourceModuleNumber.replace(/\./g,"-")}`;
             module.order = index + 1;
@@ -393,33 +405,57 @@
         const result = await window.mammoth.convertToHtml({arrayBuffer: await file.arrayBuffer()});
         const parsed = new DOMParser().parseFromString(result.value, "text/html");
         const pseudoLines = [];
+        const warnings = (result.messages || []).map(message => message.message);
+        const imageLine = image => {
+            const src = image.getAttribute("src") || "";
+            if (window.CourseSchema.safeUrl(src, true)) {
+                pseudoLines.push(`[IMAGE] ${JSON.stringify({src, alt:image.getAttribute("alt") || ""})}`);
+            } else warnings.push("An image could not be safely extracted; inspect the original document.");
+        };
         const visit = node => {
             if (node.nodeType !== Node.ELEMENT_NODE) return;
             const tag = node.tagName.toLowerCase();
-            if (/^h[1-6]$/.test(tag)) { pseudoLines.push(node.textContent.trim()); return; }
+            if (/^h[1-6]$/.test(tag)) {
+                const text = node.textContent.trim();
+                if (/^(?:MODULE\s+)?\d+\.\d+(?:[:\-\s]|$)/i.test(text)
+                    || /^(?:COURSE|COURSE DESCRIPTION|LEARNING OBJECTIVES|MODULE OBJECTIVES|CONTENT|REFERENCES|SOURCE INFORMATION|KEY POINT|FINAL KEY POINT|WARNING|CALLOUT|TABLE\s*:)/i.test(text)) {
+                    pseudoLines.push(text);
+                } else pseudoLines.push(`[HEADING] ${JSON.stringify({level:Math.max(2, Math.min(4, Number(tag[1]))), text})}`);
+                return;
+            }
             if (tag === "table") {
-                const rows = [...node.querySelectorAll("tr")].map(row => [...row.querySelectorAll("th,td")].map(cell => cell.textContent.trim()));
-                if (rows.length) pseudoLines.push("[TABLE]", JSON.stringify({headers:rows[0],rows:rows.slice(1)}));
+                const rowNodes = [...node.querySelectorAll("tr")];
+                const rows = rowNodes.map(row => [...row.querySelectorAll("th,td")].map(cell => cell.textContent.trim()));
+                const hasHeaders = rowNodes[0]?.querySelector("th");
+                if (rows.length) pseudoLines.push("[TABLE]", JSON.stringify({headers:hasHeaders ? rows[0] : [],rows:hasHeaders ? rows.slice(1) : rows}));
                 return;
             }
             if (tag === "ul" || tag === "ol") {
                 [...node.children].forEach(item => {
-                    if (item.tagName.toLowerCase() === "li") pseudoLines.push(`- ${item.textContent.trim()}`);
+                    if (item.tagName.toLowerCase() === "li") pseudoLines.push(`${tag === "ol" ? "1." : "-"} ${item.textContent.trim()}`);
                 });
                 return;
             }
             if (tag === "p") {
                 const links = [...node.querySelectorAll("a")];
+                const images = [...node.querySelectorAll("img")];
                 if (links.length === 1 && node.textContent.trim() === links[0].textContent.trim()) {
                     const href = links[0].getAttribute("href") || "";
                     pseudoLines.push(`[${links[0].textContent.trim()}](${href})`);
-                } else pseudoLines.push(node.textContent.trim());
+                } else {
+                    pseudoLines.push(node.textContent.trim());
+                    links.forEach(link => pseudoLines.push(`[${link.textContent.trim()}](${link.getAttribute("href") || ""})`));
+                }
+                images.forEach(imageLine);
                 return;
             }
+            if (tag === "img") { imageLine(node); return; }
             [...node.children].forEach(visit);
         };
         [...parsed.body.children].forEach(visit);
-        return parseCourseText(pseudoLines.join("\n"), file.name);
+        const course = parseCourseText(pseudoLines.join("\n"), file.name);
+        course.warnings.push(...warnings, "Verify DOCX headers, footers, text boxes, and layout against the original.");
+        return course;
     };
 
     window.HandbookProcessor = Object.freeze({

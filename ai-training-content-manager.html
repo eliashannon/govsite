@@ -4,7 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | AI Training Content Manager</title>
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261110-3"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261118-6">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261110-3"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261118-7">
 </head>
 <body data-page="ai-training-content-manager">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -29,7 +29,7 @@
     <form id="handbookUploadForm" class="handbook-upload-form">
       <label for="handbookFiles">Standardized training documents</label>
       <input id="handbookFiles" class="form-control" type="file" accept=".docx,.txt,.md,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple required>
-      <p>Choose a DOCX, TXT, or Markdown course document using the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a>, then create a structured draft. Review extracted content and choose a valid organization assignment. Publish the draft to Content Explorer, open the course preview, and approve it to add it to Training Courses or reject it for revision. PDF is supported for source extraction only.</p>
+      <p>Choose a DOCX, TXT, or Markdown course document using the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a>, then create a structured draft. Choose a valid organization assignment and send the draft to Content Explorer. Preview and approve or reject it, then publish an approved course separately. PDF is supported for source extraction only.</p>
       <button id="uploadHandbooksButton" class="btn btn-primary" type="submit">Upload and extract</button>
       <button id="createCourseDraftButton" class="btn btn-secondary" type="button">Create structured course draft</button>
     </form>
@@ -85,6 +85,7 @@
     <p class="prototype-storage-description">Browser-local prototype storage only. Published courses are visible only in this browser and origin.</p>
     <div class="prototype-course-toolbar">
       <button id="viewLocalCoursesButton" class="btn btn-secondary" type="button">View Saved Local Courses</button>
+      <button id="openSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Open Selected Course</button>
       <button id="deleteSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Delete Selected Local Course</button>
       <button id="archiveSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Archive Selected Local Course</button>
       <button id="clearLocalCoursesButton" class="btn btn-secondary" type="button">Clear All Prototype Courses</button>
@@ -201,7 +202,7 @@ Every user contributes to organizational security.</pre>
   </dialog>
 </main></div></div>
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
-<script src="assets/shared/js/data.js?v=20261118-3"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-3"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-9"></script>
-<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261118-2"></script>
+<script src="assets/shared/js/data.js?v=20261118-3"></script><script src="assets/shared/js/course-schema.js?v=1"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-4"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-10"></script>
+<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261118-3"></script>
 </body>
 </html>

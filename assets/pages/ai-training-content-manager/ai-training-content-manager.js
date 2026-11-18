@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!item?.structuredCourseId) return review;
         try {
             const course = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}")[item.structuredCourseId];
-            const status = course?.status === "published" ? "Approved" : course?.status === "rejected" ? "Rejected" : "Pending Review";
+            const status = ["approved", "published"].includes(course?.status) ? "Approved" : course?.status === "rejected" ? "Rejected" : "Pending Review";
             return {...review, status};
         } catch (error) {
             console.error("Unable to read the structured course review status.", error);
@@ -226,6 +226,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 console.error("Unable to read the structured course.", error);
             }
             const courseStatus = course?.status === "published" ? "Published"
+                : course?.status === "approved" ? "Approved"
                 : course?.status === "rejected" ? "Rejected"
                 : course?.status === "needs-review" ? "Pending Review" : "Unpublished";
             return `
