@@ -22,7 +22,7 @@ body[data-page="required-training"] .page-content.course-catalog-page{font-famil
 .role-progress-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-secondary);font-size:12px}
 .role-progress-summary>strong{color:var(--text-primary);font-weight:600}
 .role-progress-summary>div{display:flex;gap:14px}
-.catalog-controls{display:grid;grid-template-columns:minmax(220px,1.8fr) repeat(3,minmax(120px,.8fr)) repeat(2,minmax(120px,.8fr)) minmax(150px,1fr) auto;align-items:end;gap:13px;margin-bottom:22px;padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-sm)}
+.catalog-controls{display:grid;grid-template-columns:minmax(220px,1.8fr) repeat(2,minmax(120px,.8fr)) minmax(150px,1fr) auto;align-items:end;gap:13px;margin-bottom:22px;padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-sm)}
 .catalog-search,.catalog-filter{display:flex;min-width:0;flex-direction:column;gap:6px}
 .catalog-search label,.catalog-filter label{color:var(--text-secondary);font-size:13px;font-weight:600}
 .catalog-search-input{position:relative}

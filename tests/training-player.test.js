@@ -169,3 +169,12 @@ test("reviewers can reject a course from its preview", async () => {
     assert.equal(JSON.parse(p.localStorage.getItem("trainingManagerCourses"))[p.course.id].status, "rejected");
     assert.equal(p.elements.publishPreviewCourse.hidden, true);
 });
+
+test("Training Courses no longer exposes catalog-wide division, branch, or role filters", () => {
+    const html = source("required-training.html");
+    const script = source("assets/pages/training-courses/required-training.js");
+    assert.doesNotMatch(html, /\bid="training(Division|Branch|Role)"/);
+    assert.doesNotMatch(script, /\btraining(Division|Branch|Role)Filter\b/);
+    assert.match(script, /portal\.selectedRole/);
+    assert.match(script, /const roleName = hasSignedInAccount \? roleSelection\?\.role/);
+});
