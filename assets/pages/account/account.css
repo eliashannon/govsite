@@ -1,10 +1,10 @@
 .auth-body{background:radial-gradient(ellipse at top, #1d304b 0, var(--background) 60%);min-height:100vh}
 .account-page{width:min(100%, 620px);margin:0 auto;padding:40px 24px 56px}
-.auth-brand{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:24px}
-.auth-brand img{width:82px;height:82px;object-fit:contain;border-radius:14px;background:rgba(232,238,247,.04);padding:6px;border:1px solid var(--border)}
+.auth-brand{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:24px}
+.auth-brand img{width:96px;height:96px;object-fit:contain;border-radius:0;background:transparent;padding:0;border:0}
 .auth-brand strong,.auth-brand span{display:block;line-height:1.35}
-.auth-brand strong{color:var(--text-primary);font-size:21px;font-weight:700;letter-spacing:.01em}
-.auth-brand span{color:var(--text-secondary);font-size:16px;font-weight:600}
+.auth-brand strong{color:var(--text-primary);font-size:36px;font-weight:800;letter-spacing:.01em}
+.auth-brand span{color:var(--text-secondary);font-size:18px;font-weight:700}
 .account-page .page-heading{text-align:center;margin:0 auto 22px}
 .account-page .page-heading h1{font-size:38px;margin-bottom:8px;letter-spacing:-.02em}
 .account-page .page-heading p{font-size:15px}
@@ -26,4 +26,4 @@
 .create-account-card .signin-form{gap:15px}
 .signin-footer{display:flex;align-items:flex-start;gap:10px;border-top:1px solid var(--border);margin-top:24px;padding-top:18px}
 .signin-footer p{font-size:11px;line-height:1.5}
-@media(max-width:600px){.account-page{padding:24px 16px 40px}.auth-brand{gap:12px;margin-bottom:22px}.auth-brand img{width:68px;height:68px}.auth-brand strong{font-size:18px}.auth-brand span{font-size:14px}.account-page .page-heading h1{font-size:32px}.account-page .page-heading p{font-size:14px}.account-signin-card{padding:26px 20px}}
+@media(max-width:600px){.account-page{padding:24px 16px 40px}.auth-brand{gap:12px;margin-bottom:22px}.auth-brand img{width:84px;height:84px}.auth-brand strong{font-size:36px}.auth-brand span{font-size:16px}.account-page .page-heading h1{font-size:32px}.account-page .page-heading p{font-size:14px}.account-signin-card{padding:26px 20px}}
