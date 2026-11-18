@@ -68,3 +68,6 @@
   .training-module-controls .btn{width:100%}
   .training-module-controls .btn:first-child:nth-last-child(2){margin-right:0}
 }
+.training-review-controls{margin-bottom:20px;padding:16px;border:1px solid var(--warning);border-radius:8px;background:var(--surface-secondary);color:var(--text-primary)}
+.training-review-controls p{margin:8px 0;color:var(--text-secondary)}
+.training-review-controls .btn{margin:4px 6px 0 0}

@@ -1,8 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
     const STORAGE_KEY = "trainingManagerCourses";
     const dialog = document.getElementById("courseDraftDialog");
-    const previewDialog = document.getElementById("coursePreviewDialog");
     let draft = null;
+    let editingCourseId = null;
 
     const slug = value => String(value || "").toLowerCase().trim()
         .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -41,13 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     }
 
-    function publishLocalCourse(courseId) {
-        const course = getLocalCourse(courseId);
-        if (!course) return;
-        course.status = "published";
-        saveLocalCourse(course);
-    }
-
     function archiveLocalCourse(courseId) {
         const course = getLocalCourse(courseId);
         if (!course) return;
@@ -79,42 +72,27 @@ document.addEventListener("DOMContentLoaded", () => {
             throw new Error("Content Explorer storage is unavailable or the course has no modules.");
         }
         await window.PortalDataReady;
-        const records = course.modules.map((module, index) => {
-            const courseKey = slug(course.id) || "course";
-            const moduleKey = slug(module.id) || String(index + 1);
-            const documentId = `course-json-${courseKey}`;
-            const contentId = `${documentId}-${moduleKey}`;
-            const source = module.source && typeof module.source === "object" ? module.source : {};
-            const originalDocumentName = source.fileName || course.source?.fileName || `${course.id}.json`;
-            const sourceNumber = module.sourceModuleNumber || String(index + 1);
-            return {
-                source: {
-                    id: contentId,
-                    documentId,
-                    originalDocumentName,
-                    pageNumber: Number.isFinite(source.page) ? source.page : null,
-                    sectionNumber: source.section || sourceNumber,
-                    sourceText: formatModuleSourceText(module),
-                    importedCourseId: course.id,
-                    importedModuleId: module.id,
-                    structuredContent: module.content
-                },
-                metadata: {
-                    contentId,
-                    category: course.category || "Imported course",
-                    contentType: "Structured course module",
-                    headingPath: [course.title || course.id, `${sourceNumber} ${module.title || "Untitled module"}`],
-                    confidence: "Needs review",
-                    warnings: ["Imported course JSON. Verify source attribution and content before approval."]
-                },
-                review: {
-                    contentId,
-                    status: reviewStatus,
-                    reviewedAt: reviewStatus === "Approved" ? new Date().toISOString() : null,
-                    reviewer: reviewStatus === "Approved" ? "Master course approval" : ""
-                }
-            };
-        });
+        const contentId = `structured-course-${course.id}`;
+        const records = [{
+            source: {
+                id: contentId,
+                documentId: contentId,
+                originalDocumentName: course.source?.fileName || `${course.id}.json`,
+                pageNumber: null,
+                sectionNumber: "",
+                sourceText: course.modules.map(formatModuleSourceText).join("\n\n"),
+                structuredCourseId: course.id
+            },
+            metadata: {
+                contentId,
+                category: course.category || "Imported course",
+                contentType: "Structured course",
+                headingPath: [course.title || course.id],
+                confidence: "Needs review",
+                warnings: ["Review the complete course against its source before approval."]
+            },
+            review: {contentId, status: reviewStatus, reviewedAt: null, reviewer: ""}
+        }];
         await window.TrainingContentStore.saveMany({
             sourceContent: records.map(item => item.source),
             organizationMetadata: records.map(item => item.metadata),
@@ -137,12 +115,15 @@ document.addEventListener("DOMContentLoaded", () => {
             draft.id = suggestedId || `draft-course-${Date.now().toString(36)}`;
             document.getElementById("courseEditorId").value = draft.id;
         }
+        if (getLocalCourse(draft.id) && draft.id !== editingCourseId) {
+            throw new Error("Course ID already exists in local storage. Choose a different ID.");
+        }
         const course = canonicalCourse();
         saveLocalCourse(course);
     };
 
     const showDraftNotice = (message, isError = false) => {
-        const notice = document.getElementById("courseDraftNotice");
+        const notice = document.getElementById(dialog.open ? "courseDraftNotice" : "managerNotice");
         notice.textContent = message;
         notice.hidden = !message;
         notice.classList.toggle("is-error", isError);
@@ -479,6 +460,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const errors = [];
         if (!draft.id) errors.push("Missing course ID.");
         else if (!isValidCourseId(draft.id)) errors.push("Course ID must use lowercase letters, numbers, hyphens, or underscores.");
+        if (draft.id && getLocalCourse(draft.id) && draft.id !== editingCourseId) errors.push("Course ID already exists in local storage.");
         if (!draft.title) errors.push("Missing course title.");
         if (!draft.description) errors.push("Missing course description.");
         if (!draft.category) errors.push("Missing course category.");
@@ -509,10 +491,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const key = `${assignment.divisionId}|${assignment.branchId}|${assignment.roleId}`;
             if (duplicateAssignments.has(key)) errors.push(`Duplicate role assignment: ${key.replace(/\|/g," / ")}.`);
             duplicateAssignments.add(key);
+            const hierarchy = window.PortalData?.organizationHierarchy || {};
+            const division = Object.keys(hierarchy).find(name => slug(name) === assignment.divisionId);
+            const branch = division && Object.keys(hierarchy[division]).find(name => slug(name) === assignment.branchId);
+            if (!branch || !hierarchy[division][branch].some(role => slug(role) === assignment.roleId)) {
+                errors.push(`Assignment ${key.replace(/\|/g, " / ")} is not in the organization hierarchy. Remove it and select a valid assignment.`);
+            }
         });
-        publishedCourseIds.forEach(id => {
-            if (id !== draft.id && false) errors.push("");
-        });
+        if ((window.PortalData?.courses || []).some(course => course.id.toLowerCase() === draft.id.toLowerCase())) {
+            errors.push("Course ID conflicts with an existing catalog course.");
+        }
         const warnings = [...(draft.warnings || [])];
         if (!draft.source?.fileName) warnings.push("No source filename was recorded.");
         if (!draft.modules.some(module => (module.learningObjectives || []).length)) warnings.push("No module objectives were found.");
@@ -539,8 +527,7 @@ document.addEventListener("DOMContentLoaded", () => {
             warning.textContent = `Warnings: ${[...new Set(warnings)].join(" ")}`;
             summary.append(warning);
         }
-        document.getElementById("approveCourseDraftButton").disabled = errors.length > 0 || draft.status === "archived";
-        document.getElementById("publishCourseDraftButton").disabled = draft.status !== "approved";
+        document.getElementById("reviewCourseDraftButton").disabled = errors.length > 0 || draft.status === "archived";
         document.getElementById("exportCourseDraftButton").disabled =
             !["approved","published"].includes(draft.status);
         return {errors, warnings};
@@ -580,7 +567,8 @@ document.addEventListener("DOMContentLoaded", () => {
             version: draft.version || "1.0",
             roleAssignments: draft.roleAssignments.map(item => ({...item, required:item.required !== false})),
             status: draft.status,
-            source: draft.source?.fileName ? {fileName:draft.source.fileName} : {},
+            source: {...draft.source},
+            warnings: [...(draft.warnings || [])],
             modules
         };
     };
@@ -679,8 +667,9 @@ document.addEventListener("DOMContentLoaded", () => {
         showDraftNotice("Role assignment added.");
     };
 
-    const openDraftEditor = parsedDraft => {
+    const openDraftEditor = (parsedDraft, savedCourseId = null) => {
         draft = normalizeParsedDraft(parsedDraft || createBlankDraft());
+        editingCourseId = savedCourseId;
         populateCourseFields();
         populateAssignmentDivision();
         renderAssignments();
@@ -699,175 +688,77 @@ document.addEventListener("DOMContentLoaded", () => {
         window.setTimeout(() => URL.revokeObjectURL(url), 30000);
     };
 
-    const safePreviewText = (element, text) => {
-        element.textContent = typeof text === "string" ? text : "";
-    };
-
-    const renderCoursePreview = () => {
-        if (!draft) return;
-        readCourseFields();
-        const preview = document.getElementById("coursePreviewContent");
-        preview.replaceChildren();
-        const heading = document.createElement("h3");
-        heading.textContent = draft.title || "Untitled course";
-        const description = document.createElement("p");
-        description.textContent = draft.description || "";
-        const meta = document.createElement("div");
-        meta.className = "course-preview-meta";
-        [["Category",draft.category],["Difficulty",draft.difficulty],["Duration",draft.durationMinutes ? `${draft.durationMinutes} minutes` : ""]]
-            .filter(([,value]) => value).forEach(([label,value]) => {
-                const span = document.createElement("span");
-                span.textContent = `${label}: ${value}`;
-                meta.append(span);
-            });
-        const layout = document.createElement("div");
-        layout.className = "course-preview-layout";
-        const sidebar = document.createElement("aside");
-        sidebar.className = "course-preview-sidebar";
-        const content = document.createElement("article");
-        content.className = "course-preview-module";
-        const showModule = index => {
-            [...sidebar.querySelectorAll("button")].forEach((button, buttonIndex) => {
-                button.classList.toggle("current", buttonIndex === index);
-            });
-            content.replaceChildren();
-            const module = draft.modules[index];
-            if (!module) return;
-            const title = document.createElement("h4");
-            title.textContent = module.title || "Untitled module";
-            content.append(title);
-            (module.content || []).forEach(block => {
-                let element = null;
-                if (block.type === "heading") {
-                    element = document.createElement(`h${Math.max(2, Math.min(4, Number(block.level) || 2))}`);
-                    safePreviewText(element, block.text);
-                } else if (block.type === "paragraph") {
-                    element = document.createElement("p");
-                    safePreviewText(element, block.text);
-                } else if (block.type === "list") {
-                    element = document.createElement(block.style === "ordered" ? "ol" : "ul");
-                    (block.items || []).forEach(text => {
-                        const item = document.createElement("li");
-                        safePreviewText(item, text);
-                        element.append(item);
-                    });
-                } else if (block.type === "callout") {
-                    element = document.createElement("aside");
-                    element.className = "training-callout";
-                    const label = document.createElement("strong");
-                    safePreviewText(label, block.title);
-                    const text = document.createElement("p");
-                    safePreviewText(text, block.text);
-                    element.append(label, text);
-                } else if (block.type === "link" && isSafeProtocol(block.url)) {
-                    element = document.createElement("a");
-                    safePreviewText(element, block.text || block.url);
-                    element.href = block.url;
-                    if (/^https?:\/\//i.test(block.url)) {
-                        element.target = "_blank";
-                        element.rel = "noopener noreferrer";
-                    }
-                } else if (block.type === "image" && block.src) {
-                    element = document.createElement("img");
-                    element.src = block.src;
-                    element.alt = typeof block.alt === "string" ? block.alt : "";
-                } else if (block.type === "table") {
-                    element = document.createElement("table");
-                    const head = document.createElement("thead");
-                    const headRow = document.createElement("tr");
-                    (block.headers || []).forEach(headerText => {
-                        const th = document.createElement("th");
-                        safePreviewText(th, headerText);
-                        headRow.append(th);
-                    });
-                    head.append(headRow);
-                    const body = document.createElement("tbody");
-                    (block.rows || []).forEach(row => {
-                        const tr = document.createElement("tr");
-                        row.forEach(cell => {
-                            const td = document.createElement("td");
-                            safePreviewText(td, cell);
-                            tr.append(td);
-                        });
-                        body.append(tr);
-                    });
-                    element.append(head, body);
-                }
-                if (element) {
-                    element.classList?.add("course-preview-content-block");
-                    content.append(element);
-                }
-            });
-        };
-        draft.modules.forEach((module, index) => {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.textContent = `${index + 1}. ${module.title || "Untitled module"}`;
-            button.addEventListener("click", () => showModule(index));
-            sidebar.append(button);
-        });
-        layout.append(sidebar, content);
-        preview.append(heading, description, meta, layout);
-        showModule(0);
-        previewDialog.showModal();
-    };
-
     const saveDraft = () => {
         if (!draft) return;
         readCourseFields();
+        if (draft.id && getLocalCourse(draft.id) && draft.id !== editingCourseId) {
+            showDraftNotice("Course ID already exists in local storage. Choose a different ID.", true);
+            return;
+        }
+        if (editingCourseId && draft.id !== editingCourseId) {
+            showDraftNotice("Changing the ID of a saved course is not supported. Create a new draft instead.", true);
+            return;
+        }
+        if (getLocalCourse(draft.id)?.status === "published"
+            && !window.confirm("Saving this draft removes the published course from this browser's catalog until it is approved again. Continue?")) return;
+        const previousStatus = draft.status;
         draft.status = "draft";
         document.getElementById("courseDraftStatus").value = "draft";
-        saveDraftStore();
+        try {
+            saveDraftStore();
+        } catch (error) {
+            draft.status = previousStatus;
+            document.getElementById("courseDraftStatus").value = previousStatus;
+            showDraftNotice(error instanceof Error ? error.message : "Unable to save the course draft.", true);
+            return;
+        }
+        editingCourseId = draft.id;
+        window.dispatchEvent(new Event("training-course-changed"));
         validateDraftCourse();
         showDraftNotice("Draft saved in browser storage only. It is not an authoritative or secure repository.");
     };
 
     const statusTransition = async status => {
         if (!draft) return;
-        if (status === "published" && draft.status !== "approved") {
-            showDraftNotice("Publishing requires an approved course.", true);
-            return;
-        }
         if (status === "needs-review") {
             const result = validateDraftCourse();
             if (result.errors.length) {
                 showDraftNotice(`Submission blocked: ${result.errors.join(" ")}`, true);
                 return;
             }
-        }
-        if (status === "approved") {
-            const result = validateDraftCourse();
-            if (result.errors.length) {
-                showDraftNotice(`Approval blocked: ${result.errors.join(" ")}`, true);
+            if (editingCourseId && draft.id !== editingCourseId) {
+                showDraftNotice("Changing the ID of a saved course is not supported. Create a new draft instead.", true);
                 return;
             }
-            draft.status = "approved";
-            document.getElementById("courseDraftStatus").value = "approved";
-        } else if (status === "published") {
-            if (draft.status !== "approved") {
-                showDraftNotice("Publishing requires an approved course.", true);
-                return;
-            }
-            draft.status = "published";
-            document.getElementById("courseDraftStatus").value = "published";
-        } else {
-            draft.status = status;
-            document.getElementById("courseDraftStatus").value = status;
+            if (getLocalCourse(draft.id)?.status === "published"
+                && !window.confirm("Submitting changes removes the published course from this browser's catalog until it is approved again. Continue?")) return;
         }
+        const previous = getLocalCourse(draft.id);
+        draft.status = status;
+        document.getElementById("courseDraftStatus").value = status;
         saveDraftStore();
-        if (status === "published") {
+        editingCourseId = draft.id;
+        if (status === "needs-review") {
             try {
-                const count = await sendCourseToContentExplorer(canonicalCourse(), "Approved");
+                await sendCourseToContentExplorer(canonicalCourse(), "Pending Review");
                 renderSavedLocalCourses();
-                showDraftNotice(`Published "${draft.title}" to this browser's course catalog and added ${count} approved module source(s) to Content Explorer.`);
+                dialog.close();
+                showDraftNotice(`"${draft.title}" is in Content Explorer for review. It is not yet in Training Courses.`);
                 return;
             } catch (error) {
-                console.error("The course was saved locally but could not be added to Content Explorer.", error);
-                showDraftNotice(`The course was published locally, but Content Explorer could not be updated: ${error.message}`, true);
+                if (previous) saveLocalCourse(previous);
+                else deleteLocalCourse(draft.id);
+                draft.status = previous?.status || "draft";
+                document.getElementById("courseDraftStatus").value = draft.status;
+                editingCourseId = previous ? previous.id : null;
+                validateDraftCourse();
+                console.error("Unable to submit the course to Content Explorer.", error);
+                showDraftNotice(`Unable to submit the course: ${error.message}`, true);
                 return;
             }
         }
         validateDraftCourse();
+        window.dispatchEvent(new Event("training-course-changed"));
         showDraftNotice(`Course status set to ${draft.status}.`);
     };
 
@@ -902,22 +793,35 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    document.getElementById("previewCourseDraftButton").addEventListener("click", () => {
+    const openTrainingPreview = () => {
         if (!draft) {
             const records = readDraftStore();
             const courseIds = Object.keys(records);
-            if (courseIds.length) openDraftEditor(records[courseIds[courseIds.length - 1]]);
-            else openDraftEditor(createBlankDraft());
+            if (courseIds.length) openDraftEditor(records[courseIds[courseIds.length - 1]], courseIds[courseIds.length - 1]);
+            else {
+                showDraftNotice("Create or open a course draft before previewing it.", true);
+                return;
+            }
         }
-        renderCoursePreview();
-    });
+        const course = canonicalCourse();
+        if (!course.id || !course.title || !course.modules.length || course.modules.some(module => !module.title)) {
+            showDraftNotice("Add a course ID, title, and at least one titled module before previewing.", true);
+            return;
+        }
+        try {
+            sessionStorage.setItem("trainingEditorPreview", JSON.stringify(course));
+            const preview = window.open(`training.html?preview=editor&course=${encodeURIComponent(course.id)}`, "_blank");
+            if (!preview) throw new Error("The preview could not be opened. Allow pop-ups and try again.");
+        } catch (error) {
+            console.error("Unable to open the course preview.", error);
+            showDraftNotice(error instanceof Error ? error.message : "Unable to open the course preview.", true);
+        }
+    };
+    document.getElementById("previewCourseDraftButton").addEventListener("click", openTrainingPreview);
+    document.getElementById("previewEditingCourseButton").addEventListener("click", openTrainingPreview);
     document.getElementById("closeCourseDraftDialog").addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", event => {
         if (event.target === dialog) dialog.close();
-    });
-    document.getElementById("closeCoursePreviewDialog").addEventListener("click", () => previewDialog.close());
-    previewDialog.addEventListener("click", event => {
-        if (event.target === previewDialog) previewDialog.close();
     });
     document.getElementById("courseAssignmentDivision").addEventListener("change", populateAssignmentBranches);
     document.getElementById("courseAssignmentBranch").addEventListener("change", populateAssignmentRoles);
@@ -940,10 +844,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("saveCourseDraftButton").addEventListener("click", saveDraft);
     document.getElementById("reviewCourseDraftButton").addEventListener("click", () => statusTransition("needs-review")
         .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to submit for review.", true)));
-    document.getElementById("approveCourseDraftButton").addEventListener("click", () => statusTransition("approved")
-        .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to approve course.", true)));
-    document.getElementById("publishCourseDraftButton").addEventListener("click", () => statusTransition("published")
-        .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to publish course.", true)));
     document.getElementById("archiveCourseDraftButton").addEventListener("click", () => statusTransition("archived")
         .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to archive course.", true)));
     document.getElementById("exportCourseDraftButton").addEventListener("click", () => {
@@ -1005,30 +905,54 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("savedLocalCourses").addEventListener("dblclick", event => {
         const course = getLocalCourse(event.target.value);
         if (course) {
-            openDraftEditor(course);
+            openDraftEditor(course, course.id);
             showDraftNotice(`Opened local course ${course.id}.`);
         }
     });
-    document.getElementById("deleteSelectedLocalCourseButton").addEventListener("click", () => {
+    const removeCourseEntries = async courseIds => {
+        const contentIds = courseIds.map(id => `structured-course-${id}`);
+        await window.TrainingContentStore.saveMany({}, {
+            sourceContent: contentIds, organizationMetadata: contentIds, reviews: contentIds
+        });
+        window.dispatchEvent(new CustomEvent("training-content-removed", {detail: {contentIds}}));
+    };
+
+    document.getElementById("deleteSelectedLocalCourseButton").addEventListener("click", async () => {
         const courseId = document.getElementById("savedLocalCourses").value;
         if (!courseId) return;
         if (!window.confirm(`Delete local prototype course "${courseId}"?`)) return;
-        deleteLocalCourse(courseId);
-        renderSavedLocalCourses();
-        showDraftNotice(`Deleted local course ${courseId}.`);
+        try {
+            await removeCourseEntries([courseId]);
+            deleteLocalCourse(courseId);
+            if (editingCourseId === courseId) { draft = null; editingCourseId = null; }
+            renderSavedLocalCourses();
+            showDraftNotice(`Deleted local course ${courseId}.`);
+        } catch (error) {
+            console.error("Unable to delete the local course.", error);
+            showDraftNotice(error instanceof Error ? error.message : "Unable to delete the local course.", true);
+        }
     });
     document.getElementById("archiveSelectedLocalCourseButton").addEventListener("click", () => {
         const courseId = document.getElementById("savedLocalCourses").value;
         if (!courseId) return;
         archiveLocalCourse(courseId);
         renderSavedLocalCourses();
+        window.dispatchEvent(new Event("training-course-changed"));
         showDraftNotice(`Archived local course ${courseId}.`);
     });
-    document.getElementById("clearLocalCoursesButton").addEventListener("click", () => {
+    document.getElementById("clearLocalCoursesButton").addEventListener("click", async () => {
         if (!window.confirm("Clear all prototype courses from trainingManagerCourses? This cannot be undone.")) return;
-        localStorage.removeItem(STORAGE_KEY);
-        renderSavedLocalCourses();
-        showDraftNotice("Cleared all prototype courses from this browser.");
+        try {
+            await removeCourseEntries(Object.keys(loadLocalCourses()));
+            localStorage.removeItem(STORAGE_KEY);
+            draft = null;
+            editingCourseId = null;
+            renderSavedLocalCourses();
+            showDraftNotice("Cleared all prototype courses from this browser.");
+        } catch (error) {
+            console.error("Unable to clear local courses.", error);
+            showDraftNotice(error instanceof Error ? error.message : "Unable to clear local courses.", true);
+        }
     });
     document.getElementById("exportSelectedLocalCourseButton").addEventListener("click", () => {
         exportCourseJson(document.getElementById("savedLocalCourses").value);
@@ -1051,17 +975,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 throw new Error("The JSON does not contain a valid course object.");
             }
             const normalized = normalizeParsedDraft(course);
+            if (getLocalCourse(normalized.id)) throw new Error("Course ID already exists in local storage. Delete or rename the existing course before importing.");
             normalized.status = "draft";
             saveLocalCourse(normalized);
-            let explorerCount = 0;
-            if (document.getElementById("sendImportToExplorer").checked) {
-                explorerCount = await sendCourseToContentExplorer(normalized, "Pending Review");
-            }
             renderSavedLocalCourses();
-            openDraftEditor(normalized);
-            showDraftNotice(explorerCount
-                ? `Imported ${normalized.id} as a draft and sent ${explorerCount} module source(s) to Content Explorer for review.`
-                : `Imported ${normalized.id} as a draft.`);
+            openDraftEditor(normalized, normalized.id);
+            if (document.getElementById("sendImportToExplorer").checked) await statusTransition("needs-review");
+            else showDraftNotice(`Imported ${normalized.id} as a draft.`);
         } catch (error) {
             showDraftNotice(error instanceof Error ? error.message : "Unable to import course JSON.", true);
         } finally {

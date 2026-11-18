@@ -103,8 +103,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     }[status] || "");
     const statusBadge = status => `<span class="status-badge ${statusClass(status)}">${escapeHtml(status)}</span>`;
     const findMetadata = contentId => state.organizationMetadata.find(item => item.contentId === contentId);
-    const findReview = contentId => state.reviews.find(item => item.contentId === contentId)
-        || {contentId, status: "Pending Review", reviewedAt: null, reviewer: ""};
+    const findReview = contentId => {
+        const review = state.reviews.find(item => item.contentId === contentId)
+            || {contentId, status: "Pending Review", reviewedAt: null, reviewer: ""};
+        const item = state.sourceContent.find(source => source.id === contentId);
+        if (!item?.structuredCourseId) return review;
+        try {
+            const course = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}")[item.structuredCourseId];
+            const status = course?.status === "published" ? "Approved" : course?.status === "rejected" ? "Rejected" : "Pending Review";
+            return {...review, status};
+        } catch (error) {
+            console.error("Unable to read the structured course review status.", error);
+            return review;
+        }
+    };
     const findDocument = documentId => state.documents.find(item => item.id === documentId);
     const selectedAreApproved = () => {
         const selected = [...selectedContentIds];
@@ -206,6 +218,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         const documentRecord = findDocument(item.documentId);
         const heading = (metadata.headingPath || []).join(" / ");
         const excerpt = item.sourceText.length > 190 ? `${item.sourceText.slice(0, 190)}...` : item.sourceText;
+        if (item.structuredCourseId) {
+            let course = null;
+            try {
+                course = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}")[item.structuredCourseId];
+            } catch (error) {
+                console.error("Unable to read the structured course.", error);
+            }
+            const courseStatus = course?.status === "published" ? "Published"
+                : course?.status === "rejected" ? "Rejected"
+                : course?.status === "needs-review" ? "Pending Review" : "Unpublished";
+            return `
+                <article class="source-content-item">
+                    <span></span>
+                    <div class="source-content-copy">
+                        <button class="source-item-preview" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">${escapeHtml(heading || item.structuredCourseId)}</button>
+                        <p>${escapeHtml(excerpt)}</p>
+                        <div class="content-meta"><span>${escapeHtml(item.originalDocumentName)}</span><span>Structured course</span>${statusBadge(courseStatus)}</div>
+                    </div>
+                    <div class="source-item-actions"><button class="manager-small-button" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">Open course preview</button></div>
+                </article>`;
+        }
         const publicationStatus = isContentPublished(item.id) ? "Published" : "Unpublished";
         return `
             <article class="source-content-item">
@@ -281,7 +314,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     sections.get(sectionKey).items.push(item);
                 });
                 const chapterSelectionIds = visibleItems
-                    .filter(item => item.documentId === chapter.items[0].documentId
+                    .filter(item => !item.structuredCourseId && item.documentId === chapter.items[0].documentId
                         && (findMetadata(item.id)?.headingPath?.[0] || item.originalDocumentName) === chapter.title)
                     .map(item => item.id);
                 const hasChapterHeading = chapter.items.some(item => (findMetadata(item.id)?.headingPath || []).length > 0);
@@ -289,20 +322,20 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <section class="content-chapter-group">
                         <div class="content-chapter-heading">
                             <strong>${escapeHtml(chapter.title)}</strong>
-                            <button class="ai-text-button" type="button" data-select-group="${escapeHtml(JSON.stringify(chapterSelectionIds))}">Select ${hasChapterHeading ? "chapter" : "document"}</button>
+                            ${chapterSelectionIds.length ? `<button class="ai-text-button" type="button" data-select-group="${escapeHtml(JSON.stringify(chapterSelectionIds))}">Select ${hasChapterHeading ? "chapter" : "document"}</button>` : ""}
                         </div>
                         ${[...sections.values()].map(section => {
                             const sectionIds = visibleItems
                                 .filter(item => {
                                     const path = findMetadata(item.id)?.headingPath || [];
-                                    return item.documentId === chapter.items[0].documentId
+                                    return !item.structuredCourseId && item.documentId === chapter.items[0].documentId
                                         && (path[0] || item.originalDocumentName) === chapter.title
                                         && path.slice(1).join(" / ") === section.title;
                                 })
                                 .map(item => item.id);
                             return `
                                 <section class="content-section-group">
-                                    ${section.title ? `<div class="content-section-heading"><span>${escapeHtml(section.title)}</span><button class="ai-text-button" type="button" data-select-group="${escapeHtml(JSON.stringify(sectionIds))}">Select section</button></div>` : ""}
+                                    ${section.title ? `<div class="content-section-heading"><span>${escapeHtml(section.title)}</span>${sectionIds.length ? `<button class="ai-text-button" type="button" data-select-group="${escapeHtml(JSON.stringify(sectionIds))}">Select section</button>` : ""}</div>` : ""}
                                     ${section.items.map(renderSourceItem).join("")}
                                 </section>`;
                         }).join("")}
@@ -376,6 +409,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (index < 0) target.push(record);
                 else target[index] = record;
             });
+            window.addEventListener("training-content-removed", event => {
+                const ids = new Set(event.detail.contentIds);
+                state.sourceContent = state.sourceContent.filter(item => !ids.has(item.id));
+                state.organizationMetadata = state.organizationMetadata.filter(item => !ids.has(item.contentId));
+                state.reviews = state.reviews.filter(item => !ids.has(item.contentId));
+                render();
+            });
+            window.addEventListener("training-course-changed", render);
         };
         mergeBy(state.sourceContent, sourceContent, "id");
         mergeBy(state.organizationMetadata, organizationMetadata, "contentId");
@@ -384,7 +425,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         categoryFilter.value = "All";
         reviewFilter.value = "All";
         render();
-        showNotice(`${sourceContent.length} course module source(s) added to Content Explorer.`);
+        showNotice("Course added to Content Explorer for review.");
     });
 
     const openOriginal = async (documentId, pageNumber = null, shouldDownload = false) => {
@@ -1011,13 +1052,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateModuleSelectionControls();
     });
     contentExplorer.addEventListener("click", event => {
+        const courseButton = event.target.closest("[data-preview-course]");
+        if (courseButton) {
+            window.location.href = `training.html?preview=1&course=${encodeURIComponent(courseButton.dataset.previewCourse)}`;
+            return;
+        }
         const groupButton = event.target.closest("[data-select-group]");
         if (groupButton) {
             try {
                 const ids = JSON.parse(groupButton.dataset.selectGroup);
                 const shouldSelect = !ids.every(id => selectedContentIds.has(id));
                 ids.forEach(id => {
-                    if (shouldSelect) selectedContentIds.add(id);
+                    if (shouldSelect && state.sourceContent.some(item => item.id === id && !item.structuredCourseId)) selectedContentIds.add(id);
                     else selectedContentIds.delete(id);
                 });
                 renderContent();

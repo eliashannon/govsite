@@ -142,6 +142,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!hasSignedInAccount) return [];
         if (hasAssignmentFilter()) {
             return catalog.filter(course => {
+                if (Array.isArray(course.roleAssignments)) {
+                    const slug = value => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+                    return course.roleAssignments.some(assignment =>
+                        (!trainingDivisionFilter.value || assignment.divisionId === slug(trainingDivisionFilter.value))
+                        && (!trainingBranchFilter.value || assignment.branchId === slug(trainingBranchFilter.value))
+                        && (!trainingRoleFilter.value || assignment.roleId === slug(trainingRoleFilter.value)));
+                }
                 const assignment = course.assignment || course;
                 return (!trainingDivisionFilter.value || assignment.division === trainingDivisionFilter.value)
                     && (!trainingBranchFilter.value || assignment.branch === trainingBranchFilter.value)

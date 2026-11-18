@@ -8,6 +8,7 @@ Git internals and empty, untracked directories are omitted.
 |-- .gitlab-ci.yml
 |-- README.md
 |-- FILE_STRUCTURE.txt
+|-- HANDBOOKFORMAT.txt
 |-- account.html
 |-- ai-training-content-manager.html
 |-- assets
@@ -67,4 +68,6 @@ Git internals and empty, untracked directories are omitted.
 |-- required-training.html
 |-- role-overview.html
 |-- tqs-support.html
+|-- tests
+|   `-- course-extraction.test.js
 `-- training.html

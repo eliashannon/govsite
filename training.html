@@ -4,7 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Training Portal | Course</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-5"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/training-courses/training.css?v=20261118-1">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-5"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/training-courses/training.css?v=20261118-2">
 </head>
 <body data-page="training">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -14,6 +14,14 @@
 <main class="page-content training-course-page">
   <div id="trainingError" class="training-error" role="alert" hidden></div>
   <div id="trainingApp" hidden>
+    <section id="courseReviewControls" class="training-review-controls" aria-label="Course review" hidden>
+      <strong>Course preview — browser-local, not learner progress</strong>
+      <p>Review the course using the same navigation and completion controls as learners. Approval publishes it to this browser's Training Courses catalog.</p>
+      <p id="courseReviewNotice" role="status" aria-live="polite"></p>
+      <a href="ai-training-content-manager.html" class="btn btn-secondary">Back to Content Explorer</a>
+      <button id="approvePreviewCourse" type="button" class="btn btn-primary">Approve and publish</button>
+      <button id="rejectPreviewCourse" type="button" class="btn btn-secondary">Reject course</button>
+    </section>
     <header class="training-course-header">
       <div>
         <p class="catalog-eyebrow">COURSE</p>
@@ -42,6 +50,6 @@
   </div>
 </main>
 </div></div>
-<script src="assets/shared/js/data.js?v=20261118-4"></script><script src="assets/shared/js/navigation.js?v=20261118-3"></script><script src="assets/shared/js/account.js?v=20261118-3"></script><script src="assets/pages/training-courses/training.js?v=20261118-2"></script>
+<script src="assets/shared/js/data.js?v=20261118-4"></script><script src="assets/shared/js/navigation.js?v=20261118-3"></script><script src="assets/shared/js/account.js?v=20261118-3"></script><script src="assets/pages/training-courses/training.js?v=20261118-3"></script>
 </body>
 </html>

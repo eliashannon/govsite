@@ -16,7 +16,7 @@
 .handbook-upload-form label{grid-column:1/-1;color:var(--text-secondary);font-size:12px;font-weight:600}
 .handbook-upload-form input{min-width:0;height:42px}
 .handbook-upload-form p{grid-column:1/-1;margin:0;color:var(--text-muted);font-size:11px;line-height:1.5}
-.handbook-upload-form button{grid-column:2;grid-row:2}
+.handbook-upload-form button{grid-column:2}
 .handbook-library-panel{overflow:hidden}
 .ai-content-count{color:var(--text-secondary);font-size:12px}
 .handbook-list,.module-list{border-top:1px solid var(--border)}
@@ -113,6 +113,7 @@
 .course-field-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px}
 .course-draft-form textarea{resize:vertical}
 .course-validation-summary{display:none;margin:0 0 12px;padding:10px 12px;border:1px solid var(--danger);border-radius:8px;background:var(--danger-bg);color:var(--text-primary);font-size:12px}
+.course-validation-summary:not(:empty){display:block}
 .course-validation-summary.has-errors{display:block}
 .course-validation-summary ul{margin:6px 0 0;padding-left:18px}
 .course-validation-summary li{cursor:pointer}
@@ -131,14 +132,6 @@
 .course-content-block input{width:100%;height:38px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--input-background);color:var(--text-primary)}
 .course-block-actions{display:flex;gap:5px}
 .course-block-actions button{width:32px;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--danger)}
-.course-preview-dialog{width:min(980px,calc(100% - 28px));max-height:90vh;padding:20px;overflow:auto}
-.course-preview-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:14px}
-.course-preview-sidebar,.course-preview-module{padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
-.course-preview-sidebar button{display:block;width:100%;margin:5px 0;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);text-align:left}
-.course-preview-sidebar button.current{border-color:var(--blue-600);box-shadow:0 0 0 2px var(--focus-ring)}
-.course-preview-meta{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
-.course-preview-meta span{padding:5px 8px;border:1px solid var(--border);border-radius:20px;font-size:11px}
-.course-preview-content-block{margin:10px 0}
 .prototype-course-storage-panel{padding-bottom:16px}
 .prototype-storage-description{margin:0 20px 10px;color:var(--text-secondary);font-size:12px}
 .prototype-course-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 20px 12px}
@@ -147,13 +140,12 @@
 .import-to-explorer-option input{accent-color:var(--blue-600)}
 .prototype-course-storage-panel>label{display:block;margin:0 20px 6px;color:var(--text-secondary);font-size:12px;font-weight:600}
 #savedLocalCourses{width:calc(100% - 40px);margin:0 20px;height:auto}
-.course-preview-content-block img{max-height:320px;border:1px solid var(--border)}
 @media(max-width:850px){.handbook-toolbar{grid-template-columns:minmax(180px,1fr) 160px}.handbook-toolbar input{grid-column:1/-1}.source-preview-metadata{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.ai-manager-heading{align-items:flex-start;flex-direction:column}.ai-manager-heading h1{font-size:25px}.manager-section-heading{align-items:flex-start;padding:15px}.ai-status{max-width:150px;white-space:normal}.handbook-upload-form{grid-template-columns:1fr;padding:0 15px 15px}.handbook-upload-form button{grid-column:1;grid-row:auto}.handbook-toolbar{grid-template-columns:1fr;padding:0 15px 12px}.handbook-toolbar input{grid-column:auto}.handbook-selection-toolbar{padding:10px 15px}.handbook-selection-toolbar>span{width:100%}.handbook-selection-toolbar .btn{flex:1}.source-content-item{grid-template-columns:18px minmax(0,1fr);padding:12px 15px}.source-item-actions{grid-column:2}.source-preview-metadata{padding-right:15px;padding-left:15px}.source-preview-warnings{margin-right:15px;margin-left:15px}.source-preview-text{margin-right:15px;margin-left:15px}.handbook-document,.module-card{grid-template-columns:1fr;padding:13px 15px}.handbook-document-actions,.module-actions{justify-content:flex-start}.module-options{grid-template-columns:1fr}.ai-content-dialog form{padding:17px}.ai-dialog-actions{flex-wrap:wrap}.ai-dialog-actions>span{display:none}.ai-dialog-actions .btn{flex:1}}
 @media(max-width:760px){
   .ai-manager-heading-actions{width:100%;flex-direction:column}.ai-manager-heading-actions .btn{width:100%}
   .course-field-grid{grid-template-columns:1fr}.course-assignment-controls{grid-template-columns:1fr}
   .course-module-card-header{grid-template-columns:1fr}.course-module-card-actions{justify-content:flex-start}
-  .course-content-block{grid-template-columns:1fr}.course-preview-layout{grid-template-columns:1fr}
+  .course-content-block{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){.ai-manager-page *{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}

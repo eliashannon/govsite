@@ -1,5 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const STORAGE_KEY = "trainingProgress";
+    const previewType = new URLSearchParams(window.location.search).get("preview");
+    const previewMode = previewType === "1" || previewType === "editor";
+    const progressStorage = previewMode ? sessionStorage : localStorage;
+    const progressKey = previewMode ? "trainingPreviewProgress" : STORAGE_KEY;
     let courses = [];
     let selectedCourse = null;
     let progress = null;
@@ -83,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function readProgressStore() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+            const parsed = JSON.parse(progressStorage.getItem(progressKey) || "{}");
             return isPlainObject(parsed) ? parsed : {};
         } catch (error) {
             console.error("Training progress storage is invalid JSON and will be repaired.", error);
@@ -130,7 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         store[course.id] = state;
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+            progressStorage.setItem(progressKey, JSON.stringify(store));
         } catch (error) {
             console.error("Unable to persist training progress.", error);
         }
@@ -141,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const store = readProgressStore();
         store[selectedCourse.id] = progress;
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+            progressStorage.setItem(progressKey, JSON.stringify(store));
         } catch (error) {
             console.error("Unable to persist training progress.", error);
         }
@@ -468,7 +472,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const store = readProgressStore();
         delete store[selectedCourse.id];
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+            progressStorage.setItem(progressKey, JSON.stringify(store));
         } catch (error) {
             console.error("Unable to reset training progress.", error);
         }
@@ -495,6 +499,71 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function initialize() {
+        if (previewMode) {
+            let profile;
+            try {
+                profile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
+                if (previewType === "editor") selectedCourse = JSON.parse(sessionStorage.getItem("trainingEditorPreview") || "null");
+                else {
+                    const store = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+                    selectedCourse = store[getCourseFromUrl()];
+                }
+            } catch (error) {
+                console.error("Unable to load the course preview.", error);
+                showError("Unable to load the course preview from browser storage.");
+                return;
+            }
+            if (!profile || profile.isMaster !== true || typeof profile.email !== "string"
+                || profile.email.toLowerCase() !== "elias@navy.mil") {
+                showError("Course previews are available only to the master account.");
+                return;
+            }
+            if (!validateCourse(selectedCourse) || selectedCourse.id !== getCourseFromUrl()) {
+                showError("The saved course is unavailable or invalid. Return to the Content Manager and submit it again.");
+                return;
+            }
+            const controls = document.getElementById("courseReviewControls");
+            controls.hidden = false;
+            const approve = document.getElementById("approvePreviewCourse");
+            const reject = document.getElementById("rejectPreviewCourse");
+            approve.hidden = reject.hidden = previewType === "editor";
+            approve.disabled = reject.disabled = previewType === "editor" || selectedCourse.status !== "needs-review";
+            if (previewType === "editor") {
+                document.getElementById("courseReviewNotice").textContent = "Editor preview only. Submit the draft to Content Explorer for approval.";
+            } else if (selectedCourse.status !== "needs-review") {
+                document.getElementById("courseReviewNotice").textContent = `Course status: ${selectedCourse.status}. Submit it for review to change its decision.`;
+            }
+            const decide = async status => {
+                approve.disabled = reject.disabled = true;
+                const notice = document.getElementById("courseReviewNotice");
+                try {
+                    const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+                    if (JSON.stringify(records[selectedCourse.id]) !== JSON.stringify(selectedCourse) || selectedCourse.status !== "needs-review") {
+                        throw new Error("The course changed since this preview opened. Return to Content Explorer and reopen it.");
+                    }
+                    const updated = {...selectedCourse, status: status === "Approved" ? "published" : "rejected"};
+                    records[selectedCourse.id] = updated;
+                    localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+                    try {
+                        await window.TrainingContentStore.saveMany({reviews: [{
+                            contentId: `structured-course-${selectedCourse.id}`,
+                            status, reviewedAt: new Date().toISOString(), reviewer: profile.email
+                        }]});
+                    } catch (error) {
+                        records[selectedCourse.id] = selectedCourse;
+                        localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+                        throw error;
+                    }
+                    window.location.href = "ai-training-content-manager.html";
+                } catch (error) {
+                    console.error("Unable to save the course decision.", error);
+                    notice.textContent = error instanceof Error ? error.message : "Unable to save the course decision.";
+                    approve.disabled = reject.disabled = false;
+                }
+            };
+            approve.addEventListener("click", () => decide("Approved"));
+            reject.addEventListener("click", () => decide("Rejected"));
+        } else {
         const loaded = await loadCourses();
         if (!loaded) return;
         const courseId = getCourseFromUrl();
@@ -508,6 +577,7 @@ document.addEventListener("DOMContentLoaded", () => {
             showError("The requested course could not be found.");
             window.setTimeout(() => { window.location.replace("required-training.html"); }, 1500);
             return;
+        }
         }
         progress = loadCourseProgress(selectedCourse);
         renderCourseHeader();
