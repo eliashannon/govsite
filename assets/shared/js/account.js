@@ -107,7 +107,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const renderAccount = () => {
-        if (!button || !profile) return;
+        if (!button) return;
+        if (!profile) {
+            const avatar = button.querySelector(".account-avatar");
+            const label = button.querySelector("span:last-child");
+            if (avatar) avatar.textContent = "U";
+            if (label) label.textContent = "Sign in";
+            button.setAttribute("aria-expanded", "false");
+            return;
+        }
         const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || profile.email || "Account";
         const avatar = button.querySelector(".account-avatar");
         const label = button.querySelector("span:last-child");

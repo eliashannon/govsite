@@ -44,7 +44,7 @@ window.PortalData = {
     ],
     faqs: [
         {category:"Access & Roles",question:"Can I search for a role if I do not sign in?",answer:"You can browse the Division and Branch choices and see available roles, but selecting Search Role requires a signed-in profile and sends signed-out visitors to Sign In. Sign in first to view and save a role."},
-        {category:"Access & Roles",question:"How do I sign in or create an account?",answer:"Use the Account button in the upper-right corner. On the Sign In page, enter your account details or choose Create an Account. This portal uses a temporary browser-side account flow and is not a secure production authentication service."},
+        {category:"Access & Roles",question:"How do I sign in or create an account?",answer:"Use the Sign In button in the upper-right corner. On the Sign In page, enter your account details or choose Create an Account. This portal uses a temporary browser-side account flow and is not a secure production authentication service."},
         {category:"Access & Roles",question:"How do I sign out?",answer:"Open the Account menu in the upper-right corner and choose Sign out. Signing out clears the selected role for the current browser session."},
         {category:"Access & Roles",question:"How do I select a role?",answer:"Open Role Overview, choose a Division, Branch, and Role, then select Search Role. The selected role is used to filter role-related information elsewhere in the portal."},
         {category:"Access & Roles",question:"How do I change or clear my selected role?",answer:"Go to Role Overview and choose a different role, or use Clear Filters to clear the current selection. You can then search for and save another role."},
