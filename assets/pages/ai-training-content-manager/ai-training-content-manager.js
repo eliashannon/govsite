@@ -28,9 +28,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const selectionCount = document.getElementById("selectionCount");
     const approveSelectedButton = document.getElementById("approveSelectedButton");
     const rejectSelectedButton = document.getElementById("rejectSelectedButton");
+    const deleteSelectedContentButton = document.getElementById("deleteSelectedContentButton");
+    const selectAllVisibleButton = document.getElementById("selectAllVisibleButton");
     const createModuleButton = document.getElementById("createModuleButton");
     const moduleList = document.getElementById("moduleList");
     const moduleCount = document.getElementById("moduleCount");
+    const moduleSelectionCount = document.getElementById("moduleSelectionCount");
+    const selectAllModulesButton = document.getElementById("selectAllModulesButton");
+    const deleteSelectedModulesButton = document.getElementById("deleteSelectedModulesButton");
     const previewPanel = document.getElementById("sourcePreview");
     const viewOriginalButton = document.getElementById("viewOriginalButton");
     const moduleDialog = document.getElementById("moduleDialog");
@@ -44,6 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const assignmentRole = document.getElementById("assignmentRole");
     let pendingApprovalModuleId = null;
     const selectedContentIds = new Set();
+    const selectedModuleIds = new Set();
     const maximumFileSize = 75 * 1024 * 1024;
     const state = {
         documents: [],
@@ -106,7 +112,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         selectionCount.textContent = `${selectedContentIds.size} selected`;
         approveSelectedButton.disabled = selectedContentIds.size === 0;
         rejectSelectedButton.disabled = selectedContentIds.size === 0;
+        deleteSelectedContentButton.disabled = selectedContentIds.size === 0;
         createModuleButton.disabled = !selectedAreApproved();
+        const visibleCheckboxes = [...contentExplorer.querySelectorAll("[data-select-content]")];
+        selectAllVisibleButton.textContent = visibleCheckboxes.length > 0
+            && visibleCheckboxes.every(checkbox => selectedContentIds.has(checkbox.dataset.selectContent))
+            ? "Deselect visible"
+            : "Select all visible";
+    };
+    const updateModuleSelectionControls = () => {
+        const availableIds = new Set(state.modules.map(module => module.id));
+        selectedModuleIds.forEach(id => {
+            if (!availableIds.has(id)) selectedModuleIds.delete(id);
+        });
+        moduleSelectionCount.textContent = `${selectedModuleIds.size} selected`;
+        deleteSelectedModulesButton.disabled = selectedModuleIds.size === 0;
+        selectAllModulesButton.textContent = state.modules.length > 0
+            && state.modules.every(module => selectedModuleIds.has(module.id))
+            ? "Deselect all"
+            : "Select all";
     };
 
     const renderDocuments = () => {
@@ -276,6 +300,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         moduleCount.textContent = `${state.modules.length} ${state.modules.length === 1 ? "module" : "modules"}`;
         if (!state.modules.length) {
             moduleList.innerHTML = '<div class="handbook-empty">No modules have been assembled. Approve extracted source items before creating a module.</div>';
+            updateModuleSelectionControls();
             return;
         }
         moduleList.innerHTML = [...state.modules]
@@ -295,6 +320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return `
                     <article class="module-card">
                         <div class="module-card-copy">
+                            <label class="module-select"><input type="checkbox" data-select-module="${escapeHtml(module.id)}" aria-label="Select ${escapeHtml(module.title)}" ${selectedModuleIds.has(module.id) ? "checked" : ""}>Select module</label>
                             <h3>${escapeHtml(module.title)}</h3>
                             <p>${escapeHtml(module.category)} · Created ${escapeHtml(dateTime(module.createdAt))}</p>
                             <p class="module-source-count">${validSourceCount} of ${sourceContentIds.length} source items remain approved${assignmentLabel ? ` · Assignment: ${escapeHtml(assignmentLabel)}` : ""}</p>
@@ -311,6 +337,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         </div>
                     </article>`;
             }).join("");
+        updateModuleSelectionControls();
     };
 
     const render = () => {
@@ -430,6 +457,64 @@ document.addEventListener("DOMContentLoaded", async () => {
         showNotice(affectedModules.length
             ? `${validIds.length} source item(s) rejected. Published modules containing rejected text were unpublished from this browser's catalog.`
             : `${validIds.length} source item(s) ${status.toLowerCase()}.`);
+    };
+
+    const deleteSelectedSourceContent = async () => {
+        if (!requireMaster()) return;
+        const contentIds = [...selectedContentIds].filter(id => state.sourceContent.some(item => item.id === id));
+        if (!contentIds.length) return;
+        const affectedModules = state.modules
+            .filter(module => module.publicationStatus === "Published"
+                && Array.isArray(module.sourceContentIds)
+                && module.sourceContentIds.some(id => contentIds.includes(id)))
+            .map(module => ({...module, publicationStatus: "Unpublished", unpublishedAt: new Date().toISOString()}));
+        const confirmation = `Delete ${contentIds.length} selected source item(s)? Original documents will remain.`
+            + (affectedModules.length
+                ? ` ${affectedModules.length} published module(s) that use this content will be unpublished.`
+                : "");
+        if (!window.confirm(confirmation)) return;
+
+        await store.saveMany(
+            {modules: affectedModules},
+            {
+                sourceContent: contentIds,
+                organizationMetadata: contentIds,
+                reviews: contentIds
+            }
+        );
+        const deletedIds = new Set(contentIds);
+        state.sourceContent = state.sourceContent.filter(item => !deletedIds.has(item.id));
+        state.organizationMetadata = state.organizationMetadata.filter(item => !deletedIds.has(item.contentId));
+        state.reviews = state.reviews.filter(item => !deletedIds.has(item.contentId));
+        affectedModules.forEach(updated => {
+            const index = state.modules.findIndex(module => module.id === updated.id);
+            if (index !== -1) state.modules[index] = updated;
+        });
+        contentIds.forEach(id => selectedContentIds.delete(id));
+        if (deletedIds.has(state.activePreviewId)) {
+            state.activePreviewId = null;
+            previewPanel.hidden = true;
+        }
+        render();
+        showNotice(`Deleted ${contentIds.length} source item(s).${affectedModules.length ? ` Unpublished ${affectedModules.length} dependent module(s).` : ""}`);
+    };
+
+    const deleteSelectedModules = async () => {
+        if (!requireMaster()) return;
+        const moduleIds = [...selectedModuleIds].filter(id => state.modules.some(module => module.id === id));
+        if (!moduleIds.length || !window.confirm(`Delete ${moduleIds.length} selected training module(s)? Published courses will be removed from this browser's catalog.`)) {
+            return;
+        }
+        await store.saveMany({}, {modules: moduleIds});
+        const deletedIds = new Set(moduleIds);
+        state.modules = state.modules.filter(module => !deletedIds.has(module.id));
+        moduleIds.forEach(id => selectedModuleIds.delete(id));
+        if (deletedIds.has(pendingApprovalModuleId)) {
+            assignmentDialog.close();
+            pendingApprovalModuleId = null;
+        }
+        render();
+        showNotice(`Deleted ${moduleIds.length} training module(s) from this browser's catalog.`);
     };
 
     const beginProcessing = async documentRecord => {
@@ -808,6 +893,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         else selectedContentIds.delete(checkbox.dataset.selectContent);
         updateSelectionControls();
     });
+    moduleList.addEventListener("change", event => {
+        const checkbox = event.target.closest("[data-select-module]");
+        if (!checkbox) return;
+        if (checkbox.checked) selectedModuleIds.add(checkbox.dataset.selectModule);
+        else selectedModuleIds.delete(checkbox.dataset.selectModule);
+        updateModuleSelectionControls();
+    });
     contentExplorer.addEventListener("click", event => {
         const groupButton = event.target.closest("[data-select-group]");
         if (groupButton) {
@@ -846,7 +938,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         contentSearch.value = event.target.value;
         renderContent();
     });
-    document.getElementById("selectAllVisibleButton").addEventListener("click", () => {
+    selectAllVisibleButton.addEventListener("click", () => {
         const visibleCheckboxes = [...contentExplorer.querySelectorAll("[data-select-content]")];
         const selectAll = visibleCheckboxes.some(checkbox => !checkbox.checked);
         visibleCheckboxes.forEach(checkbox => {
@@ -856,6 +948,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         updateSelectionControls();
     });
+    deleteSelectedContentButton.addEventListener("click", () => deleteSelectedSourceContent().catch(error => {
+        console.error("Unable to delete selected source content.", error);
+        showNotice(error instanceof Error ? error.message : String(error), true);
+    }));
     approveSelectedButton.addEventListener("click", () => updateReviewStatus([...selectedContentIds], "Approved")
         .catch(error => {
             console.error("Unable to approve selected source content.", error);
@@ -867,6 +963,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             showNotice(error instanceof Error ? error.message : String(error), true);
         }));
     createModuleButton.addEventListener("click", openModuleDialog);
+    selectAllModulesButton.addEventListener("click", () => {
+        const allSelected = state.modules.length > 0
+            && state.modules.every(module => selectedModuleIds.has(module.id));
+        if (allSelected) state.modules.forEach(module => selectedModuleIds.delete(module.id));
+        else state.modules.forEach(module => selectedModuleIds.add(module.id));
+        renderModules();
+    });
+    deleteSelectedModulesButton.addEventListener("click", () => deleteSelectedModules().catch(error => {
+        console.error("Unable to delete selected training modules.", error);
+        showNotice(error instanceof Error ? error.message : String(error), true);
+    }));
     viewOriginalButton.addEventListener("click", () => {
         const item = state.sourceContent.find(candidate => candidate.id === state.activePreviewId);
         if (item) openOriginal(item.documentId, item.pageNumber);
