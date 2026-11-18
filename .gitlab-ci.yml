@@ -38,4 +38,6 @@ validate-portal:
     - test -f assets/pages/ai-training-content-manager/vendor/pdf.min.js
     - test -f assets/pages/ai-training-content-manager/vendor/pdf.worker.min.js
     - test -f assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js
+    - test -f assets/pages/ai-training-content-manager/vendor/PDFJS-LICENSE.txt
+    - test -f assets/pages/ai-training-content-manager/vendor/MAMMOTH-LICENSE.txt
     - echo "All required portal files were found."

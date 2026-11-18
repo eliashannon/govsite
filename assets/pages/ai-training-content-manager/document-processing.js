@@ -4,6 +4,13 @@
     const checklistPattern = /^\s*(?:☐|□|\[\s?\]|\(\s?\))\s*/;
     const numberedStepPattern = /^\s*(?:step\s+)?\d+[.)]\s+/i;
 
+    const inferHeadingLevel = text => {
+        const value = String(text).trim();
+        if (/^chapter\s+\S+/i.test(value)) return 1;
+        if (/^section\s+\S+/i.test(value) || /^\d+(?:\.\d+)*\s+\S+/.test(value)) return 2;
+        return 2;
+    };
+
     const getSectionNumber = text => {
         const match = String(text).match(sectionNumberPattern);
         return match ? match[2].replace(/[.)]$/, "") : "";
@@ -34,7 +41,7 @@
         if (requirementPattern.test(value)) {
             return {category: "Requirement", contentType: "Requirement", confidence: "Needs review"};
         }
-        if (blockKind === "list" && numberedStepPattern.test(value)) {
+        if (numberedStepPattern.test(value)) {
             return {category: "Procedure", contentType: "Procedure step", confidence: "Needs review"};
         }
         if (blockKind === "list") {
@@ -45,12 +52,15 @@
 
     const createBlock = (text, details = {}) => {
         if (!String(text).trim()) return null;
-        const headingLevel = details.headingLevel || (details.blockKind === "pdf-text" && isHeading(text) ? 2 : 0);
+        const headingLevel = details.headingLevel || (details.blockKind === "pdf-text" && isHeading(text) ? inferHeadingLevel(text) : 0);
         const classification = classifyBlock(text, details.blockKind, headingLevel);
         return {
             sourceText: text,
+            tableCells: details.tableCells || null,
             pageNumber: details.pageNumber || null,
-            sectionNumber: details.sectionNumber || getSectionNumber(text),
+            sectionNumber: details.sectionNumber || (headingLevel || /^(chapter|section)\s+/i.test(text.trim())
+                ? getSectionNumber(text)
+                : ""),
             headingPath: details.headingPath || [],
             category: classification.category,
             contentType: classification.contentType,
@@ -66,6 +76,7 @@
         const pdf = await window.pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
         const blocks = [];
         const warnings = [];
+        const headingPath = [];
         try {
             for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
                 const page = await pdf.getPage(pageNumber);
@@ -79,7 +90,15 @@
                     }
                     pageText += `${line}\n`;
                     const block = createBlock(line, {pageNumber, blockKind: "pdf-text", forceReview: true});
-                    if (block) blocks.push(block);
+                    if (block) {
+                        if (block.category === "Structure") {
+                            const headingLevel = inferHeadingLevel(line);
+                            headingPath.length = headingLevel - 1;
+                            headingPath[headingLevel - 1] = line.trim();
+                        }
+                        block.headingPath = [...headingPath];
+                        blocks.push(block);
+                    }
                     line = "";
                 };
                 textContent.items.forEach(item => {
@@ -107,6 +126,10 @@
         const parsed = new DOMParser().parseFromString(result.value, "text/html");
         const blocks = [];
         const warnings = (result.messages || []).map(message => message.message);
+        if (parsed.querySelector("img")) {
+            warnings.push("Embedded images and diagrams were not converted to text; inspect them in the original document.");
+        }
+        warnings.push("Verify headers, footers, text boxes, and document-specific layout in the original; this text extractor may not include them.");
         const headingPath = [];
 
         const addHeading = (element, level) => {
@@ -133,8 +156,10 @@
             }
             if (tag === "table") {
                 node.querySelectorAll("tr").forEach(row => {
-                    const block = createBlock(row.textContent, {
+                    const tableCells = [...row.querySelectorAll("th,td")].map(cell => cell.textContent);
+                    const block = createBlock(tableCells.join("\t"), {
                         blockKind: "table",
+                        tableCells,
                         headingPath: [...headingPath]
                     });
                     if (block) blocks.push(block);

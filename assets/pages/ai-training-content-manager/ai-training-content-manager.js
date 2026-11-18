@@ -140,6 +140,36 @@ document.addEventListener("DOMContentLoaded", async () => {
         module.publicationStatus === "Published" && module.sourceContentIds.includes(contentId)
     );
 
+    const renderSourceItem = item => {
+        const metadata = findMetadata(item.id) || {};
+        const review = findReview(item.id);
+        const documentRecord = findDocument(item.documentId);
+        const heading = (metadata.headingPath || []).join(" / ");
+        const excerpt = item.sourceText.length > 190 ? `${item.sourceText.slice(0, 190)}...` : item.sourceText;
+        const publicationStatus = isContentPublished(item.id) ? "Published" : "Unpublished";
+        return `
+            <article class="source-content-item">
+                <input type="checkbox" data-select-content="${escapeHtml(item.id)}" aria-label="Select ${escapeHtml(metadata.contentType || "content")} from ${escapeHtml(item.originalDocumentName)}" ${selectedContentIds.has(item.id) ? "checked" : ""}>
+                <div class="source-content-copy">
+                    <button class="source-item-preview" type="button" data-preview-content="${escapeHtml(item.id)}">${escapeHtml(heading || item.sectionNumber || metadata.contentType || "Source text")}</button>
+                    <p>${escapeHtml(excerpt)}</p>
+                    <div class="content-meta">
+                        <span>${escapeHtml(documentRecord?.fileName || item.originalDocumentName)}</span>
+                        <span>${item.pageNumber ? `Page ${escapeHtml(item.pageNumber)}` : "Page unavailable"}</span>
+                        ${item.sectionNumber ? `<span>Section ${escapeHtml(item.sectionNumber)}</span>` : ""}
+                        <span>${escapeHtml(metadata.contentType || "Text")}</span>
+                        <span>${escapeHtml(metadata.confidence || "Needs review")}</span>
+                        ${statusBadge(review.status)}
+                        ${statusBadge(publicationStatus)}
+                    </div>
+                </div>
+                <div class="source-item-actions">
+                    <button class="manager-small-button" type="button" data-review-content="${escapeHtml(item.id)}" data-review-status="Approved" ${review.status === "Approved" ? "disabled" : ""}>Approve</button>
+                    <button class="manager-small-button" type="button" data-review-content="${escapeHtml(item.id)}" data-review-status="Rejected" ${review.status === "Rejected" ? "disabled" : ""}>Reject</button>
+                </div>
+            </article>`;
+    };
+
     const renderContent = () => {
         const query = contentSearch.value.trim().toLocaleLowerCase();
         const selectedCategory = categoryFilter.value;
@@ -171,39 +201,59 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!grouped.has(category)) grouped.set(category, []);
             grouped.get(category).push(item);
         });
-        contentExplorer.innerHTML = [...grouped.entries()].map(([category, items]) => `
-            <details class="content-category" open>
-                <summary>${escapeHtml(category)} <span class="content-category-count">${items.length} ${items.length === 1 ? "item" : "items"}</span></summary>
-                ${items.map(item => {
-                    const metadata = findMetadata(item.id) || {};
-                    const review = findReview(item.id);
-                    const documentRecord = findDocument(item.documentId);
-                    const heading = (metadata.headingPath || []).join(" / ");
-                    const excerpt = item.sourceText.length > 190 ? `${item.sourceText.slice(0, 190)}...` : item.sourceText;
-                    const publicationStatus = isContentPublished(item.id) ? "Published" : "Unpublished";
-                    return `
-                        <article class="source-content-item">
-                            <input type="checkbox" data-select-content="${escapeHtml(item.id)}" aria-label="Select ${escapeHtml(metadata.contentType || "content")} from ${escapeHtml(item.originalDocumentName)}" ${selectedContentIds.has(item.id) ? "checked" : ""}>
-                            <div class="source-content-copy">
-                                <button class="source-item-preview" type="button" data-preview-content="${escapeHtml(item.id)}">${escapeHtml(heading || item.sectionNumber || metadata.contentType || "Source text")}</button>
-                                <p>${escapeHtml(excerpt)}</p>
-                                <div class="content-meta">
-                                    <span>${escapeHtml(documentRecord?.fileName || item.originalDocumentName)}</span>
-                                    <span>${item.pageNumber ? `Page ${escapeHtml(item.pageNumber)}` : "Page unavailable"}</span>
-                                    ${item.sectionNumber ? `<span>Section ${escapeHtml(item.sectionNumber)}</span>` : ""}
-                                    <span>${escapeHtml(metadata.contentType || "Text")}</span>
-                                    <span>${escapeHtml(metadata.confidence || "Needs review")}</span>
-                                    ${statusBadge(review.status)}
-                                    ${statusBadge(publicationStatus)}
-                                </div>
-                            </div>
-                            <div class="source-item-actions">
-                                <button class="manager-small-button" type="button" data-review-content="${escapeHtml(item.id)}" data-review-status="Approved" ${review.status === "Approved" ? "disabled" : ""}>Approve</button>
-                                <button class="manager-small-button" type="button" data-review-content="${escapeHtml(item.id)}" data-review-status="Rejected" ${review.status === "Rejected" ? "disabled" : ""}>Reject</button>
-                            </div>
-                        </article>`;
-                }).join("")}
-            </details>`).join("");
+        contentExplorer.innerHTML = [...grouped.entries()].map(([category, items]) => {
+            const chapters = new Map();
+            items.forEach(item => {
+                const metadata = findMetadata(item.id) || {};
+                const path = metadata.headingPath || [];
+                const chapterTitle = path[0] || item.originalDocumentName;
+                const chapterKey = `${item.documentId}::${chapterTitle}`;
+                if (!chapters.has(chapterKey)) chapters.set(chapterKey, {title: chapterTitle, items: []});
+                chapters.get(chapterKey).items.push(item);
+            });
+            const chapterMarkup = [...chapters.entries()].map(([chapterKey, chapter]) => {
+                const sections = new Map();
+                chapter.items.forEach(item => {
+                    const path = findMetadata(item.id)?.headingPath || [];
+                    const sectionTitle = path.length > 1 ? path.slice(1).join(" / ") : "";
+                    const sectionKey = sectionTitle || `${chapterKey}::chapter-items`;
+                    if (!sections.has(sectionKey)) sections.set(sectionKey, {title: sectionTitle, items: []});
+                    sections.get(sectionKey).items.push(item);
+                });
+                const chapterSelectionIds = visibleItems
+                    .filter(item => item.documentId === chapter.items[0].documentId
+                        && (findMetadata(item.id)?.headingPath?.[0] || item.originalDocumentName) === chapter.title)
+                    .map(item => item.id);
+                const hasChapterHeading = chapter.items.some(item => (findMetadata(item.id)?.headingPath || []).length > 0);
+                return `
+                    <section class="content-chapter-group">
+                        <div class="content-chapter-heading">
+                            <strong>${escapeHtml(chapter.title)}</strong>
+                            <button class="ai-text-button" type="button" data-select-group="${escapeHtml(JSON.stringify(chapterSelectionIds))}">Select ${hasChapterHeading ? "chapter" : "document"}</button>
+                        </div>
+                        ${[...sections.values()].map(section => {
+                            const sectionIds = visibleItems
+                                .filter(item => {
+                                    const path = findMetadata(item.id)?.headingPath || [];
+                                    return item.documentId === chapter.items[0].documentId
+                                        && (path[0] || item.originalDocumentName) === chapter.title
+                                        && path.slice(1).join(" / ") === section.title;
+                                })
+                                .map(item => item.id);
+                            return `
+                                <section class="content-section-group">
+                                    ${section.title ? `<div class="content-section-heading"><span>${escapeHtml(section.title)}</span><button class="ai-text-button" type="button" data-select-group="${escapeHtml(JSON.stringify(sectionIds))}">Select section</button></div>` : ""}
+                                    ${section.items.map(renderSourceItem).join("")}
+                                </section>`;
+                        }).join("")}
+                    </section>`;
+            }).join("");
+            return `
+                <details class="content-category" open>
+                    <summary>${escapeHtml(category)} <span class="content-category-count">${items.length} ${items.length === 1 ? "item" : "items"}</span></summary>
+                    ${chapterMarkup}
+                </details>`;
+        }).join("");
         updateSelectionControls();
     };
 
@@ -264,11 +314,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return;
             }
             const pageFragment = pageNumber && documentRecord.fileType === "pdf" ? `#page=${pageNumber}` : "";
-            const openedWindow = window.open(`${objectUrl}${pageFragment}`, "_blank", "noopener");
+            const openedWindow = window.open(`${objectUrl}${pageFragment}`, "_blank");
             if (!openedWindow) {
                 URL.revokeObjectURL(objectUrl);
                 throw new Error("The original handbook could not be opened. Allow pop-ups for this portal and try again.");
             }
+            openedWindow.opener = null;
             window.setTimeout(() => URL.revokeObjectURL(objectUrl), 120000);
         } catch (error) {
             console.error("Unable to open the original handbook.", error);
@@ -376,7 +427,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 originalDocumentName: documentRecord.fileName,
                 pageNumber: block.pageNumber,
                 sectionNumber: block.sectionNumber,
-                sourceText: block.sourceText
+                sourceText: block.sourceText,
+                tableCells: block.tableCells
             }));
             const metadataRecords = result.blocks.map((block, index) => ({
                 contentId: `${documentRecord.id}-source-${index + 1}`,
@@ -654,6 +706,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateSelectionControls();
     });
     contentExplorer.addEventListener("click", event => {
+        const groupButton = event.target.closest("[data-select-group]");
+        if (groupButton) {
+            try {
+                const ids = JSON.parse(groupButton.dataset.selectGroup);
+                const shouldSelect = !ids.every(id => selectedContentIds.has(id));
+                ids.forEach(id => {
+                    if (shouldSelect) selectedContentIds.add(id);
+                    else selectedContentIds.delete(id);
+                });
+                renderContent();
+            } catch (error) {
+                console.error("Unable to select the requested handbook section.", error);
+                showNotice(error instanceof Error ? error.message : String(error), true);
+            }
+            return;
+        }
         const previewButton = event.target.closest("[data-preview-content]");
         if (previewButton) {
             previewContent(previewButton.dataset.previewContent);

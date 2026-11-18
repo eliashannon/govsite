@@ -316,11 +316,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
             currentPage = 1;
             render();
-            const requestedCourseId = new URLSearchParams(window.location.search).get("course");
-            const requestedCourse = requestedCourseId
-                ? roleCourses.find(course => course.id === requestedCourseId)
-                : null;
-            if (requestedCourse) openCourseDetails(requestedCourse);
         });
     });
     [categoryFilter, statusFilter, sortFilter].forEach(filter => {
@@ -404,4 +399,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         emptyCourses.textContent = "0";
     }
     render();
+    const requestedCourseId = new URLSearchParams(window.location.search).get("course");
+    const requestedCourse = requestedCourseId
+        ? roleCourses.find(course => course.id === requestedCourseId)
+        : null;
+    if (requestedCourse) openCourseDetails(requestedCourse);
 });
