@@ -213,3 +213,18 @@ test("published courses can be selected and unpublished and course player has a 
     assert.match(player, /Back to Training Courses/);
     assert.match(player, /Back to Content Explorer/);
 });
+
+test("topbar search markup and shared styles are consistent across pages", () => {
+    const pages = ["index.html","role-overview.html","account.html","faq.html","key-references.html","contact.html","required-training.html","training.html","tqs-support.html","ai-training-content-manager.html"];
+    pages.forEach(page => {
+        const html = source(page);
+        assert.match(html, /class="topbar-search search-box"/);
+        assert.match(html, /<svg[^>]*aria-hidden="true"/);
+        assert.match(html, /<input type="search"/);
+    });
+    const sharedComponents = source("assets/shared/css/components.css");
+    const sharedLayout = source("assets/shared/css/layout.css");
+    assert.match(sharedComponents, /\.topbar-search\.search-box input\{height:42px/);
+    assert.match(sharedComponents, /\.topbar-search\.search-box input:focus/);
+    assert.match(sharedLayout, /\.topbar-search\{width:min\(620px,34vw\)\}/);
+});
