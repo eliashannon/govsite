@@ -1,4 +1,5 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    await window.PortalDataReady;
     const date = document.getElementById("dashboardDate");
     if (date) {
         const now = new Date();

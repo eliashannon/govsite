@@ -1,4 +1,5 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    await window.PortalDataReady;
     const emptyState = document.getElementById("tqsNoRole");
     const emptyTitle = document.getElementById("tqsEmptyTitle");
     const emptyMessage = document.getElementById("tqsEmptyMessage");
@@ -119,6 +120,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const statusClass = status => status.toLowerCase().replaceAll(" ", "-");
+    const linkedTrainingModules = requirement => (window.PortalData.publishedTrainingModules || [])
+        .filter(module => module.tqsRequirementIds.includes(requirement.id) && module.roleIds.includes(roleName));
     const filteredRequirements = () => {
         const query = searchInput.value.trim().toLowerCase();
         const selectedStatus = statusFilter.value;
@@ -138,6 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const renderRequirement = requirement => {
         const status = getStatus(requirement);
         const date = displayDate(getCompletedAt(requirement));
+        const linkedModules = linkedTrainingModules(requirement);
         return `
             <article class="tqs-requirement tqs-status-${statusClass(status)}" data-requirement-id="${escapeHtml(requirement.id)}">
                 <label class="tqs-checkbox">
@@ -148,6 +152,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     <button class="tqs-requirement-title" type="button" data-open-requirement="${escapeHtml(requirement.id)}">${escapeHtml(requirement.title)}</button>
                     <p>${escapeHtml(requirement.description)}</p>
                     <div class="tqs-requirement-meta"><span>${escapeHtml(requirement.id)}</span><span>${escapeHtml(requirement.category)}</span>${date ? `<span>Completed ${escapeHtml(date)}</span>` : ""}</div>
+                    ${linkedModules.length ? `<div class="tqs-linked-content"><strong>Published handbook material</strong>${linkedModules.map(module =>
+                        `<a href="required-training.html?role=${encodeURIComponent(roleName)}&course=${encodeURIComponent(module.courseId)}">${escapeHtml(module.title)}</a>`
+                    ).join("")}</div>` : ""}
                 </div>
                 <div class="tqs-requirement-actions">
                     <span class="tqs-status-badge tqs-badge-${statusClass(status)}">${escapeHtml(status)}</span>
@@ -255,7 +262,10 @@ document.addEventListener("DOMContentLoaded", () => {
         ).join("");
         const courseLink = document.getElementById("dialogCourseLink");
         const courseHref = requirement.link && requirement.link !== "#" ? requirement.link : "required-training.html";
-        courseLink.innerHTML = `<a href="${escapeHtml(courseHref)}">${requirement.link && requirement.link !== "#" ? "Open related course" : "View in Training Courses"} →</a>`;
+        const linkedModules = linkedTrainingModules(requirement);
+        courseLink.innerHTML = `<a href="${escapeHtml(courseHref)}">${requirement.link && requirement.link !== "#" ? "Open related course" : "View in Training Courses"} →</a>${linkedModules.map(module =>
+            `<a href="required-training.html?role=${encodeURIComponent(roleName)}&course=${encodeURIComponent(module.courseId)}">${escapeHtml(module.title)} →</a>`
+        ).join("")}`;
         document.getElementById("dialogInProgress").hidden = status === "Completed" || status === "In Progress";
         document.getElementById("dialogToggleComplete").textContent = status === "Completed" ? "Mark Incomplete" : "Mark Complete";
         if (!dialog.open) dialog.showModal();

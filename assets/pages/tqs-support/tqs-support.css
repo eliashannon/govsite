@@ -64,6 +64,10 @@
 .tqs-requirement-title:hover{color:var(--blue-700);text-decoration:underline}
 .tqs-requirement-copy>p{margin:4px 0 7px;color:var(--text-secondary);font-size:12px;line-height:1.45}
 .tqs-requirement-meta{display:flex;flex-wrap:wrap;gap:7px 12px;color:var(--text-muted);font-size:11px}
+.tqs-linked-content{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:8px;font-size:11px}
+.tqs-linked-content strong{color:var(--text-muted);font-weight:600}
+.tqs-linked-content a{color:var(--blue-700);font-weight:600;text-decoration:none}
+.tqs-linked-content a:hover{text-decoration:underline}
 .tqs-requirement-actions{display:flex;align-items:center;gap:12px}
 .tqs-status-badge{padding:5px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .tqs-badge-completed{background:var(--success-bg);color:var(--success)}

@@ -45,3 +45,164 @@ window.PortalData = {
         {category:"Help & Resources",question:"Where can I get help, and are Policy Updates available?",answer:"Open Contact / Help for support guidance and use your organization's approved contact channels. Policy Updates are currently marked Coming Soon; check References for materials already listed in the portal."}
     ]
 };
+
+(() => {
+    const databaseName = "govsiteTrainingContent";
+    const storeNames = [
+        "documents",
+        "originalFiles",
+        "sourceContent",
+        "organizationMetadata",
+        "reviews",
+        "modules"
+    ];
+
+    const openDatabase = () => new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+            reject(new Error("This browser does not support local document storage."));
+            return;
+        }
+        const request = window.indexedDB.open(databaseName, 1);
+        request.onupgradeneeded = () => {
+            const database = request.result;
+            storeNames.forEach(name => {
+                if (!database.objectStoreNames.contains(name)) {
+                    database.createObjectStore(name, {keyPath: name === "organizationMetadata" || name === "reviews" ? "contentId" : "id"});
+                }
+            });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error("Unable to open local document storage."));
+        request.onblocked = () => reject(new Error("Local document storage is blocked by another open portal tab."));
+    });
+
+    const trainingContentStore = {
+        async readAll(names = storeNames) {
+            const database = await openDatabase();
+            return new Promise((resolve, reject) => {
+                const transaction = database.transaction(names, "readonly");
+                const result = {};
+                names.forEach(name => {
+                    const request = transaction.objectStore(name).getAll();
+                    request.onsuccess = () => {
+                        result[name] = request.result;
+                    };
+                    request.onerror = () => reject(request.error || new Error(`Unable to read ${name} from local document storage.`));
+                });
+                transaction.oncomplete = () => {
+                    database.close();
+                    resolve(result);
+                };
+                transaction.onerror = () => {
+                    database.close();
+                    reject(transaction.error || new Error("Unable to read local document storage."));
+                };
+                transaction.onabort = () => {
+                    database.close();
+                    reject(transaction.error || new Error("The local document storage read was interrupted."));
+                };
+            });
+        },
+
+        async saveMany(recordsByStore, deletesByStore = {}) {
+            const names = [...new Set([...Object.keys(recordsByStore), ...Object.keys(deletesByStore)])];
+            if (!names.length) return;
+            const database = await openDatabase();
+            return new Promise((resolve, reject) => {
+                const transaction = database.transaction(names, "readwrite");
+                Object.entries(recordsByStore).forEach(([name, records]) => {
+                    const objectStore = transaction.objectStore(name);
+                    records.forEach(record => objectStore.put(record));
+                });
+                Object.entries(deletesByStore).forEach(([name, ids]) => {
+                    const objectStore = transaction.objectStore(name);
+                    ids.forEach(id => objectStore.delete(id));
+                });
+                transaction.oncomplete = () => {
+                    database.close();
+                    resolve();
+                };
+                transaction.onerror = () => {
+                    database.close();
+                    reject(transaction.error || new Error("Unable to save changes to local document storage."));
+                };
+                transaction.onabort = () => {
+                    database.close();
+                    reject(transaction.error || new Error("The local document storage update was interrupted."));
+                };
+            });
+        },
+
+        async getOriginal(id) {
+            const database = await openDatabase();
+            return new Promise((resolve, reject) => {
+                const transaction = database.transaction("originalFiles", "readonly");
+                const request = transaction.objectStore("originalFiles").get(id);
+                request.onsuccess = () => resolve(request.result || null);
+                request.onerror = () => reject(request.error || new Error("Unable to read the original handbook."));
+                transaction.oncomplete = () => database.close();
+                transaction.onerror = () => {
+                    database.close();
+                    reject(transaction.error || new Error("Unable to read the original handbook."));
+                };
+            });
+        }
+    };
+
+    window.TrainingContentStore = Object.freeze(trainingContentStore);
+    window.PortalData.publishedTrainingModules = [];
+    window.PortalDataReady = trainingContentStore.readAll(["documents", "sourceContent", "reviews", "modules"])
+        .then(({documents, sourceContent, reviews, modules}) => {
+            const documentsById = new Map(documents.map(item => [item.id, item]));
+            const sourceById = new Map(sourceContent.map(item => [item.id, item]));
+            const reviewById = new Map(reviews.map(item => [item.contentId, item]));
+            const publishableModules = modules.filter(module =>
+                module.publicationStatus === "Published"
+                && Array.isArray(module.sourceContentIds)
+                && module.sourceContentIds.length > 0
+                && module.sourceContentIds.every(id =>
+                    sourceById.has(id)
+                    && documentsById.has(sourceById.get(id).documentId)
+                    && reviewById.get(id)?.status === "Approved"
+                )
+            );
+            const moduleCourses = publishableModules.map(module => {
+                const sourceItems = module.sourceContentIds.map(id => sourceById.get(id));
+                const courseId = `HANDBOOK-${module.id}`;
+                const course = {
+                    id: courseId,
+                    title: module.title,
+                    description: sourceItems.map(item => item.sourceText).join("\n\n"),
+                    category: module.category || "Handbook-based",
+                    requirement: "Optional",
+                    duration: "Not specified in source",
+                    frequency: "Not specified in source",
+                    link: `required-training.html?course=${encodeURIComponent(courseId)}`,
+                    roles: module.roleIds,
+                    sourceContentIds: module.sourceContentIds,
+                    tqsRequirementIds: module.tqsRequirementIds || [],
+                    originalDocuments: [...new Set(sourceItems.map(item => item.documentId))],
+                    sourceReferences: sourceItems.map(item => ({
+                        id: item.id,
+                        documentName: item.originalDocumentName,
+                        pageNumber: item.pageNumber,
+                        sectionNumber: item.sectionNumber
+                    }))
+                };
+                return {module, course};
+            });
+            window.PortalData.publishedTrainingModules = moduleCourses.map(({module, course}) => ({
+                id: module.id,
+                title: module.title,
+                courseId: course.id,
+                roleIds: module.roleIds,
+                tqsRequirementIds: course.tqsRequirementIds,
+                sourceContentIds: module.sourceContentIds
+            }));
+            window.PortalData.courses.push(...moduleCourses.map(({course}) => course));
+        })
+        .catch(error => {
+            console.error("Unable to load locally published training content.", error);
+            window.PortalData.contentLoadError = error;
+        });
+})();

@@ -1,4 +1,5 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    await window.PortalDataReady;
     const tableBody = document.getElementById("trainingList");
     const catalog = window.PortalData?.courses;
     if (!tableBody || !Array.isArray(catalog)) {
@@ -261,7 +262,13 @@ document.addEventListener("DOMContentLoaded", () => {
             ["Estimated duration", course.duration],
             ["Requirement", course.requirement],
             ["Frequency", course.frequency],
-            ["Current status", getCourseStatus(course)]
+            ["Current status", getCourseStatus(course)],
+            ...(Array.isArray(course.sourceReferences) ? [[
+                "Handbook source references",
+                course.sourceReferences.map(reference =>
+                    `${reference.documentName} — page ${reference.pageNumber || "unavailable"}, section ${reference.sectionNumber || "not identified"}`
+                ).join("; ")
+            ]] : [])
         ];
         dialogFields.innerHTML = fields.map(([label, value]) => `
             <dl class="course-detail-item"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></dl>
@@ -309,6 +316,11 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             currentPage = 1;
             render();
+            const requestedCourseId = new URLSearchParams(window.location.search).get("course");
+            const requestedCourse = requestedCourseId
+                ? roleCourses.find(course => course.id === requestedCourseId)
+                : null;
+            if (requestedCourse) openCourseDetails(requestedCourse);
         });
     });
     [categoryFilter, statusFilter, sortFilter].forEach(filter => {

@@ -4,58 +4,83 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | AI Training Content Manager</title>
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261110-3"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261117-1"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261110-3"><link rel="stylesheet" href="assets/shared/css/components.css"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-1"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261118-1">
 </head>
 <body data-page="ai-training-content-manager">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
 <header class="topbar"><div class="topbar-left"><button class="btn btn-secondary mobile-menu-button" id="mobileMenuButton" aria-label="Open navigation">☰</button><img class="navsea-logo" src="assets/shared/images/navsea%20logo.jpg" alt="NAVSEA, Naval Sea Systems Command"><span class="portal-title">C Department Training Portal</span></div>
-<div class="topbar-right"><div class="topbar-search search-box"><input type="search" placeholder="Search training content..." data-ai-content-search aria-label="Search training content"><span aria-hidden="true">⌕</span></div>
+<div class="topbar-right"><div class="topbar-search search-box"><input type="search" placeholder="Search handbook content..." data-handbook-search aria-label="Search handbook content"><span aria-hidden="true">⌕</span></div>
 <div style="position:relative"><button class="account-button" id="accountButton" aria-expanded="false" aria-controls="accountMenu"><span class="account-avatar">U</span><span>Account ▾</span></button><div class="account-menu" id="accountMenu" hidden><a href="contact.html">Contact Support</a><a href="index.html">Dashboard</a></div></div></div></header>
 <main class="page-content ai-manager-page">
   <section class="ai-manager-heading">
-    <div><p class="tqs-eyebrow">MASTER ACCOUNT TOOL</p><h1>AI Training Content Manager</h1><p>Draft, review, and organize role-based training content.</p></div>
-    <button id="newContentButton" class="btn btn-primary" type="button">+ New Training Content</button>
+    <div><p class="tqs-eyebrow">MASTER ACCOUNT TOOL</p><h1>Training Content Manager</h1><p>Extract, review, approve, and publish source-traceable handbook material.</p></div>
+    <button id="exportPackageButton" class="btn btn-secondary" type="button">Export JSON package</button>
   </section>
 
-  <section class="ai-manager-grid">
-    <aside class="ai-manager-panel ai-draft-panel">
-      <div class="ai-panel-heading"><div><span class="tqs-label">AI DRAFT ASSISTANT</span><h2>Create course draft</h2></div><span class="ai-status">LOCAL ASSISTANT</span></div>
-      <form id="aiDraftForm">
-        <label for="draftTitle">Training title</label><input id="draftTitle" class="form-control" type="text" placeholder="Example: Cybersecurity Incident Response" required>
-        <label for="draftRole">Target role</label><input id="draftRole" class="form-control" type="text" placeholder="Example: IT Support Analyst" required>
-        <label for="draftNotes">Training details or source notes</label><textarea id="draftNotes" class="form-control" rows="5" placeholder="Describe objectives, required procedures, duration, or reference materials."></textarea>
-        <button id="generateDraftButton" class="btn btn-primary" type="submit">Generate Draft</button>
-      </form>
-      <div id="draftResult" class="ai-draft-result" hidden>
-        <div><span class="tqs-label">GENERATED SUMMARY</span><button id="useDraftButton" type="button">Use in editor</button></div>
-        <h3 id="draftResultTitle"></h3><p id="draftResultDescription"></p>
-        <dl><div><dt>Category</dt><dd id="draftResultCategory"></dd></div><div><dt>Duration</dt><dd id="draftResultDuration"></dd></div></dl>
-      </div>
-    </aside>
+  <aside class="manager-prototype-notice" aria-label="Prototype processing and storage notice">
+    <strong>Local prototype — no AI service is connected.</strong>
+    <span>PDF/DOCX text extraction and rule-based classification run in this browser. Original files and workflow data stay in this browser. Publishing updates this browser's training catalog only; export and source-control the JSON package and original handbooks separately for shared deployment.</span>
+  </aside>
+  <p id="managerNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
 
-    <section class="ai-manager-panel ai-library-panel">
-      <div class="ai-panel-heading ai-library-heading"><div><span class="tqs-label">TRAINING LIBRARY</span><h2>Managed content</h2></div><span id="contentCount" class="ai-content-count">0 items</span></div>
-      <div class="ai-library-toolbar"><input id="contentSearch" type="search" class="form-control" placeholder="Search title or role"><select id="contentFilter" class="form-control"><option value="All">All statuses</option><option value="Draft">Draft</option><option value="Published">Published</option><option value="Archived">Archived</option></select></div>
-      <div id="contentList" class="ai-content-list"></div>
-    </section>
+  <section class="ai-manager-panel handbook-upload-panel" aria-labelledby="uploadTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">SOURCE HANDBOOKS</span><h2 id="uploadTitle">Upload official documents</h2></div><span class="ai-status">LOCAL EXTRACTION · NO AI</span></div>
+    <form id="handbookUploadForm" class="handbook-upload-form">
+      <label for="handbookFiles">PDF or DOCX handbooks</label>
+      <input id="handbookFiles" class="form-control" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple required>
+      <p>Text is extracted without rewriting. Scanned PDF pages, uncertain structure, and parser warnings require administrator review.</p>
+      <button id="uploadHandbooksButton" class="btn btn-primary" type="submit">Upload and extract</button>
+    </form>
   </section>
 
-  <dialog id="contentDialog" class="ai-content-dialog" aria-labelledby="contentDialogTitle">
-    <form id="contentForm">
-      <div class="ai-dialog-header"><div><span class="tqs-label">TRAINING CONTENT</span><h2 id="contentDialogTitle">New training content</h2></div><button id="closeContentDialog" type="button" aria-label="Close">×</button></div>
-      <input id="contentId" type="hidden">
-      <div class="ai-form-grid">
-        <label>Title<input id="contentTitle" class="form-control" type="text" required></label>
-        <label>Target role<input id="contentRole" class="form-control" type="text" required></label>
-        <label>Category<input id="contentCategory" class="form-control" type="text" required></label>
-        <label>Duration<input id="contentDuration" class="form-control" type="text" placeholder="Example: 2 hours" required></label>
-        <label class="ai-full-field">Description<textarea id="contentDescription" class="form-control" rows="5" required></textarea></label>
-        <label>Status<select id="contentStatus" class="form-control"><option>Draft</option><option>Published</option><option>Archived</option></select></label>
-      </div>
-      <div class="ai-dialog-actions"><button id="deleteContentButton" class="btn ai-delete-button" type="button" hidden>Delete</button><span></span><button id="cancelContentButton" class="btn btn-secondary" type="button">Cancel</button><button class="btn btn-primary" type="submit">Save Content</button></div>
+  <section class="ai-manager-panel handbook-library-panel" aria-labelledby="handbookLibraryTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">PRESERVED ORIGINALS</span><h2 id="handbookLibraryTitle">Handbook library</h2></div><span id="documentCount" class="ai-content-count">0 documents</span></div>
+    <div id="handbookList" class="handbook-list"></div>
+  </section>
+
+  <section class="ai-manager-panel handbook-explorer-panel" aria-labelledby="contentExplorerTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">SOURCE CONTENT</span><h2 id="contentExplorerTitle">Content explorer</h2></div><span id="contentCount" class="ai-content-count">0 items</span></div>
+    <div class="handbook-toolbar">
+      <input id="contentSearch" type="search" class="form-control" placeholder="Search exact source text, section, or document">
+      <select id="categoryFilter" class="form-control" aria-label="Filter by content category"><option value="All">All categories</option></select>
+      <select id="reviewFilter" class="form-control" aria-label="Filter by approval status"><option value="All">All approval statuses</option><option>Pending Review</option><option>Approved</option><option>Rejected</option></select>
+    </div>
+    <div class="handbook-selection-toolbar">
+      <span id="selectionCount">0 selected</span>
+      <button id="selectAllVisibleButton" class="ai-text-button" type="button">Select visible</button>
+      <button id="approveSelectedButton" class="btn btn-secondary" type="button" disabled>Approve selected</button>
+      <button id="rejectSelectedButton" class="btn btn-secondary" type="button" disabled>Reject selected</button>
+      <button id="createModuleButton" class="btn btn-primary" type="button" disabled>Create module from approved</button>
+    </div>
+    <div id="contentExplorer" class="handbook-content-explorer"></div>
+  </section>
+
+  <section class="ai-manager-panel source-preview-panel" id="sourcePreview" aria-labelledby="previewTitle" hidden>
+    <div class="manager-section-heading"><div><span class="tqs-label">SOURCE PREVIEW</span><h2 id="previewTitle">Select a content item</h2></div><button id="viewOriginalButton" class="btn btn-secondary" type="button" hidden>View original</button></div>
+    <dl id="previewMetadata" class="source-preview-metadata"></dl>
+    <p id="previewWarnings" class="source-preview-warnings" hidden></p>
+    <pre id="previewText" class="source-preview-text"></pre>
+  </section>
+
+  <section class="ai-manager-panel module-library-panel" aria-labelledby="moduleLibraryTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">ADMIN-APPROVED MATERIAL</span><h2 id="moduleLibraryTitle">Training modules</h2></div><span id="moduleCount" class="ai-content-count">0 modules</span></div>
+    <div id="moduleList" class="module-list"></div>
+  </section>
+
+  <dialog id="moduleDialog" class="ai-content-dialog module-dialog" aria-labelledby="moduleDialogTitle">
+    <form id="moduleForm">
+      <div class="ai-dialog-header"><div><span class="tqs-label">SOURCE-BASED MODULE</span><h2 id="moduleDialogTitle">Create training module</h2></div><button id="closeModuleDialog" type="button" aria-label="Close">×</button></div>
+      <p class="module-source-summary" id="moduleSourceSummary"></p>
+      <label for="moduleTitle">Module title <span>(administrative label only)</span></label>
+      <input id="moduleTitle" class="form-control" type="text" maxlength="160" required>
+      <fieldset class="module-fieldset"><legend>Link to existing portal roles</legend><p>Choose the roles that should see this published module.</p><div id="moduleRoleOptions" class="module-options"></div></fieldset>
+      <fieldset class="module-fieldset"><legend>Link to existing TQS requirements</legend><p>These links do not create or change qualification requirements.</p><div id="moduleTqsOptions" class="module-options"></div></fieldset>
+      <p id="moduleDialogNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
+      <div class="ai-dialog-actions"><span></span><button id="cancelModuleButton" class="btn btn-secondary" type="button">Cancel</button><button class="btn btn-primary" type="submit">Save unpublished module</button></div>
     </form>
   </dialog>
 </main></div></div>
-<script src="assets/shared/js/data.js"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js"></script>
+<script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
+<script src="assets/shared/js/data.js?v=20261118-1"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-1"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-1"></script>
 </body>
 </html>
