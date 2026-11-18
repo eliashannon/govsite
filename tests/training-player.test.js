@@ -101,6 +101,7 @@ async function player(preview = false, savedStorage = null, fixture = null) {
 
 test("course player shows module states, renders structured material, and completes a five-module course", async () => {
     const p = await player();
+    assert.deepEqual({...p.scrolls.at(-1)}, {top:84, behavior:"auto"});
     assert.equal(p.elements.courseProgressDetail.textContent, "0 of 5 modules continued");
     assert.equal(p.sidebar(0).attributes["aria-current"], "page");
     assert.equal(p.sidebar(1).disabled, true);
@@ -124,7 +125,7 @@ test("course player shows module states, renders structured material, and comple
     assert.equal(p.sidebar(0).children[0].textContent, "✓");
     assert.equal(p.sidebar(1).attributes["aria-current"], "page");
     assert.equal(p.window.location.searchParams.get("module"), "module-2");
-    assert.deepEqual({...p.scrolls.at(-1)}, {top:0, behavior:"auto"});
+    assert.deepEqual({...p.scrolls.at(-1)}, {top:84, behavior:"auto"});
     p.sidebar(0).click();
     p.button("Continue").click();
     assert.equal(p.elements.courseProgressLabel.textContent, "20%");
@@ -141,6 +142,7 @@ test("course player shows module states, renders structured material, and comple
     assert.equal(p.elements.courseCompletionTitle.textContent, p.course.title);
     assert.equal(p.elements.courseCompletionReturn.href, "required-training.html");
     assert.equal(p.elements.courseCompletion.focused, true);
+    assert.deepEqual({...p.scrolls.at(-1)}, {top:0, behavior:"auto"});
     assert.equal(p.button("Course Completed").disabled, true);
     assert.ok(JSON.parse(p.localStorage.getItem("portal.completedCourses")).includes(p.course.id));
     assert.ok(!JSON.parse(p.localStorage.getItem("portal.inProgressCourses")).includes(p.course.id));

@@ -395,7 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderModuleSidebar();
         renderModuleContent();
         document.getElementById("courseCompletion").focus({preventScroll:true});
-        scrollToCourseTop();
+        scrollToPageTop();
     }
 
     function renderModuleContent() {
@@ -505,6 +505,21 @@ document.addEventListener("DOMContentLoaded", () => {
         window.scrollTo({top:0, behavior:reducedMotion ? "auto" : "smooth"});
     }
 
+    function scrollToCourseProgress() {
+        const progressSection = document.getElementById("courseProgressSection");
+        if (typeof progressSection?.scrollIntoView === "function") {
+            const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+            progressSection.scrollIntoView({behavior:reducedMotion ? "auto" : "smooth", block:"start"});
+        } else {
+            const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+            window.scrollTo({top:84, behavior:reducedMotion ? "auto" : "smooth"});
+        }
+    }
+
+    function scrollToPageTop() {
+        scrollToCourseTop();
+    }
+
     function navigateToModule(index, addHistory, recordLastViewed = true) {
         if (!Number.isInteger(index) || index < 0 || index >= selectedCourse.modules.length) return;
         const module = selectedCourse.modules[index];
@@ -526,7 +541,7 @@ document.addEventListener("DOMContentLoaded", () => {
         url.searchParams.set("module", module.id);
         if (addHistory) history.pushState({ courseId: selectedCourse.id, moduleId: module.id }, "", url);
         else history.replaceState({ courseId: selectedCourse.id, moduleId: module.id }, "", url);
-        scrollToCourseTop();
+        scrollToCourseProgress();
     }
 
     function resetCourseProgress() {

@@ -14,6 +14,7 @@
 .training-objectives h2{margin:0 0 8px;font-size:17px}
 .training-objectives ul{margin:0;padding-left:20px;color:var(--text-secondary)}
 .training-progress-section{margin-bottom:18px;padding:15px 18px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.training-progress-section{scroll-margin-top:calc(var(--header-height) + 12px)}
 .training-progress-heading{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px}
 .training-progress-heading strong{font-size:13px}
 .training-progress-heading span{color:var(--blue-700);font-weight:700}
