@@ -664,8 +664,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const uploadFiles = async files => {
         for (const file of files) {
             const extension = file.name.toLowerCase().split(".").pop();
-            if (!["pdf", "docx"].includes(extension)) {
-                showNotice(`${file.name}: only PDF and DOCX handbooks are supported.`, true);
+            if (!["pdf", "docx", "txt", "md"].includes(extension)) {
+                showNotice(`${file.name}: only PDF, DOCX, TXT, and Markdown handbooks are supported.`, true);
                 continue;
             }
             if (file.size === 0 || file.size > maximumFileSize) {

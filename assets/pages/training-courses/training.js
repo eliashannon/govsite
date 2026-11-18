@@ -250,6 +250,36 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             return list;
         }
+        if (block.type === "table") {
+            if (!Array.isArray(block.headers) || !Array.isArray(block.rows)) return null;
+            const table = document.createElement("table");
+            table.className = "training-content-table";
+            const thead = document.createElement("thead");
+            const headerRow = document.createElement("tr");
+            block.headers.forEach(headerText => {
+                if (typeof headerText !== "string") return;
+                const th = document.createElement("th");
+                th.scope = "col";
+                th.textContent = headerText;
+                headerRow.append(th);
+            });
+            thead.append(headerRow);
+            table.append(thead);
+            const tbody = document.createElement("tbody");
+            block.rows.forEach(row => {
+                if (!Array.isArray(row)) return;
+                const tr = document.createElement("tr");
+                row.forEach(cell => {
+                    if (typeof cell !== "string") return;
+                    const td = document.createElement("td");
+                    td.textContent = cell;
+                    tr.append(td);
+                });
+                tbody.append(tr);
+            });
+            table.append(tbody);
+            return table;
+        }
         if (block.type === "callout") {
             const callout = document.createElement("aside");
             callout.className = `training-callout training-callout-${block.variant === "warning" ? "warning" : "info"}`;

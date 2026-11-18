@@ -195,12 +195,195 @@
         return {blocks, warnings, pageCount: null};
     };
 
+    const parseCourseText = (text, fileName) => {
+        const lines = String(text).replace(/\r\n?/g, "\n").split("\n");
+        const course = {
+            id: "", title: "", shortDescription: "", description: "", category: "", difficulty: "",
+            durationMinutes: 0, version: "1.0", learningObjectives: [], roleAssignments: [],
+            status: "draft", source: {fileName}, modules: []
+        };
+        const moduleHeadingPattern = /^\s*(?:(?:MODULE)\s*)?((?:\d+\.)+\d+|\d+\.\d+)\s*(?:[:\-]\s*|\s+)(.+?)\s*$/i;
+        const moduleHeadingWithColon = /^\s*MODULE\s+((?:\d+\.)*\d+(?:\.\d+)*)\s*[:\-]?\s*(.*?)\s*$/i;
+        const modulePattern = value => {
+            const match = value.match(moduleHeadingWithColon) || value.match(moduleHeadingPattern);
+            if (!match) return null;
+            const number = match[1].replace(/[.:]$/, "");
+            return {number, title: (match[2] || "").trim()};
+        };
+        let section = "";
+        let currentModule = null;
+        let courseMetadataLines = [];
+        let pendingTable = false;
+
+        const addCourseLink = line => {
+            const linkMatch = line.match(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|[A-Za-z0-9_./-]+)\)/i);
+            if (linkMatch) return {type:"link", text:linkMatch[1], url:linkMatch[2]};
+            const bareMatch = line.match(/^(https?:\/\/\S+)$/i);
+            if (bareMatch) return {type:"link", text:"Open reference", url:bareMatch[1]};
+            return null;
+        };
+        const safeLine = line => line.trim();
+
+        lines.forEach(rawLine => {
+            const line = safeLine(rawLine);
+            if (!line) return;
+            if (line === "[TABLE]" && currentModule) {
+                pendingTable = true;
+                return;
+            }
+            if (pendingTable && currentModule) {
+                try {
+                    const table = JSON.parse(line);
+                    if (Array.isArray(table.headers) && Array.isArray(table.rows)) {
+                        currentModule.content.push({
+                            type: "table",
+                            headers: table.headers.filter(item => typeof item === "string"),
+                            rows: table.rows.filter(Array.isArray).map(row => row.filter(item => typeof item === "string"))
+                        });
+                    }
+                } catch (_) {}
+                pendingTable = false;
+                return;
+            }
+            const heading = modulePattern(line);
+            if (heading) {
+                currentModule = {
+                    id: "", sourceModuleNumber: heading.number, title: heading.title, order: course.modules.length + 1,
+                    estimatedMinutes: 10, learningObjectives: [], content: [],
+                    source: {fileName, section: heading.number}
+                };
+                course.modules.push(currentModule);
+                section = "MODULE";
+                return;
+            }
+            const upper = line.replace(/:$/, "").toUpperCase();
+            if (["COURSE","COURSE DESCRIPTION","LEARNING OBJECTIVES","MODULE OBJECTIVES","CONTENT","REFERENCES","SOURCE INFORMATION"].includes(upper)) {
+                section = upper;
+                return;
+            }
+            if (/^COURSE\s+ID\s*:/i.test(line)) { course.id = line.replace(/^COURSE\s+ID\s*:\s*/i,"").trim(); return; }
+            if (/^COURSE\s+TITLE\s*:/i.test(line)) { course.title = line.replace(/^COURSE\s+TITLE\s*:\s*/i,"").trim(); return; }
+            if (/^CATEGORY\s*:/i.test(line)) { course.category = line.replace(/^CATEGORY\s*:\s*/i,"").trim(); return; }
+            if (/^DIFFICULTY\s*:/i.test(line)) { course.difficulty = line.replace(/^DIFFICULTY\s*:\s*/i,"").trim(); return; }
+            if (/^DURATION\s+MINUTES\s*:/i.test(line)) { course.durationMinutes = Number(line.replace(/^DURATION\s+MINUTES\s*:\s*/i,"").trim()) || 0; return; }
+            if (/^VERSION\s*:/i.test(line)) { course.version = line.replace(/^VERSION\s*:\s*/i,"").trim(); return; }
+            if (/^(DIVISION|BRANCH|ROLE)\s*:/i.test(line)) {
+                const match = line.match(/^([A-Z]+)\s*:\s*(.+)$/i);
+                if (match) {
+                    if (match[1].toLowerCase() === "division") course._division = match[2].trim();
+                    if (match[1].toLowerCase() === "branch") course._branch = match[2].trim();
+                    if (match[1].toLowerCase() === "role") course._role = match[2].trim();
+                }
+                return;
+            }
+            if (section === "COURSE DESCRIPTION") {
+                course.description = [course.description, line].filter(Boolean).join(" ");
+            } else if (section === "LEARNING OBJECTIVES") {
+                const item = line.replace(/^[-*•]\s*/, "").replace(/^\d+[.)]\s*/, "").trim();
+                if (item) course.learningObjectives.push(item);
+            } else if (currentModule && section === "MODULE OBJECTIVES") {
+                const item = line.replace(/^[-*•]\s*/, "").replace(/^\d+[.)]\s*/, "").trim();
+                if (item) currentModule.learningObjectives.push(item);
+            } else if (currentModule && ["CONTENT","MODULE","REFERENCES","SOURCE INFORMATION"].includes(section)) {
+                if (section === "REFERENCES") {
+                    const link = addCourseLink(line);
+                    if (link) currentModule.content.push(link);
+                    else currentModule.content.push({type:"paragraph",text:line.replace(/^[-*•]\s*/, "")});
+                } else {
+                    const bullet = line.match(/^[-*•]\s+(.+)$/);
+                    const numbered = line.match(/^\d+[.)]\s+(.+)$/);
+                    if (bullet || numbered) {
+                        const item = (bullet || numbered)[1];
+                        const previous = currentModule.content[currentModule.content.length - 1];
+                        if (previous?.type === "list" && previous.style === (numbered ? "ordered" : "unordered")) previous.items.push(item);
+                        else currentModule.content.push({type:"list", style:numbered ? "ordered":"unordered", items:[item]});
+                    } else if (/^KEY POINT/i.test(line)) {
+                        currentModule.content.push({type:"callout",variant:"info",title:"Key Point",text:""});
+                    } else if (line.toUpperCase() === "WARNING") {
+                        currentModule.content.push({type:"callout",variant:"warning",title:"Warning",text:""});
+                    } else {
+                        const link = addCourseLink(line);
+                        if (link) currentModule.content.push(link);
+                        else {
+                            const callout = currentModule.content[currentModule.content.length - 1];
+                            if (callout?.type === "callout" && !callout.text) callout.text = line;
+                            else currentModule.content.push({type:"paragraph",text:line});
+                        }
+                    }
+                }
+            }
+        });
+
+        if (course._division || course._branch || course._role) {
+            course.roleAssignments = course._division && course._branch && course._role ? [{
+                divisionId: course._division.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
+                branchId: course._branch.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
+                roleId: course._role.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
+                required:true
+            }] : [];
+        }
+        delete course._division; delete course._branch; delete course._role;
+        const validIdBase = course.title.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+        if (!/^[a-z0-9][a-z0-9_-]*$/.test(course.id) && validIdBase) course.id = validIdBase;
+        course.modules.forEach((module, index) => {
+            if (!module.id) module.id = `${course.id || "course"}-module-${module.sourceModuleNumber.replace(/\./g,"-")}`;
+            module.order = index + 1;
+        });
+        return course;
+    };
+
+    const extractCourseFromDocx = async file => {
+        if (!window.mammoth) throw new Error("The local DOCX text parser is unavailable.");
+        const result = await window.mammoth.convertToHtml({arrayBuffer: await file.arrayBuffer()});
+        const parsed = new DOMParser().parseFromString(result.value, "text/html");
+        const pseudoLines = [];
+        const visit = node => {
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+            const tag = node.tagName.toLowerCase();
+            if (/^h[1-6]$/.test(tag)) { pseudoLines.push(node.textContent.trim()); return; }
+            if (tag === "table") {
+                const rows = [...node.querySelectorAll("tr")].map(row => [...row.querySelectorAll("th,td")].map(cell => cell.textContent.trim()));
+                if (rows.length) pseudoLines.push("[TABLE]", JSON.stringify({headers:rows[0],rows:rows.slice(1)}));
+                return;
+            }
+            if (tag === "ul" || tag === "ol") {
+                [...node.children].forEach(item => {
+                    if (item.tagName.toLowerCase() === "li") pseudoLines.push(`- ${item.textContent.trim()}`);
+                });
+                return;
+            }
+            if (tag === "p") {
+                const links = [...node.querySelectorAll("a")];
+                if (links.length === 1 && node.textContent.trim() === links[0].textContent.trim()) {
+                    const href = links[0].getAttribute("href") || "";
+                    pseudoLines.push(`[${links[0].textContent.trim()}](${href})`);
+                } else pseudoLines.push(node.textContent.trim());
+                return;
+            }
+            [...node.children].forEach(visit);
+        };
+        [...parsed.body.children].forEach(visit);
+        return parseCourseText(pseudoLines.join("\n"), file.name);
+    };
+
     window.HandbookProcessor = Object.freeze({
         async extract(file) {
             const extension = file.name.toLowerCase().split(".").pop();
             if (extension === "pdf") return extractPdf(file);
             if (extension === "docx") return extractDocx(file);
-            throw new Error("Only PDF and DOCX handbooks can be processed.");
+            if (extension === "txt" || extension === "md") {
+                const text = await file.text();
+                const blocks = text.split(/\n{2,}/).filter(Boolean).map(sourceText => createBlock(sourceText.trim(), {blockKind:extension==="md"?"markdown":"text"}));
+                if (!blocks.length) throw new Error("The text document is empty.");
+                return {blocks:blocks.filter(Boolean), warnings:[], pageCount:null};
+            }
+            throw new Error("Only PDF, DOCX, TXT, and Markdown files can be processed.");
+        },
+        async extractCourse(file) {
+            const extension = file.name.toLowerCase().split(".").pop();
+            if (extension === "docx") return extractCourseFromDocx(file);
+            if (extension === "txt" || extension === "md") return parseCourseText(await file.text(), file.name);
+            throw new Error("Only DOCX, TXT, and Markdown course documents are supported.");
         }
     });
 })();

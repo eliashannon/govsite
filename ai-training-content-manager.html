@@ -14,7 +14,7 @@
 <main class="page-content ai-manager-page">
   <section class="ai-manager-heading">
     <div><p class="tqs-eyebrow">MASTER ACCOUNT TOOL</p><h1>Training Content Manager</h1><p>Extract, review, approve, and publish source-traceable handbook material.</p></div>
-    <button id="exportPackageButton" class="btn btn-secondary" type="button">Export JSON package</button>
+    <div class="ai-manager-heading-actions"><button id="previewCourseDraftButton" class="btn btn-secondary" type="button">Preview draft</button><button id="exportPackageButton" class="btn btn-secondary" type="button">Export source package</button></div>
   </section>
 
   <aside class="manager-prototype-notice" aria-label="Prototype processing and storage notice">
@@ -27,10 +27,11 @@
   <section class="ai-manager-panel handbook-upload-panel" aria-labelledby="uploadTitle">
     <div class="manager-section-heading"><div><span class="tqs-label">SOURCE HANDBOOKS</span><h2 id="uploadTitle">Upload official documents</h2></div><span class="ai-status">LOCAL EXTRACTION · NO AI</span></div>
     <form id="handbookUploadForm" class="handbook-upload-form">
-      <label for="handbookFiles">PDF or DOCX handbooks</label>
-      <input id="handbookFiles" class="form-control" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple required>
-      <p>Text is extracted without rewriting. Scanned PDF pages, uncertain structure, and parser warnings require administrator review.</p>
+      <label for="handbookFiles">Standardized training documents</label>
+      <input id="handbookFiles" class="form-control" type="file" accept=".docx,.txt,.md,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple required>
+      <p>Primary input: DOCX. TXT and Markdown are available for development. PDF remains a legacy extraction option. Scanned PDFs and uncertain structure require administrator review.</p>
       <button id="uploadHandbooksButton" class="btn btn-primary" type="submit">Upload and extract</button>
+      <button id="createCourseDraftButton" class="btn btn-secondary" type="button">Create structured course draft</button>
     </form>
   </section>
 
@@ -79,6 +80,88 @@
     <div id="moduleList" class="module-list"></div>
   </section>
 
+  <section class="ai-manager-panel standardized-template-panel" aria-labelledby="templateTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">STANDARDIZED SOURCE FORMAT</span><h2 id="templateTitle">Synthetic course template</h2></div></div>
+    <pre class="standardized-template">COURSE
+Course ID: cybersecurity-basics
+Course Title: Cybersecurity Basics
+Category: Cybersecurity
+Difficulty: Beginner
+Duration Minutes: 60
+Version: 1.0
+Division: Technical Services
+Branch: IT
+Role: IT Support Analyst
+
+COURSE DESCRIPTION
+This course introduces fundamental cybersecurity concepts.
+
+LEARNING OBJECTIVES
+- Identify common cybersecurity threats
+- Recognize suspicious messages
+
+MODULE 1.1: Introduction to Cybersecurity
+
+MODULE OBJECTIVES
+- Define cybersecurity
+- Explain why cybersecurity matters
+
+CONTENT
+Cybersecurity is the practice of protecting systems, networks, and information.
+
+KEY POINT
+Every user contributes to organizational security.</pre>
+  </section>
+
+  <dialog id="courseDraftDialog" class="ai-content-dialog course-draft-dialog" aria-labelledby="courseDraftDialogTitle">
+    <div class="ai-dialog-header"><div><span class="tqs-label">COURSE WORKFLOW</span><h2 id="courseDraftDialogTitle">Edit course draft</h2></div><button id="closeCourseDraftDialog" type="button" aria-label="Close course draft">×</button></div>
+    <div class="course-draft-toolbar">
+      <label for="courseDraftStatus">Course status</label>
+      <select id="courseDraftStatus" class="form-control">
+        <option value="uploaded">uploaded</option><option value="processing">processing</option><option value="draft" selected>draft</option><option value="needs-review">needs-review</option><option value="approved">approved</option><option value="published">published</option><option value="archived">archived</option>
+      </select>
+      <button id="saveCourseDraftButton" class="btn btn-secondary" type="button">Save draft</button>
+      <button id="reviewCourseDraftButton" class="btn btn-secondary" type="button">Send to review</button>
+      <button id="approveCourseDraftButton" class="btn btn-primary" type="button" disabled>Approve</button>
+      <button id="publishCourseDraftButton" class="btn btn-secondary" type="button" disabled>Mark published</button>
+      <button id="exportCourseDraftButton" class="btn btn-primary" type="button" disabled>Export approved JSON</button>
+    </div>
+    <p id="courseDraftNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
+    <div id="courseValidationSummary" class="course-validation-summary" aria-live="polite"></div>
+    <form id="courseDraftForm" class="course-draft-form">
+      <fieldset><legend>Course information</legend>
+        <div class="course-field-grid">
+          <label>Course ID<input id="courseEditorId" class="form-control" type="text"></label>
+          <label>Course title<input id="courseEditorTitle" class="form-control" type="text"></label>
+          <label>Short description<input id="courseEditorShortDescription" class="form-control" type="text"></label>
+          <label>Category<input id="courseEditorCategory" class="form-control" type="text"></label>
+          <label>Difficulty<select id="courseEditorDifficulty" class="form-control"><option value="">Select difficulty</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></label>
+          <label>Duration (minutes)<input id="courseEditorDuration" class="form-control" type="number" min="1"></label>
+          <label>Version<input id="courseEditorVersion" class="form-control" type="text" value="1.0"></label>
+          <label>Source filename<input id="courseEditorSourceFile" class="form-control" type="text" readonly></label>
+        </div>
+        <label>Full description<textarea id="courseEditorDescription" class="form-control" rows="4"></textarea></label>
+        <label>Course learning objectives (one per line)<textarea id="courseEditorObjectives" class="form-control" rows="4"></textarea></label>
+      </fieldset>
+      <fieldset><legend>Role assignments</legend>
+        <div class="course-assignment-controls">
+          <label>Division<select id="courseAssignmentDivision" class="form-control"></select></label>
+          <label>Branch<select id="courseAssignmentBranch" class="form-control" disabled></select></label>
+          <label>Role<select id="courseAssignmentRole" class="form-control" disabled></select></label>
+          <label>Requirement<select id="courseAssignmentRequired" class="form-control"><option value="true">Required</option><option value="false">Recommended</option></select></label>
+          <button id="addCourseAssignmentButton" class="btn btn-secondary" type="button">Add assignment</button>
+        </div>
+        <div id="courseAssignmentList" class="course-assignment-list"></div>
+      </fieldset>
+      <fieldset><legend>Modules</legend><div id="courseModuleEditor" class="course-module-editor"></div><button id="addCourseModuleButton" class="btn btn-secondary" type="button">Add module</button></fieldset>
+    </form>
+  </dialog>
+
+  <dialog id="coursePreviewDialog" class="ai-content-dialog course-preview-dialog" aria-labelledby="coursePreviewTitle">
+    <div class="ai-dialog-header"><div><span class="tqs-label">MASTER PREVIEW · NOT PUBLISHED</span><h2 id="coursePreviewTitle">Course preview</h2></div><button id="closeCoursePreviewDialog" type="button" aria-label="Close preview">×</button></div>
+    <div id="coursePreviewContent"></div>
+  </dialog>
+
   <dialog id="moduleDialog" class="ai-content-dialog module-dialog" aria-labelledby="moduleDialogTitle">
     <form id="moduleForm">
       <div class="ai-dialog-header"><div><span class="tqs-label">SOURCE-BASED MODULE</span><h2 id="moduleDialogTitle">Create training module</h2></div><button id="closeModuleDialog" type="button" aria-label="Close">×</button></div>
@@ -107,5 +190,6 @@
 </main></div></div>
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
 <script src="assets/shared/js/data.js?v=20261118-3"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-2"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-8"></script>
+<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261118-1"></script>
 </body>
 </html>
