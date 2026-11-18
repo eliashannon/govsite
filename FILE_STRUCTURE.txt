@@ -1,0 +1,65 @@
+Repository file structure
+========================
+
+Update this sheet whenever project files or directories are added, removed, or moved.
+Git internals and empty, untracked directories are omitted.
+
+.
+|-- .gitlab-ci.yml
+|-- README.md
+|-- FILE_STRUCTURE.txt
+|-- account.html
+|-- ai-training-content-manager.html
+|-- assets
+|   |-- pages
+|   |   |-- account
+|   |   |   `-- account.css
+|   |   |-- ai-training-content-manager
+|   |   |   |-- ai-training-content-manager.css
+|   |   |   |-- ai-training-content-manager.js
+|   |   |   |-- document-processing.js
+|   |   |   `-- vendor
+|   |   |       |-- MAMMOTH-LICENSE.txt
+|   |   |       |-- PDFJS-LICENSE.txt
+|   |   |       |-- mammoth.browser.min.js
+|   |   |       |-- pdf.min.js
+|   |   |       `-- pdf.worker.min.js
+|   |   |-- dashboard
+|   |   |   |-- dashboard.css
+|   |   |   `-- dashboard.js
+|   |   |-- faq
+|   |   |   |-- faq.css
+|   |   |   `-- faq.js
+|   |   |-- key-references
+|   |   |   `-- references.js
+|   |   |-- role-overview
+|   |   |   `-- role-overview.js
+|   |   |-- tqs-support
+|   |   |   |-- tqs-support.css
+|   |   |   `-- tqs-support.js
+|   |   `-- training-courses
+|   |       |-- required-training.css
+|   |       `-- required-training.js
+|   |-- shared
+|       |-- css
+|       |   |-- components.css
+|       |   |-- global.css
+|       |   |-- layout.css
+|       |   |-- responsive.css
+|       |   `-- variables.css
+|       |-- images
+|       |   `-- navsea logo.jpg
+|       `-- js
+|           |-- account.js
+|           |-- build-info.js
+|           |-- data.js
+|           |-- navigation.js
+|           `-- search.js
+|-- contact.html
+|-- faq.html
+|-- index.html
+|-- key-references.html
+|-- required-training.html
+|-- role-overview.html
+|-- tqs-support.html
+`-- training.html
