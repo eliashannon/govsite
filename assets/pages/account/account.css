@@ -20,8 +20,6 @@
 .create-account-prompt{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;text-align:center;margin-top:18px;font-size:14px;color:var(--text-secondary)}
 .create-account-prompt a{min-height:42px}
 .create-account-card .signin-form{gap:15px}
-.account-menu-action{display:block;width:100%;padding:9px;border:0;border-radius:5px;background:transparent;text-align:left;color:var(--text-primary);font:inherit;font-size:12px;cursor:pointer}
-.account-menu-action:hover{background:var(--surface-secondary)}
 .signin-footer{display:flex;align-items:flex-start;gap:10px;border-top:1px solid var(--border);margin-top:24px;padding-top:18px}
 .security-icon{color:var(--navy-800);font-size:18px;line-height:1.2}
 .signin-footer p{font-size:11px;line-height:1.5}

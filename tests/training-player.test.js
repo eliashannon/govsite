@@ -328,8 +328,14 @@ test("signed-out account control says Sign in on every page", () => {
     const pages = ["index.html","role-overview.html","account.html","faq.html","key-references.html","contact.html","required-training.html","training.html","tqs-support.html","ai-training-content-manager.html"];
     pages.forEach(page => {
         assert.match(source(page), /<span>Sign in<\/span>/);
+        assert.match(source(page), /components\.css\?v=20261118-3/);
     });
     const accountScript = source("assets/shared/js/account.js");
     assert.match(accountScript, /if \(label\) label\.textContent = "Sign in"/);
     assert.match(accountScript, /if \(avatar\) avatar\.textContent = "U"/);
+    const sharedComponents = source("assets/shared/css/components.css");
+    const dashboardCss = source("assets/pages/dashboard/dashboard.css");
+    assert.match(sharedComponents, /\.account-button\{[^}]*font-size:13px;font-weight:600/);
+    assert.match(sharedComponents, /\.account-avatar\{width:36px;height:36px;[^}]*color:var\(--blue-700\)/);
+    assert.doesNotMatch(dashboardCss, /\.dashboard-account\s+\.account-(button|avatar)/);
 });
