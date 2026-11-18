@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         .join(" · ");
     dashboardRoleDetail.textContent = roleGroup || "Your selected training role";
 
-    const courses = window.PortalData?.courses || [];
+    const courses = await window.CourseCatalog.load();
     const roleCourses = courses.filter(course =>
         Array.isArray(course.roles) && course.roles.includes(roleName)
     );
@@ -138,7 +138,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.error("Unable to read TQS progress for the dashboard.", error);
         }
 
-        const tqsRequirements = roleCourses.filter(course => course.requirement === "Required");
+        const tqsRequirements = (window.PortalData?.courses || []).filter(course =>
+            Array.isArray(course.roles) && course.roles.includes(roleName) && course.requirement === "Required"
+        );
         const tqsCompleted = tqsRequirements.filter(course =>
             tqsProgress[course.id]?.status === "Completed"
         ).length;
@@ -189,39 +191,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Unable to read in-progress courses for the dashboard.", error);
     }
 
+    let trainingProgress = {};
     try {
-        const trainingProgress = JSON.parse(localStorage.getItem("trainingProgress") || "{}");
-        if (trainingProgress && typeof trainingProgress === "object" && !Array.isArray(trainingProgress)) {
-            roleCourses.forEach(course => {
-                const moduleProgress = trainingProgress[course.id];
-                if (!moduleProgress || typeof moduleProgress !== "object") return;
-                if (moduleProgress.courseCompleted === true
-                    && Array.isArray(moduleProgress.completedModuleIds)
-                    && moduleProgress.completedModuleIds.length === course.modules?.length) {
-                    completedIds = [...new Set([...completedIds, course.id])];
-                    inProgressIds = inProgressIds.filter(id => id !== course.id);
-                } else if (Array.isArray(moduleProgress.continuedModuleIds)
-                    && moduleProgress.continuedModuleIds.length > 0
-                    && !completedIds.includes(course.id)) {
-                    inProgressIds = [...new Set([...inProgressIds, course.id])];
-                }
-            });
-            localStorage.setItem(completionKey, JSON.stringify(completedIds));
-            localStorage.setItem("portal.inProgressCourses", JSON.stringify(inProgressIds));
-        }
+        const stored = JSON.parse(localStorage.getItem("trainingProgress") || "{}");
+        if (stored && typeof stored === "object" && !Array.isArray(stored)) trainingProgress = stored;
+        else console.error("Saved training progress is not a valid record.");
     } catch (error) {
-        console.error("Unable to synchronize dashboard progress with course progress.", error);
+        console.error("Unable to read course progress for the dashboard.", error);
     }
+    const getCourseStatus = course =>
+        window.CourseCatalog.status(course, completedIds, inProgressIds, trainingProgress);
 
     const requiredCourses = roleCourses.filter(course => course.requirement === "Required");
-    const completedCourses = roleCourses.filter(course => completedIds.includes(course.id));
-    const completedRequired = requiredCourses.filter(course => completedIds.includes(course.id));
-    const activeCourses = roleCourses.filter(course =>
-        inProgressIds.includes(course.id) && !completedIds.includes(course.id)
-    );
+    const completedCourses = roleCourses.filter(course => getCourseStatus(course) === "Completed");
+    const completedRequired = requiredCourses.filter(course => getCourseStatus(course) === "Completed");
+    const activeCourses = roleCourses.filter(course => getCourseStatus(course) === "In Progress");
     const progress = requiredCourses.length
         ? Math.round((completedRequired.length / requiredCourses.length) * 100)
-        : null;
+        : 0;
 
     availableCoursesElement.textContent = String(roleCourses.length);
     completedCoursesElement.textContent = String(completedCourses.length);
@@ -247,7 +234,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 "'": "&#39;"
             })[character]);
             activeCourseList.innerHTML = activeCourses.map(course => {
-                const courseHref = course.link && course.link !== "#" ? course.link : "required-training.html";
+                const courseHref = `training.html?course=${encodeURIComponent(course.id)}`;
                 return `
                     <article class="active-course-card" data-searchable>
                         <span class="active-course-icon" aria-hidden="true">

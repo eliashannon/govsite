@@ -1,77 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
     await window.PortalDataReady;
     const tableBody = document.getElementById("trainingList");
-    const loadBuiltInCourses = async () => {
-        try {
-            const response = await fetch("data/courses.json", {cache:"no-store"});
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            if (!Array.isArray(data?.courses)) return window.PortalData?.courses || [];
-            const portalCourses = window.PortalData?.courses || [];
-            const portalById = new Map(portalCourses.map(course => [course.id, course]));
-            const builtIn = data.courses.map(course => {
-                const portalCourse = portalById.get(course.id) || {};
-                return {
-                    ...portalCourse,
-                    ...course,
-                    duration: `${course.durationMinutes || 0} minutes`,
-                    roles: portalCourse.roles || []
-                };
-            });
-            const merged = new Map(builtIn.map(course => [course.id, course]));
-            portalCourses.forEach(course => { if (!merged.has(course.id)) merged.set(course.id, course); });
-            return [...merged.values()];
-        } catch (error) {
-            console.error("Unable to load built-in course JSON.", error);
-            return window.PortalData?.courses || [];
-        }
-    };
-    const loadPublishedLocalCourses = () => {
-        try {
-            const parsed = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
-            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
-            return Object.values(parsed).filter(course =>
-                course && typeof course === "object"
-                && course.status === "published"
-                && typeof course.id === "string"
-                && window.CourseSchema.validateCourse(course, {complete:true, hierarchy:window.PortalData?.organizationHierarchy}).length === 0
-            ).map(course => {
-                const hierarchy = window.PortalData?.organizationHierarchy || {};
-                const roleNames = [];
-                (Array.isArray(course.roleAssignments) ? course.roleAssignments : []).forEach(assignment => {
-                    Object.entries(hierarchy).forEach(([divisionName, branches]) => {
-                        Object.entries(branches).forEach(([branchName, roles]) => {
-                            const divisionId = divisionName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-                            const branchId = branchName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-                            roles.forEach(roleName => {
-                                const roleId = roleName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-                                if (assignment.divisionId === divisionId
-                                    && assignment.branchId === branchId
-                                    && assignment.roleId === roleId
-                                    && !roleNames.includes(roleName)) roleNames.push(roleName);
-                            });
-                        });
-                    });
-                });
-                return {
-                    ...course,
-                    duration: `${course.durationMinutes || 0} minutes`,
-                    requirement: (course.roleAssignments || []).some(item => item.required) ? "Required" : "Optional",
-                    roles: roleNames,
-                    description: course.description || course.shortDescription || ""
-                };
-            });
-        } catch (error) {
-            console.error("Unable to load published local courses.", error);
-            return [];
-        }
-    };
-    const mergeCoursesById = (builtInCourses, localCourses) => {
-        const merged = new Map(builtInCourses.map(course => [course.id, course]));
-        localCourses.forEach(course => merged.set(course.id, course));
-        return [...merged.values()];
-    };
-    const catalog = mergeCoursesById(await loadBuiltInCourses(), loadPublishedLocalCourses());
+    const catalog = await window.CourseCatalog.load();
     if (!tableBody || !Array.isArray(catalog)) {
         console.error("Unable to load the training course catalog.");
         return;
@@ -223,32 +153,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         "'": "&#39;"
     })[character]);
 
-    const getCourseStatus = course => {
-        const moduleProgress = trainingProgressStore[course.id];
-        if (moduleProgress && typeof moduleProgress === "object"
-            && moduleProgress.courseCompleted === true
-            && Array.isArray(moduleProgress.completedModuleIds)
-            && moduleProgress.completedModuleIds.length === course.modules?.length) {
-            if (!completedIds.includes(course.id)) {
-                completedIds = [...new Set([...completedIds, course.id])];
-                inProgressIds = inProgressIds.filter(id => id !== course.id);
-                saveStatus();
-            }
-            return "Completed";
-        }
-        if (completedIds.includes(course.id)) return "Completed";
-        if (moduleProgress && typeof moduleProgress === "object"
-            && Array.isArray(moduleProgress.continuedModuleIds)
-            && moduleProgress.continuedModuleIds.length > 0) {
-            if (!inProgressIds.includes(course.id)) {
-                inProgressIds = [...new Set([...inProgressIds, course.id])];
-                saveStatus();
-            }
-            return "In Progress";
-        }
-        if (inProgressIds.includes(course.id)) return "In Progress";
-        return "Not Started";
-    };
+    const getCourseStatus = course =>
+        window.CourseCatalog.status(course, completedIds, inProgressIds, trainingProgressStore);
 
     const updateStats = () => {
         if (!hasSignedInAccount) {
@@ -493,8 +399,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     completionToggle.addEventListener("click", () => {
         if (!currentCourse) return;
-        if (completedIds.includes(currentCourse.id)) {
+        if (getCourseStatus(currentCourse) === "Completed") {
+            if (Object.hasOwn(trainingProgressStore, currentCourse.id)) {
+                const updated = {...trainingProgressStore};
+                delete updated[currentCourse.id];
+                try {
+                    localStorage.setItem("trainingProgress", JSON.stringify(updated));
+                    trainingProgressStore = updated;
+                } catch (error) {
+                    console.error("Unable to reset module progress.", error);
+                    actionNotice.textContent = "Unable to reset module progress. Please try again.";
+                    actionNotice.hidden = false;
+                    return;
+                }
+            }
             completedIds = completedIds.filter(id => id !== currentCourse.id);
+            inProgressIds = inProgressIds.filter(id => id !== currentCourse.id);
         } else {
             completedIds = [...new Set([...completedIds, currentCourse.id])];
             inProgressIds = inProgressIds.filter(id => id !== currentCourse.id);

@@ -15,13 +15,18 @@ class Element {
         this.style = {};
         this.events = {};
         this.className = "";
-        this.classList = {add: name => { this.className += ` ${name}`; }};
+        this.classList = {
+            add: name => { this.className += ` ${name}`; },
+            toggle: () => {}
+        };
+        this.value = "";
     }
     set textContent(value) { this.text = value; this.children = []; }
     get textContent() { return (this.text || "") + this.children.map(child => child.textContent).join(""); }
     append(...children) { this.children.push(...children); }
     replaceChildren(...children) { this.text = ""; this.children = children; }
     setAttribute(name, value) { this.attributes[name] = value; }
+    removeAttribute(name) { delete this.attributes[name]; }
     addEventListener(name, callback) { this.events[name] = callback; }
     click() { if (!this.disabled) this.events.click?.(); }
     focus() { this.focused = true; }
@@ -39,8 +44,8 @@ function descendants(element) {
     return [element, ...element.children.flatMap(descendants)];
 }
 
-async function player(preview = false, savedStorage = null) {
-    const course = JSON.parse(source("data/courses.json")).courses[0];
+async function player(preview = false, savedStorage = null, fixture = null) {
+    const course = fixture ? structuredClone(fixture) : JSON.parse(source("data/courses.json")).courses[0];
     course.modules = Array.from({length:5}, (_, index) => ({
         ...structuredClone(course.modules[index % course.modules.length]),
         id:`module-${index + 1}`,
@@ -51,8 +56,10 @@ async function player(preview = false, savedStorage = null) {
         {type:"link", text:"Guide", url:"https://example.test/guide"},
         {type:"image", alt:"Diagram", src:"data:image/png;base64,AAAA"}
     );
-    course.roleAssignments = [{divisionId:"division", branchId:"branch", roleId:"role", required:true}];
-    course.status = "needs-review";
+    if (!fixture) {
+        course.roleAssignments = [{divisionId:"division", branchId:"branch", roleId:"role", required:true}];
+        course.status = "needs-review";
+    }
 
     const html = source("training.html");
     const elements = Object.fromEntries([...html.matchAll(/\bid="([^"]+)"/g)].map(match => [match[1], new Element()]));
@@ -176,6 +183,104 @@ test("reviewers can reject a course from its preview", async () => {
     assert.equal(p.elements.publishPreviewCourse.hidden, true);
 });
 
+async function overviewPage(page, localStorage) {
+    const html = source(page === "dashboard" ? "index.html" : "required-training.html");
+    const elements = Object.fromEntries([...html.matchAll(/\bid="([^"]+)"/g)].map(match => [match[1], new Element()]));
+    for (const id of ["trainingCategory", "trainingStatus"]) if (elements[id]) elements[id].value = "All";
+    if (elements.trainingSort) elements.trainingSort.value = "name-asc";
+    const document = {
+        getElementById: id => elements[id] || null,
+        querySelector: () => null,
+        addEventListener: (event, callback) => { if (event === "DOMContentLoaded") callback(); }
+    };
+    const sessionStorage = storage({govsiteAccountProfile:JSON.stringify({firstName:"Test", lastName:"User", email:"test@example.test"})});
+    const window = {
+        PortalData:{
+            courses:[],
+            organizationHierarchy:{"Test Division":{"Test Branch":["Test Role"]}},
+            announcements:[]
+        },
+        location:{search:"", href:"https://example.test/required-training.html"}
+    };
+    const context = {
+        window, document, localStorage, sessionStorage, URL, URLSearchParams, console,
+        fetch:async () => ({ok:true, json:async () => ({courses:[]})})
+    };
+    vm.runInNewContext(source("assets/shared/js/course-schema.js"), context);
+    vm.runInNewContext(source("assets/shared/js/course-catalog.js"), context);
+    vm.runInNewContext(source(page === "dashboard"
+        ? "assets/pages/dashboard/dashboard.js" : "assets/pages/training-courses/required-training.js"), context);
+    await new Promise(resolve => setImmediate(resolve));
+    return elements;
+}
+
+test("catalog and dashboard agree when a published course is started, completed, and reset", async () => {
+    const fixture = structuredClone(JSON.parse(source("data/courses.json")).courses[0]);
+    fixture.id = "published-test";
+    fixture.modules = Array.from({length:5}, (_, index) => ({
+        ...structuredClone(fixture.modules[index % fixture.modules.length]),
+        id:`module-${index + 1}`
+    }));
+    fixture.roleAssignments = [{divisionId:"test-division", branchId:"test-branch", roleId:"test-role", required:true}];
+    fixture.status = "published";
+    const saved = storage({
+        "portal.selectedRole":JSON.stringify({division:"Test Division", branch:"Test Branch", role:"Test Role"}),
+        "portal.completedCourses":"[]",
+        trainingManagerCourses:JSON.stringify({[fixture.id]:fixture})
+    });
+
+    let catalog = await overviewPage("catalog", saved);
+    assert.match(catalog.trainingList.innerHTML, /Start Course/);
+    const link = {dataset:{viewCourse:fixture.id}, getAttribute:() => `training.html?course=${fixture.id}`};
+    catalog.trainingList.events.click({target:{closest:() => link}});
+    const p = await player(false, saved, fixture);
+    assert.equal(p.elements.courseProgressLabel.textContent, "0%");
+    catalog = await overviewPage("catalog", saved);
+    let dashboard = await overviewPage("dashboard", saved);
+    assert.match(catalog.trainingList.innerHTML, /Continue Course/);
+    assert.equal(catalog.inProgressStat.textContent, "1");
+    assert.equal(dashboard.inProgressCourses.textContent, "1");
+    assert.match(dashboard.activeCourseList.innerHTML, /published-test/);
+    assert.match(dashboard.activeCourseList.innerHTML, /training\.html\?course=published-test/);
+    assert.equal(dashboard.trainingProgressSummary.textContent, catalog.roleProgressSummary.textContent);
+
+    p.elements.resetCourseProgress.click();
+    catalog = await overviewPage("catalog", saved);
+    dashboard = await overviewPage("dashboard", saved);
+    assert.match(catalog.trainingList.innerHTML, /Start Course/);
+    assert.equal(dashboard.inProgressCourses.textContent, "0");
+    assert.doesNotMatch(dashboard.activeCourseList.innerHTML, /published-test/);
+    catalog.trainingList.events.click({target:{closest:() => link}});
+    const restarted = await player(false, saved, fixture);
+    for (let index = 0; index < 4; index += 1) restarted.button("Continue").click();
+    restarted.button("Mark Complete").click();
+    catalog = await overviewPage("catalog", saved);
+    dashboard = await overviewPage("dashboard", saved);
+    assert.match(catalog.trainingList.innerHTML, /Review Course/);
+    assert.equal(catalog.completedStat.textContent, "1");
+    assert.equal(dashboard.completedCourses.textContent, "1");
+    assert.equal(dashboard.overallProgress.textContent, catalog.roleProgressPercent.textContent);
+    assert.doesNotMatch(dashboard.activeCourseList.innerHTML, /published-test/);
+
+    restarted.elements.resetCourseProgress.click();
+    catalog = await overviewPage("catalog", saved);
+    dashboard = await overviewPage("dashboard", saved);
+    assert.match(catalog.trainingList.innerHTML, /Start Course/);
+    assert.equal(catalog.notStartedStat.textContent, "1");
+    assert.equal(dashboard.notStartedCourses.textContent, "1");
+    assert.equal(dashboard.overallProgress.textContent, catalog.roleProgressPercent.textContent);
+    assert.doesNotMatch(dashboard.activeCourseList.innerHTML, /published-test/);
+
+    saved.setItem("trainingProgress", JSON.stringify({
+        [fixture.id]:{courseCompleted:true, continuedModuleIds:fixture.modules.map(module => module.id)}
+    }));
+    catalog = await overviewPage("catalog", saved);
+    dashboard = await overviewPage("dashboard", saved);
+    assert.match(catalog.trainingList.innerHTML, /Review Course/);
+    assert.equal(dashboard.completedCourses.textContent, "1");
+    assert.equal(dashboard.overallProgress.textContent, catalog.roleProgressPercent.textContent);
+});
+
 test("Training Courses no longer exposes catalog-wide division, branch, or role filters", () => {
     const html = source("required-training.html");
     const script = source("assets/pages/training-courses/required-training.js");
@@ -183,18 +288,6 @@ test("Training Courses no longer exposes catalog-wide division, branch, or role 
     assert.doesNotMatch(script, /\btraining(Division|Branch|Role)Filter\b/);
     assert.match(script, /portal\.selectedRole/);
     assert.match(script, /const roleName = hasSignedInAccount \? roleSelection\?\.role/);
-});
-
-test("catalog actions and dashboard follow course lifecycle status", () => {
-    const catalog = source("assets/pages/training-courses/required-training.js");
-    const dashboard = source("assets/pages/dashboard/dashboard.js");
-    assert.match(catalog, /Review Course/);
-    assert.match(catalog, /Continue Course/);
-    assert.match(catalog, /Start Course/);
-    assert.doesNotMatch(catalog, />View Details</);
-    assert.match(dashboard, /trainingProgress/);
-    assert.match(dashboard, /moduleProgress\.courseCompleted === true/);
-    assert.match(dashboard, /portal\.inProgressCourses/);
 });
 
 test("published courses can be selected and unpublished and course player has a back link", () => {

@@ -159,9 +159,6 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (progress.continuedModuleIds.length > 0) {
                 inProgressIds = [...new Set([...inProgressIds, selectedCourse.id])];
                 completedIds = completedIds.filter(id => id !== selectedCourse.id);
-            } else {
-                inProgressIds = inProgressIds.filter(id => id !== selectedCourse.id);
-                completedIds = completedIds.filter(id => id !== selectedCourse.id);
             }
             localStorage.setItem("portal.completedCourses", JSON.stringify(completedIds));
             localStorage.setItem("portal.inProgressCourses", JSON.stringify(inProgressIds));
@@ -541,8 +538,18 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             console.error("Unable to reset training progress.", error);
         }
+        if (!previewMode) {
+            try {
+                for (const key of ["portal.completedCourses", "portal.inProgressCourses"]) {
+                    const ids = JSON.parse(localStorage.getItem(key) || "[]");
+                    if (!Array.isArray(ids)) throw new Error(`Invalid course status list: ${key}`);
+                    localStorage.setItem(key, JSON.stringify(ids.filter(id => id !== selectedCourse.id)));
+                }
+            } catch (error) {
+                console.error("Unable to reset the course status in Training Courses.", error);
+            }
+        }
         progress = loadCourseProgress(selectedCourse);
-        syncCatalogStatus();
         const url = new URL(window.location.href);
         url.searchParams.set("course", selectedCourse.id);
         url.searchParams.delete("module");
