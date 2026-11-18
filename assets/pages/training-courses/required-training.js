@@ -1,7 +1,73 @@
 document.addEventListener("DOMContentLoaded", async () => {
     await window.PortalDataReady;
     const tableBody = document.getElementById("trainingList");
-    const catalog = window.PortalData?.courses;
+    const loadBuiltInCourses = async () => {
+        try {
+            const response = await fetch("data/courses.json", {cache:"no-store"});
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (!Array.isArray(data?.courses)) return window.PortalData?.courses || [];
+            const portalCourses = window.PortalData?.courses || [];
+            const portalById = new Map(portalCourses.map(course => [course.id, course]));
+            return data.courses.map(course => {
+                const portalCourse = portalById.get(course.id) || {};
+                return {
+                    ...portalCourse,
+                    ...course,
+                    duration: `${course.durationMinutes || 0} minutes`,
+                    roles: portalCourse.roles || []
+                };
+            });
+        } catch (error) {
+            console.error("Unable to load built-in course JSON.", error);
+            return window.PortalData?.courses || [];
+        }
+    };
+    const loadPublishedLocalCourses = () => {
+        try {
+            const parsed = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
+            return Object.values(parsed).filter(course =>
+                course && typeof course === "object"
+                && course.status === "published"
+                && typeof course.id === "string"
+            ).map(course => {
+                const hierarchy = window.PortalData?.organizationHierarchy || {};
+                const roleNames = [];
+                (Array.isArray(course.roleAssignments) ? course.roleAssignments : []).forEach(assignment => {
+                    Object.entries(hierarchy).forEach(([divisionName, branches]) => {
+                        Object.entries(branches).forEach(([branchName, roles]) => {
+                            const divisionId = divisionName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+                            const branchId = branchName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+                            roles.forEach(roleName => {
+                                const roleId = roleName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+                                if (assignment.divisionId === divisionId
+                                    && assignment.branchId === branchId
+                                    && assignment.roleId === roleId
+                                    && !roleNames.includes(roleName)) roleNames.push(roleName);
+                            });
+                        });
+                    });
+                });
+                return {
+                    ...course,
+                    duration: `${course.durationMinutes || 0} minutes`,
+                    requirement: (course.roleAssignments || []).some(item => item.required) ? "Required" : "Optional",
+                    roles: roleNames,
+                    description: course.description || course.shortDescription || ""
+                };
+            });
+        } catch (error) {
+            console.error("Unable to load published local courses.", error);
+            return [];
+        }
+    };
+    const mergeCoursesById = (builtInCourses, localCourses) => {
+        const merged = new Map(builtInCourses.map(course => [course.id, course]));
+        localCourses.forEach(course => merged.set(course.id, course));
+        return [...merged.values()];
+    };
+    const catalog = mergeCoursesById(await loadBuiltInCourses(), loadPublishedLocalCourses());
     if (!tableBody || !Array.isArray(catalog)) {
         console.error("Unable to load the training course catalog.");
         return;

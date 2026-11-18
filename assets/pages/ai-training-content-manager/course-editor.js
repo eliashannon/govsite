@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const STORAGE_KEY = "trainingCourseDrafts";
+    const STORAGE_KEY = "trainingManagerCourses";
     const dialog = document.getElementById("courseDraftDialog");
     const previewDialog = document.getElementById("coursePreviewDialog");
     let draft = null;
@@ -12,21 +12,59 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const readDraftStore = () => {
         try {
-            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-            return Array.isArray(parsed) ? parsed : [];
+            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+            return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
         } catch (error) {
             console.error("The local course draft store was repaired.", error);
-            return [];
+            return {};
         }
     };
 
+    function loadLocalCourses() {
+        return readDraftStore();
+    }
+
+    function saveLocalCourse(course) {
+        if (!course || typeof course.id !== "string") return;
+        const records = loadLocalCourses();
+        records[course.id] = course;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function getLocalCourse(courseId) {
+        return loadLocalCourses()[courseId] || null;
+    }
+
+    function deleteLocalCourse(courseId) {
+        if (!courseId) return;
+        const records = loadLocalCourses();
+        delete records[courseId];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function publishLocalCourse(courseId) {
+        const course = getLocalCourse(courseId);
+        if (!course) return;
+        course.status = "published";
+        saveLocalCourse(course);
+    }
+
+    function archiveLocalCourse(courseId) {
+        const course = getLocalCourse(courseId);
+        if (!course) return;
+        course.status = "archived";
+        saveLocalCourse(course);
+    }
+
     const saveDraftStore = () => {
         if (!draft) return;
-        const records = readDraftStore();
-        const index = records.findIndex(item => item.id && item.id === draft.id);
-        if (index === -1) records.push(draft);
-        else records[index] = draft;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        if (!draft.id) {
+            const suggestedId = slug(draft.title);
+            draft.id = suggestedId || `draft-course-${Date.now().toString(36)}`;
+            document.getElementById("courseEditorId").value = draft.id;
+        }
+        const course = canonicalCourse();
+        saveLocalCourse(course);
     };
 
     const showDraftNotice = (message, isError = false) => {
@@ -367,7 +405,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const errors = [];
         if (!draft.id) errors.push("Missing course ID.");
         else if (!isValidCourseId(draft.id)) errors.push("Course ID must use lowercase letters, numbers, hyphens, or underscores.");
-        if (draft.id && publishedCourseIds.has(draft.id)) errors.push("This course ID already exists in data/courses.json.");
         if (!draft.title) errors.push("Missing course title.");
         if (!draft.description) errors.push("Missing course description.");
         if (!draft.category) errors.push("Missing course category.");
@@ -430,7 +467,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         document.getElementById("approveCourseDraftButton").disabled = errors.length > 0 || draft.status === "archived";
         document.getElementById("publishCourseDraftButton").disabled = draft.status !== "approved";
-        document.getElementById("exportCourseDraftButton").disabled = draft.status !== "approved";
+        document.getElementById("exportCourseDraftButton").disabled =
+            !["approved","published"].includes(draft.status);
         return {errors, warnings};
     }
 
@@ -703,6 +741,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const saveDraft = () => {
         if (!draft) return;
         readCourseFields();
+        draft.status = "draft";
+        document.getElementById("courseDraftStatus").value = "draft";
         saveDraftStore();
         validateDraftCourse();
         showDraftNotice("Draft saved in browser storage only. It is not an authoritative or secure repository.");
@@ -710,6 +750,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const statusTransition = status => {
         if (!draft) return;
+        if (status === "published" && draft.status !== "approved") {
+            showDraftNotice("Publishing requires an approved course.", true);
+            return;
+        }
+        if (status === "needs-review") {
+            const result = validateDraftCourse();
+            if (result.errors.length) {
+                showDraftNotice(`Submission blocked: ${result.errors.join(" ")}`, true);
+                return;
+            }
+        }
         if (status === "approved") {
             const result = validateDraftCourse();
             if (result.errors.length) {
@@ -768,7 +819,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("previewCourseDraftButton").addEventListener("click", () => {
         if (!draft) {
             const records = readDraftStore();
-            if (records.length) openDraftEditor(records[records.length - 1]);
+            const courseIds = Object.keys(records);
+            if (courseIds.length) openDraftEditor(records[courseIds[courseIds.length - 1]]);
             else openDraftEditor(createBlankDraft());
         }
         renderCoursePreview();
@@ -803,10 +855,11 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("reviewCourseDraftButton").addEventListener("click", () => statusTransition("needs-review"));
     document.getElementById("approveCourseDraftButton").addEventListener("click", () => statusTransition("approved"));
     document.getElementById("publishCourseDraftButton").addEventListener("click", () => statusTransition("published"));
+    document.getElementById("archiveCourseDraftButton").addEventListener("click", () => statusTransition("archived"));
     document.getElementById("exportCourseDraftButton").addEventListener("click", () => {
         if (!draft) return;
-        if (draft.status !== "approved") {
-            showDraftNotice("Export requires an approved course.", true);
+        if (!["approved","published"].includes(draft.status)) {
+            showDraftNotice("Export is available after approval or publishing.", true);
             return;
         }
         const result = validateDraftCourse();
@@ -822,6 +875,105 @@ document.addEventListener("DOMContentLoaded", () => {
      "courseEditorDifficulty","courseEditorDuration","courseEditorVersion","courseEditorObjectives","courseDraftStatus"]
         .forEach(id => document.getElementById(id).addEventListener("input", validateDraftCourse));
 
+    const exportCourseJson = courseId => {
+        const course = courseId ? getLocalCourse(courseId) : draft ? canonicalCourse() : null;
+        if (!course) {
+            showDraftNotice("Select a saved local course to export.", true);
+            return;
+        }
+        downloadJson(course, `${course.id || "training-course"}.json`);
+        showDraftNotice(`Exported backup JSON for ${course.id || "the selected course"}.`);
+    };
+
+    const renderSavedLocalCourses = () => {
+        const select = document.getElementById("savedLocalCourses");
+        select.replaceChildren();
+        const records = loadLocalCourses();
+        Object.values(records).forEach(course => {
+            if (!course || typeof course !== "object") return;
+            const option = document.createElement("option");
+            option.value = course.id;
+            option.textContent = `${course.title || course.id} — ${course.status || "draft"} — v${course.version || "1.0"}`;
+            select.append(option);
+        });
+        const hasSelection = Boolean(select.value);
+        document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
+        document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
+        document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
+    };
+
+    document.getElementById("viewLocalCoursesButton").addEventListener("click", () => {
+        renderSavedLocalCourses();
+        showDraftNotice("Saved local prototype courses are listed below.");
+    });
+    document.getElementById("savedLocalCourses").addEventListener("change", event => {
+        const hasSelection = Boolean(event.target.value);
+        document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
+        document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
+        document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
+    });
+    document.getElementById("savedLocalCourses").addEventListener("dblclick", event => {
+        const course = getLocalCourse(event.target.value);
+        if (course) {
+            openDraftEditor(course);
+            showDraftNotice(`Opened local course ${course.id}.`);
+        }
+    });
+    document.getElementById("deleteSelectedLocalCourseButton").addEventListener("click", () => {
+        const courseId = document.getElementById("savedLocalCourses").value;
+        if (!courseId) return;
+        if (!window.confirm(`Delete local prototype course "${courseId}"?`)) return;
+        deleteLocalCourse(courseId);
+        renderSavedLocalCourses();
+        showDraftNotice(`Deleted local course ${courseId}.`);
+    });
+    document.getElementById("archiveSelectedLocalCourseButton").addEventListener("click", () => {
+        const courseId = document.getElementById("savedLocalCourses").value;
+        if (!courseId) return;
+        archiveLocalCourse(courseId);
+        renderSavedLocalCourses();
+        showDraftNotice(`Archived local course ${courseId}.`);
+    });
+    document.getElementById("clearLocalCoursesButton").addEventListener("click", () => {
+        if (!window.confirm("Clear all prototype courses from trainingManagerCourses? This cannot be undone.")) return;
+        localStorage.removeItem(STORAGE_KEY);
+        renderSavedLocalCourses();
+        showDraftNotice("Cleared all prototype courses from this browser.");
+    });
+    document.getElementById("exportSelectedLocalCourseButton").addEventListener("click", () => {
+        exportCourseJson(document.getElementById("savedLocalCourses").value);
+    });
+    document.getElementById("importLocalCourseButton").addEventListener("click", () => {
+        document.getElementById("importLocalCourseFile").click();
+    });
+    document.getElementById("importLocalCourseFile").addEventListener("change", async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            showDraftNotice("The imported course JSON is too large.", true);
+            event.target.value = "";
+            return;
+        }
+        try {
+            const parsed = JSON.parse(await file.text());
+            const course = parsed && Array.isArray(parsed.courses) ? parsed.courses[0] : parsed;
+            if (!course || typeof course !== "object" || typeof course.id !== "string") {
+                throw new Error("The JSON does not contain a valid course object.");
+            }
+            const normalized = normalizeParsedDraft(course);
+            normalized.status = ["draft","needs-review","approved","published","archived"].includes(normalized.status)
+                ? normalized.status : "draft";
+            saveLocalCourse(normalized);
+            renderSavedLocalCourses();
+            openDraftEditor(normalized);
+            showDraftNotice(`Imported local course ${normalized.id}.`);
+        } catch (error) {
+            showDraftNotice(error instanceof Error ? error.message : "Unable to import course JSON.", true);
+        } finally {
+            event.target.value = "";
+        }
+    });
+
     fetch("data/courses.json").then(response => {
         if (!response.ok) throw new Error("Existing course IDs could not be checked.");
         return response.json();
@@ -832,4 +984,5 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     }).catch(error => console.error("Unable to load existing course IDs for duplicate validation.", error));
+    renderSavedLocalCourses();
 });

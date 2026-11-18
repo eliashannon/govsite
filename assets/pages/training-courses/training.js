@@ -47,6 +47,19 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
             if (!isPlainObject(data) || !Array.isArray(data.courses)) throw new Error("The course file has an invalid structure.");
             courses = data.courses.filter(validateCourse);
+            let localStore = {};
+            try {
+                const parsed = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+                if (isPlainObject(parsed)) localStore = parsed;
+            } catch (error) {
+                console.error("Unable to load local prototype courses.", error);
+            }
+            const localCourses = Object.values(localStore).filter(course =>
+                isPlainObject(course) && course.status === "published" && validateCourse(course)
+            );
+            const merged = new Map(courses.map(course => [course.id, course]));
+            localCourses.forEach(course => merged.set(course.id, course));
+            courses = [...merged.values()];
             if (courses.length === 0) throw new Error("No valid courses were found.");
             return true;
         } catch (error) {

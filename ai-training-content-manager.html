@@ -80,6 +80,22 @@
     <div id="moduleList" class="module-list"></div>
   </section>
 
+  <section class="ai-manager-panel prototype-course-storage-panel" aria-labelledby="prototypeStorageTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">DEVELOPMENT ONLY</span><h2 id="prototypeStorageTitle">Prototype Course Storage</h2></div></div>
+    <p class="prototype-storage-description">Browser-local prototype storage only. Published courses are visible only in this browser and origin.</p>
+    <div class="prototype-course-toolbar">
+      <button id="viewLocalCoursesButton" class="btn btn-secondary" type="button">View Saved Local Courses</button>
+      <button id="deleteSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Delete Selected Local Course</button>
+      <button id="archiveSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Archive Selected Local Course</button>
+      <button id="clearLocalCoursesButton" class="btn btn-secondary" type="button">Clear All Prototype Courses</button>
+      <button id="exportSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Export Course JSON</button>
+      <button id="importLocalCourseButton" class="btn btn-secondary" type="button">Import Course JSON</button>
+      <input id="importLocalCourseFile" type="file" accept=".json,application/json" hidden>
+    </div>
+    <label for="savedLocalCourses">Saved local courses</label>
+    <select id="savedLocalCourses" class="form-control" size="6"></select>
+  </section>
+
   <section class="ai-manager-panel standardized-template-panel" aria-labelledby="templateTitle">
     <div class="manager-section-heading"><div><span class="tqs-label">STANDARDIZED SOURCE FORMAT</span><h2 id="templateTitle">Synthetic course template</h2></div></div>
     <pre class="standardized-template">COURSE
@@ -123,7 +139,8 @@ Every user contributes to organizational security.</pre>
       <button id="saveCourseDraftButton" class="btn btn-secondary" type="button">Save draft</button>
       <button id="reviewCourseDraftButton" class="btn btn-secondary" type="button">Send to review</button>
       <button id="approveCourseDraftButton" class="btn btn-primary" type="button" disabled>Approve</button>
-      <button id="publishCourseDraftButton" class="btn btn-secondary" type="button" disabled>Mark published</button>
+      <button id="publishCourseDraftButton" class="btn btn-secondary" type="button" disabled>Publish for Prototype</button>
+      <button id="archiveCourseDraftButton" class="btn btn-secondary" type="button">Archive</button>
       <button id="exportCourseDraftButton" class="btn btn-primary" type="button" disabled>Export approved JSON</button>
     </div>
     <p id="courseDraftNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>

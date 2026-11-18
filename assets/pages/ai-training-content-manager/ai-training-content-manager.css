@@ -139,6 +139,12 @@
 .course-preview-meta{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
 .course-preview-meta span{padding:5px 8px;border:1px solid var(--border);border-radius:20px;font-size:11px}
 .course-preview-content-block{margin:10px 0}
+.prototype-course-storage-panel{padding-bottom:16px}
+.prototype-storage-description{margin:0 20px 10px;color:var(--text-secondary);font-size:12px}
+.prototype-course-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 20px 12px}
+.prototype-course-toolbar .btn{font-size:12px}
+.prototype-course-storage-panel>label{display:block;margin:0 20px 6px;color:var(--text-secondary);font-size:12px;font-weight:600}
+#savedLocalCourses{width:calc(100% - 40px);margin:0 20px;height:auto}
 .course-preview-content-block img{max-height:320px;border:1px solid var(--border)}
 @media(max-width:850px){.handbook-toolbar{grid-template-columns:minmax(180px,1fr) 160px}.handbook-toolbar input{grid-column:1/-1}.source-preview-metadata{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.ai-manager-heading{align-items:flex-start;flex-direction:column}.ai-manager-heading h1{font-size:25px}.manager-section-heading{align-items:flex-start;padding:15px}.ai-status{max-width:150px;white-space:normal}.handbook-upload-form{grid-template-columns:1fr;padding:0 15px 15px}.handbook-upload-form button{grid-column:1;grid-row:auto}.handbook-toolbar{grid-template-columns:1fr;padding:0 15px 12px}.handbook-toolbar input{grid-column:auto}.handbook-selection-toolbar{padding:10px 15px}.handbook-selection-toolbar>span{width:100%}.handbook-selection-toolbar .btn{flex:1}.source-content-item{grid-template-columns:18px minmax(0,1fr);padding:12px 15px}.source-item-actions{grid-column:2}.source-preview-metadata{padding-right:15px;padding-left:15px}.source-preview-warnings{margin-right:15px;margin-left:15px}.source-preview-text{margin-right:15px;margin-left:15px}.handbook-document,.module-card{grid-template-columns:1fr;padding:13px 15px}.handbook-document-actions,.module-actions{justify-content:flex-start}.module-options{grid-template-columns:1fr}.ai-content-dialog form{padding:17px}.ai-dialog-actions{flex-wrap:wrap}.ai-dialog-actions>span{display:none}.ai-dialog-actions .btn{flex:1}}
