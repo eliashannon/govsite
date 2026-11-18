@@ -21,6 +21,9 @@
 .ai-content-count{color:var(--text-secondary);font-size:12px}
 .handbook-list,.module-list{border-top:1px solid var(--border)}
 .handbook-document,.module-card{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid var(--border)}
+.handbook-document{grid-template-columns:auto minmax(0,1fr) auto}
+.handbook-document-select{display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:10px;font-weight:600;white-space:nowrap}
+.handbook-document-select input{margin:0;accent-color:var(--blue-600)}
 .handbook-document:last-child,.module-card:last-child{border-bottom:0}
 .handbook-document h3,.module-card h3{margin:0 0 5px;font-size:14px}
 .handbook-document p,.module-card p{margin:0;color:var(--text-secondary);font-size:11px;line-height:1.5}

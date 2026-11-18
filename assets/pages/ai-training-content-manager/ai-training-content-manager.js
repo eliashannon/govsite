@@ -20,6 +20,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const fileInput = document.getElementById("handbookFiles");
     const handbookList = document.getElementById("handbookList");
     const documentCount = document.getElementById("documentCount");
+    const documentSelectionCount = document.getElementById("documentSelectionCount");
+    const selectAllDocumentsButton = document.getElementById("selectAllDocumentsButton");
+    const deleteSelectedDocumentsButton = document.getElementById("deleteSelectedDocumentsButton");
     const contentExplorer = document.getElementById("contentExplorer");
     const contentCount = document.getElementById("contentCount");
     const contentSearch = document.getElementById("contentSearch");
@@ -48,6 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const assignmentBranch = document.getElementById("assignmentBranch");
     const assignmentRole = document.getElementById("assignmentRole");
     let pendingApprovalModuleId = null;
+    const selectedDocumentIds = new Set();
     const selectedContentIds = new Set();
     const selectedModuleIds = new Set();
     const maximumFileSize = 75 * 1024 * 1024;
@@ -132,11 +136,26 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? "Deselect all"
             : "Select all";
     };
+    const updateDocumentSelectionControls = () => {
+        const eligibleIds = new Set(state.documents
+            .filter(documentRecord => documentRecord.status !== "processing")
+            .map(documentRecord => documentRecord.id));
+        selectedDocumentIds.forEach(id => {
+            if (!eligibleIds.has(id)) selectedDocumentIds.delete(id);
+        });
+        documentSelectionCount.textContent = `${selectedDocumentIds.size} selected`;
+        deleteSelectedDocumentsButton.disabled = selectedDocumentIds.size === 0;
+        selectAllDocumentsButton.textContent = eligibleIds.size > 0
+            && [...eligibleIds].every(id => selectedDocumentIds.has(id))
+            ? "Deselect all"
+            : "Select all";
+    };
 
     const renderDocuments = () => {
         documentCount.textContent = `${state.documents.length} ${state.documents.length === 1 ? "document" : "documents"}`;
         if (!state.documents.length) {
             handbookList.innerHTML = '<div class="handbook-empty">Uploaded handbooks will remain available here for review.</div>';
+            updateDocumentSelectionControls();
             return;
         }
         handbookList.innerHTML = state.documents.map(documentRecord => {
@@ -152,6 +171,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 : "";
             return `
                 <article class="handbook-document">
+                    <label class="handbook-document-select"><input type="checkbox" data-select-document="${escapeHtml(documentRecord.id)}" aria-label="Select ${escapeHtml(documentRecord.fileName)}" ${selectedDocumentIds.has(documentRecord.id) ? "checked" : ""} ${documentRecord.status === "processing" ? "disabled" : ""}>Select</label>
                     <div><h3>${escapeHtml(documentRecord.fileName)}</h3>
                         <p>${escapeHtml(documentRecord.fileType.toUpperCase())} · Uploaded ${escapeHtml(dateTime(documentRecord.uploadedAt))} · ${statusBadge(processingStatus)}</p>
                         ${warningText}
@@ -163,6 +183,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </div>
                 </article>`;
         }).join("");
+        updateDocumentSelectionControls();
     };
 
     const updateCategoryOptions = () => {
@@ -497,6 +518,54 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         render();
         showNotice(`Deleted ${contentIds.length} source item(s).${affectedModules.length ? ` Unpublished ${affectedModules.length} dependent module(s).` : ""}`);
+    };
+
+    const deleteSelectedDocuments = async () => {
+        if (!requireMaster()) return;
+        const documentIds = [...selectedDocumentIds].filter(id =>
+            state.documents.some(documentRecord => documentRecord.id === id && documentRecord.status !== "processing")
+        );
+        if (!documentIds.length) return;
+        const deletedDocumentIds = new Set(documentIds);
+        const sourceItems = state.sourceContent.filter(item => deletedDocumentIds.has(item.documentId));
+        const contentIds = sourceItems.map(item => item.id);
+        const affectedModules = state.modules
+            .filter(module => module.publicationStatus === "Published"
+                && Array.isArray(module.sourceContentIds)
+                && module.sourceContentIds.some(id => contentIds.includes(id)))
+            .map(module => ({...module, publicationStatus: "Unpublished", unpublishedAt: new Date().toISOString()}));
+        const confirmation = `Permanently delete ${documentIds.length} handbook(s), their original files, and ${contentIds.length} extracted item(s)?`
+            + (affectedModules.length
+                ? ` ${affectedModules.length} published module(s) that use this content will be unpublished.`
+                : "");
+        if (!window.confirm(confirmation)) return;
+
+        await store.saveMany(
+            {modules: affectedModules},
+            {
+                documents: documentIds,
+                originalFiles: documentIds,
+                sourceContent: contentIds,
+                organizationMetadata: contentIds,
+                reviews: contentIds
+            }
+        );
+        state.documents = state.documents.filter(documentRecord => !deletedDocumentIds.has(documentRecord.id));
+        state.sourceContent = state.sourceContent.filter(item => !deletedDocumentIds.has(item.documentId));
+        state.organizationMetadata = state.organizationMetadata.filter(item => !contentIds.includes(item.contentId));
+        state.reviews = state.reviews.filter(item => !contentIds.includes(item.contentId));
+        affectedModules.forEach(updated => {
+            const index = state.modules.findIndex(module => module.id === updated.id);
+            if (index !== -1) state.modules[index] = updated;
+        });
+        documentIds.forEach(id => selectedDocumentIds.delete(id));
+        contentIds.forEach(id => selectedContentIds.delete(id));
+        if (sourceItems.some(item => item.id === state.activePreviewId)) {
+            state.activePreviewId = null;
+            previewPanel.hidden = true;
+        }
+        render();
+        showNotice(`Deleted ${documentIds.length} handbook(s) and ${contentIds.length} extracted item(s).${affectedModules.length ? ` Unpublished ${affectedModules.length} dependent module(s).` : ""}`);
     };
 
     const deleteSelectedModules = async () => {
@@ -886,6 +955,28 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         }
     });
+    handbookList.addEventListener("change", event => {
+        const checkbox = event.target.closest("[data-select-document]");
+        if (!checkbox) return;
+        if (checkbox.checked) selectedDocumentIds.add(checkbox.dataset.selectDocument);
+        else selectedDocumentIds.delete(checkbox.dataset.selectDocument);
+        updateDocumentSelectionControls();
+    });
+    selectAllDocumentsButton.addEventListener("click", () => {
+        const checkboxes = [...handbookList.querySelectorAll("[data-select-document]:not(:disabled)")];
+        const allSelected = checkboxes.length > 0
+            && checkboxes.every(checkbox => selectedDocumentIds.has(checkbox.dataset.selectDocument));
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = !allSelected;
+            if (allSelected) selectedDocumentIds.delete(checkbox.dataset.selectDocument);
+            else selectedDocumentIds.add(checkbox.dataset.selectDocument);
+        });
+        updateDocumentSelectionControls();
+    });
+    deleteSelectedDocumentsButton.addEventListener("click", () => deleteSelectedDocuments().catch(error => {
+        console.error("Unable to delete selected handbooks.", error);
+        showNotice(error instanceof Error ? error.message : String(error), true);
+    }));
     contentExplorer.addEventListener("change", event => {
         const checkbox = event.target.closest("[data-select-content]");
         if (!checkbox) return;
