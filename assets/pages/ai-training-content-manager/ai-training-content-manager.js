@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const approveSelectedButton = document.getElementById("approveSelectedButton");
     const rejectSelectedButton = document.getElementById("rejectSelectedButton");
     const deleteSelectedContentButton = document.getElementById("deleteSelectedContentButton");
+    const unpublishSelectedCoursesButton = document.getElementById("unpublishSelectedCoursesButton");
     const selectAllVisibleButton = document.getElementById("selectAllVisibleButton");
     const createModuleButton = document.getElementById("createModuleButton");
     const moduleList = document.getElementById("moduleList");
@@ -53,6 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let pendingApprovalModuleId = null;
     const selectedDocumentIds = new Set();
     const selectedContentIds = new Set();
+    const selectedStructuredCourseIds = new Set();
     const selectedModuleIds = new Set();
     const maximumFileSize = 75 * 1024 * 1024;
     const state = {
@@ -117,6 +119,38 @@ document.addEventListener("DOMContentLoaded", async () => {
             return review;
         }
     };
+    const unpublishStructuredCourses = courseIds => {
+        if (!requireMaster()) return;
+        const uniqueIds = [...new Set(courseIds.filter(Boolean))];
+        if (!uniqueIds.length) return;
+        try {
+            const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+            let changed = 0;
+            uniqueIds.forEach(courseId => {
+                const course = records[courseId];
+                if (!course || course.status !== "published") return;
+                records[courseId] = {
+                    ...course,
+                    status:"approved",
+                    publishedAt:null,
+                    unpublishedAt:new Date().toISOString()
+                };
+                changed += 1;
+            });
+            if (!changed) {
+                showNotice("No published courses were selected.", true);
+                return;
+            }
+            localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+            selectedStructuredCourseIds.clear();
+            window.dispatchEvent(new Event("training-course-changed"));
+            render();
+            showNotice(`Unpublished ${changed} ${changed === 1 ? "course" : "courses"} from Training Courses.`);
+        } catch (error) {
+            console.error("Unable to unpublish the selected courses.", error);
+            showNotice(error instanceof Error ? error.message : "Unable to unpublish the selected courses.", true);
+        }
+    };
     const findDocument = documentId => state.documents.find(item => item.id === documentId);
     const selectedAreApproved = () => {
         const selected = [...selectedContentIds];
@@ -125,10 +159,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     };
     const updateSelectionControls = () => {
-        selectionCount.textContent = `${selectedContentIds.size} selected`;
+        selectionCount.textContent = `${selectedContentIds.size + selectedStructuredCourseIds.size} selected`;
         approveSelectedButton.disabled = selectedContentIds.size === 0;
         rejectSelectedButton.disabled = selectedContentIds.size === 0;
         deleteSelectedContentButton.disabled = selectedContentIds.size === 0;
+        unpublishSelectedCoursesButton.disabled = selectedStructuredCourseIds.size === 0;
         createModuleButton.disabled = !selectedAreApproved();
         const visibleCheckboxes = [...contentExplorer.querySelectorAll("[data-select-content]")];
         selectAllVisibleButton.textContent = visibleCheckboxes.length > 0
@@ -231,13 +266,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                 : course?.status === "needs-review" ? "Pending Review" : "Unpublished";
             return `
                 <article class="source-content-item">
-                    <span></span>
+                    ${course?.status === "published"
+                        ? `<input type="checkbox" data-select-structured-course="${escapeHtml(item.structuredCourseId)}" aria-label="Select published course ${escapeHtml(course.title || item.structuredCourseId)}" ${selectedStructuredCourseIds.has(item.structuredCourseId) ? "checked" : ""}>`
+                        : `<span></span>`}
                     <div class="source-content-copy">
                         <button class="source-item-preview" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">${escapeHtml(heading || item.structuredCourseId)}</button>
                         <p>${escapeHtml(excerpt)}</p>
                         <div class="content-meta"><span>${escapeHtml(item.originalDocumentName)}</span><span>Structured course</span>${statusBadge(courseStatus)}</div>
                     </div>
-                    <div class="source-item-actions"><button class="manager-small-button" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">Open course preview</button></div>
+                    <div class="source-item-actions">
+                        <button class="manager-small-button" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">Open course preview</button>
+                        ${course?.status === "published" ? `<button class="manager-small-button" type="button" data-unpublish-course="${escapeHtml(item.structuredCourseId)}">Unpublish course</button>` : ""}
+                    </div>
                 </article>`;
         }
         const publicationStatus = isContentPublished(item.id) ? "Published" : "Unpublished";
@@ -1039,6 +1079,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         showNotice(error instanceof Error ? error.message : String(error), true);
     }));
     contentExplorer.addEventListener("change", event => {
+        const courseCheckbox = event.target.closest("[data-select-structured-course]");
+        if (courseCheckbox) {
+            if (courseCheckbox.checked) selectedStructuredCourseIds.add(courseCheckbox.dataset.selectStructuredCourse);
+            else selectedStructuredCourseIds.delete(courseCheckbox.dataset.selectStructuredCourse);
+            updateSelectionControls();
+            return;
+        }
         const checkbox = event.target.closest("[data-select-content]");
         if (!checkbox) return;
         if (checkbox.checked) selectedContentIds.add(checkbox.dataset.selectContent);
@@ -1053,6 +1100,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateModuleSelectionControls();
     });
     contentExplorer.addEventListener("click", event => {
+        const unpublishCourseButton = event.target.closest("[data-unpublish-course]");
+        if (unpublishCourseButton) {
+            unpublishStructuredCourses([unpublishCourseButton.dataset.unpublishCourse]);
+            return;
+        }
         const courseButton = event.target.closest("[data-preview-course]");
         if (courseButton) {
             window.location.href = `training.html?preview=1&course=${encodeURIComponent(courseButton.dataset.previewCourse)}`;
@@ -1097,11 +1149,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     selectAllVisibleButton.addEventListener("click", () => {
         const visibleCheckboxes = [...contentExplorer.querySelectorAll("[data-select-content]")];
-        const selectAll = visibleCheckboxes.some(checkbox => !checkbox.checked);
+        const visibleCourseCheckboxes = [...contentExplorer.querySelectorAll("[data-select-structured-course]")];
+        const selectAll = visibleCheckboxes.some(checkbox => !checkbox.checked)
+            || visibleCourseCheckboxes.some(checkbox => !checkbox.checked);
         visibleCheckboxes.forEach(checkbox => {
             checkbox.checked = selectAll;
             if (selectAll) selectedContentIds.add(checkbox.dataset.selectContent);
             else selectedContentIds.delete(checkbox.dataset.selectContent);
+        });
+        visibleCourseCheckboxes.forEach(checkbox => {
+            checkbox.checked = selectAll;
+            if (selectAll) selectedStructuredCourseIds.add(checkbox.dataset.selectStructuredCourse);
+            else selectedStructuredCourseIds.delete(checkbox.dataset.selectStructuredCourse);
         });
         updateSelectionControls();
     });
@@ -1109,6 +1168,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Unable to delete selected source content.", error);
         showNotice(error instanceof Error ? error.message : String(error), true);
     }));
+    unpublishSelectedCoursesButton.addEventListener("click", () => {
+        unpublishStructuredCourses([...selectedStructuredCourseIds]);
+    });
     approveSelectedButton.addEventListener("click", () => updateReviewStatus([...selectedContentIds], "Approved")
         .catch(error => {
             console.error("Unable to approve selected source content.", error);

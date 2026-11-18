@@ -181,6 +181,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderCourseHeader() {
         document.title = `${selectedCourse.title} | Training Portal`;
+        const backLink = document.getElementById("courseBackLink");
+        if (previewMode) {
+            backLink.href = "ai-training-content-manager.html";
+            backLink.textContent = "← Back to Content Explorer";
+            backLink.setAttribute("aria-label", "Back to Content Explorer");
+        } else {
+            backLink.href = "required-training.html";
+            backLink.textContent = "← Back to Training Courses";
+            backLink.setAttribute("aria-label", "Back to Training Courses");
+        }
         document.getElementById("courseTitle").textContent = selectedCourse.title;
         document.getElementById("courseDescription").textContent =
             typeof selectedCourse.description === "string" ? selectedCourse.description : selectedCourse.shortDescription || "";

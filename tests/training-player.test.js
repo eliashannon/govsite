@@ -196,3 +196,20 @@ test("catalog actions and dashboard follow course lifecycle status", () => {
     assert.match(dashboard, /moduleProgress\.courseCompleted === true/);
     assert.match(dashboard, /portal\.inProgressCourses/);
 });
+
+test("published courses can be selected and unpublished and course player has a back link", () => {
+    const explorerHtml = source("ai-training-content-manager.html");
+    const explorer = source("assets/pages/ai-training-content-manager/ai-training-content-manager.js");
+    const localEditor = source("assets/pages/ai-training-content-manager/course-editor.js");
+    const playerHtml = source("training.html");
+    const player = source("assets/pages/training-courses/training.js");
+    assert.match(explorerHtml, /unpublishSelectedCoursesButton/);
+    assert.match(explorerHtml, /unpublishSelectedLocalCourseButton/);
+    assert.match(explorer, /data-select-structured-course/);
+    assert.match(explorer, /unpublishStructuredCourses/);
+    assert.match(explorer, /status:"approved"/);
+    assert.match(explorerHtml, /Unpublish Selected Course/);
+    assert.match(playerHtml, /id="courseBackLink"/);
+    assert.match(player, /Back to Training Courses/);
+    assert.match(player, /Back to Content Explorer/);
+});

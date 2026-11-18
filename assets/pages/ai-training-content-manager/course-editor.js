@@ -882,6 +882,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("openSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
+        document.getElementById("unpublishSelectedLocalCourseButton").disabled = !hasSelection
+            || getLocalCourse(select.value)?.status !== "published";
         document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
     };
 
@@ -894,6 +896,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("openSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
+        document.getElementById("unpublishSelectedLocalCourseButton").disabled = !hasSelection
+            || getLocalCourse(event.target.value)?.status !== "published";
         document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
     });
     document.getElementById("savedLocalCourses").addEventListener("dblclick", event => {
@@ -941,6 +945,20 @@ document.addEventListener("DOMContentLoaded", () => {
         renderSavedLocalCourses();
         window.dispatchEvent(new Event("training-course-changed"));
         showDraftNotice(`Archived local course ${courseId}.`);
+    });
+    document.getElementById("unpublishSelectedLocalCourseButton").addEventListener("click", () => {
+        const courseId = document.getElementById("savedLocalCourses").value;
+        if (!courseId) return;
+        const course = getLocalCourse(courseId);
+        if (!course || course.status !== "published") return;
+        if (!window.confirm(`Unpublish "${course.title || courseId}" from Training Courses?`)) return;
+        course.status = "approved";
+        course.publishedAt = null;
+        course.unpublishedAt = new Date().toISOString();
+        saveLocalCourse(course);
+        renderSavedLocalCourses();
+        window.dispatchEvent(new Event("training-course-changed"));
+        showDraftNotice(`Unpublished "${course.title || courseId}" from Training Courses.`);
     });
     document.getElementById("clearLocalCoursesButton").addEventListener("click", async () => {
         if (!window.confirm("Clear all prototype courses from trainingManagerCourses? This cannot be undone.")) return;
