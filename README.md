@@ -76,3 +76,9 @@ Update all existing interface elements to match the new theme:
 * Do not change the application’s backend or data handling.
 
 Final Goal: The website should feel like a premium government training and qualification management platform: sophisticated, clean, modern, and easy to use for extended periods. The Midnight Navy background should be noticeable throughout the application without making the interface feel too dark or difficult to read.
+
+## Prototype sign-in
+
+Sign-in is a browser-only prototype, not security or authorization. Do not use real credentials, personal information, or sensitive content. The **Use Demo Account!** button uses public synthetic test credentials and is for local testing only. Existing prototype admin access is unchanged.
+
+Sessions are stored in session storage; newly created prototype accounts and salted password-derived values are stored locally in the same browser. Clearing browser data removes them. Signing out preserves saved roles and course progress. Client-side checks and password derivation do not protect accounts or page content from a user with browser access. Production requires server-side authentication and authorization, secure password hashing and cookies, CSRF protection, audit logging, and approved hosting.

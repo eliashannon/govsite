@@ -310,7 +310,7 @@ test("published courses can be selected and unpublished and course player has a 
 });
 
 test("topbar search markup and shared styles are consistent across pages", () => {
-    const pages = ["index.html","role-overview.html","account.html","faq.html","key-references.html","contact.html","required-training.html","training.html","tqs-support.html","ai-training-content-manager.html"];
+    const pages = ["index.html","role-overview.html","faq.html","key-references.html","contact.html","required-training.html","training.html","tqs-support.html","ai-training-content-manager.html"];
     pages.forEach(page => {
         const html = source(page);
         assert.match(html, /class="topbar-search search-box"/);
@@ -324,15 +324,12 @@ test("topbar search markup and shared styles are consistent across pages", () =>
     assert.match(sharedLayout, /\.topbar-search\{width:min\(620px,34vw\)\}/);
 });
 
-test("signed-out account control says Sign in on every page", () => {
-    const pages = ["index.html","role-overview.html","account.html","faq.html","key-references.html","contact.html","required-training.html","training.html","tqs-support.html","ai-training-content-manager.html"];
+test("protected pages share the account control styles", () => {
+    const pages = ["index.html","role-overview.html","faq.html","key-references.html","contact.html","required-training.html","training.html","tqs-support.html","ai-training-content-manager.html"];
     pages.forEach(page => {
         assert.match(source(page), /<span>Sign in<\/span>/);
-        assert.match(source(page), /components\.css\?v=20261118-3/);
+        assert.match(source(page), /components\.css\?v=20261118-4/);
     });
-    const accountScript = source("assets/shared/js/account.js");
-    assert.match(accountScript, /if \(label\) label\.textContent = "Sign in"/);
-    assert.match(accountScript, /if \(avatar\) avatar\.textContent = "U"/);
     const sharedComponents = source("assets/shared/css/components.css");
     const dashboardCss = source("assets/pages/dashboard/dashboard.css");
     assert.match(sharedComponents, /\.account-button\{[^}]*font-size:13px;font-weight:600/);

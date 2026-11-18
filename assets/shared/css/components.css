@@ -38,7 +38,8 @@
 .empty-state{padding:35px 15px;text-align:center;color:var(--text-muted)}
 .account-button{border:0;background:transparent;display:flex;align-items:center;gap:9px;padding:0;color:var(--text-primary);font-size:13px;font-weight:600;white-space:nowrap}
 .account-avatar{width:36px;height:36px;background:var(--blue-100);color:var(--blue-700);border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600}
-.account-menu{position:absolute;right:25px;top:62px;width:190px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);z-index:150}
+.dashboard-account{position:relative}
+.account-menu{position:absolute;right:0;top:calc(100% + 8px);width:190px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);z-index:150}
 .account-menu a,.account-menu-action{display:block;width:100%;padding:9px;border:0;border-radius:5px;background:transparent;text-align:left;color:var(--text-primary);font:inherit;font-size:12px;cursor:pointer}.account-menu a:hover,.account-menu-action:hover{background:var(--surface-secondary);text-decoration:none}
 .faq-item{border-bottom:1px solid var(--border)}.faq-question{width:100%;padding:15px 0;text-align:left;background:transparent;border:0;font-weight:600;color:var(--text-primary)}
 .faq-answer{padding:0 0 15px;color:var(--text-secondary);font-size:13px}
