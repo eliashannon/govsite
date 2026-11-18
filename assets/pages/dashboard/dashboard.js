@@ -189,6 +189,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Unable to read in-progress courses for the dashboard.", error);
     }
 
+    try {
+        const trainingProgress = JSON.parse(localStorage.getItem("trainingProgress") || "{}");
+        if (trainingProgress && typeof trainingProgress === "object" && !Array.isArray(trainingProgress)) {
+            roleCourses.forEach(course => {
+                const moduleProgress = trainingProgress[course.id];
+                if (!moduleProgress || typeof moduleProgress !== "object") return;
+                if (moduleProgress.courseCompleted === true
+                    && Array.isArray(moduleProgress.completedModuleIds)
+                    && moduleProgress.completedModuleIds.length === course.modules?.length) {
+                    completedIds = [...new Set([...completedIds, course.id])];
+                    inProgressIds = inProgressIds.filter(id => id !== course.id);
+                } else if (Array.isArray(moduleProgress.continuedModuleIds)
+                    && moduleProgress.continuedModuleIds.length > 0
+                    && !completedIds.includes(course.id)) {
+                    inProgressIds = [...new Set([...inProgressIds, course.id])];
+                }
+            });
+            localStorage.setItem(completionKey, JSON.stringify(completedIds));
+            localStorage.setItem("portal.inProgressCourses", JSON.stringify(inProgressIds));
+        }
+    } catch (error) {
+        console.error("Unable to synchronize dashboard progress with course progress.", error);
+    }
+
     const requiredCourses = roleCourses.filter(course => course.requirement === "Required");
     const completedCourses = roleCourses.filter(course => completedIds.includes(course.id));
     const completedRequired = requiredCourses.filter(course => completedIds.includes(course.id));

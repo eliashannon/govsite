@@ -71,6 +71,7 @@ async function player(preview = false, savedStorage = null) {
         PortalData:{courses:[]},
         TrainingContentStore:{saveMany:async () => {}},
         matchMedia:() => ({matches:true}),
+        confirm:() => true,
         scrollTo: options => scrolls.push(options),
         addEventListener:(event, callback) => { events[event] = callback; }
     };
@@ -142,6 +143,11 @@ test("course player shows module states, renders structured material, and comple
     const reopened = await player(false, p.localStorage);
     assert.equal(reopened.elements.courseCompletion.hidden, false);
     assert.equal(reopened.elements.courseProgressLabel.textContent, "100%");
+    p.elements.resetCourseProgress.click();
+    assert.equal(p.elements.courseProgressLabel.textContent, "0%");
+    assert.equal(p.elements.courseCompletion.hidden, true);
+    assert.ok(!JSON.parse(p.localStorage.getItem("portal.completedCourses")).includes(p.course.id));
+    assert.ok(!JSON.parse(p.localStorage.getItem("portal.inProgressCourses")).includes(p.course.id));
 });
 
 test("review preview has learner navigation without changing learner progress and can approve then publish", async () => {
@@ -177,4 +183,16 @@ test("Training Courses no longer exposes catalog-wide division, branch, or role 
     assert.doesNotMatch(script, /\btraining(Division|Branch|Role)Filter\b/);
     assert.match(script, /portal\.selectedRole/);
     assert.match(script, /const roleName = hasSignedInAccount \? roleSelection\?\.role/);
+});
+
+test("catalog actions and dashboard follow course lifecycle status", () => {
+    const catalog = source("assets/pages/training-courses/required-training.js");
+    const dashboard = source("assets/pages/dashboard/dashboard.js");
+    assert.match(catalog, /Review Course/);
+    assert.match(catalog, /Continue Course/);
+    assert.match(catalog, /Start Course/);
+    assert.doesNotMatch(catalog, />View Details</);
+    assert.match(dashboard, /trainingProgress/);
+    assert.match(dashboard, /moduleProgress\.courseCompleted === true/);
+    assert.match(dashboard, /portal\.inProgressCourses/);
 });

@@ -278,6 +278,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const renderCourseRow = course => {
         const status = getCourseStatus(course);
         const statusClass = status.toLowerCase().replaceAll(" ", "-");
+        const actionLabel = status === "Completed"
+            ? "Review Course"
+            : status === "In Progress" ? "Continue Course" : "Start Course";
         const courseHref = `training.html?course=${encodeURIComponent(course.id)}`;
         return `
             <tr>
@@ -288,7 +291,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td data-label="Category"><span class="course-category"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"></path></svg>${escapeHtml(course.category)}</span></td>
                 <td class="course-duration" data-label="Duration">${escapeHtml(course.duration)}</td>
                 <td data-label="Status"><span class="course-status course-status-${statusClass}">${status}</span></td>
-                <td data-label="Actions"><div class="course-row-actions"><a class="course-view-button" href="${courseHref}" data-view-course="${escapeHtml(course.id)}">View Details</a></div></td>
+                <td data-label="Actions"><div class="course-row-actions"><a class="course-view-button" href="${courseHref}" data-view-course="${escapeHtml(course.id)}">${actionLabel}</a></div></td>
             </tr>`;
     };
 
@@ -460,6 +463,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     tableBody.addEventListener("click", event => {
         const link = event.target.closest("[data-view-course]");
         if (!link) return;
+        const course = roleCourses.find(item => item.id === link.dataset.viewCourse);
+        if (course && getCourseStatus(course) === "Not Started") {
+            inProgressIds = [...new Set([...inProgressIds, course.id])];
+            saveStatus();
+        }
         // Use the real link destination so the dynamic training page works in all browsers.
         window.location.href = link.getAttribute("href");
     });
@@ -476,7 +484,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     primaryAction.addEventListener("click", () => {
         if (!currentCourse) return;
-        if (!completedIds.includes(currentCourse.id) && !inProgressIds.includes(currentCourse.id)) {
+        if (getCourseStatus(currentCourse) !== "Completed"
+            && !inProgressIds.includes(currentCourse.id)) {
             inProgressIds = [...new Set([...inProgressIds, currentCourse.id])];
             saveStatus();
         }
