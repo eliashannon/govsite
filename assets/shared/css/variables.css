@@ -1,21 +1,53 @@
 :root {
-    color-scheme:dark;
-    --navy-950:#0B1526; --navy-900:#E8EEF7; --navy-800:#E8EEF7; --navy-700:#A7B5C9;
-    --blue-700:#85A5D5; --blue-600:#668BCB; --blue-500:#7FA0D4; --blue-100:#263A56;
-    --background:#101B2D; --surface:#1B2B43; --surface-secondary:#223650; --input-background:#152238;
-    --text-primary:#E8EEF7; --text-secondary:#A7B5C9; --text-muted:#94A3B8;
-    --border:#2C3D56; --border-dark:#405675;
-    --accent-secondary:#78A6B0; --accent-secondary-bg:#263C4D;
-    --success:#72B695; --success-indicator:#72B695; --success-bg:#203A36;
-    --warning:#D6AC69; --warning-indicator:#D6AC69; --warning-bg:#3E3529;
-    --danger:#D47D83; --danger-bg:#38232D;
-    --button-text:#101B2D; --neutral-bg:#2A3A51; --progress-track:#2C3D56;
-    --header-background:rgba(16,27,45,.96); --focus-ring:rgba(102,139,203,.55);
+    color-scheme: dark;
+
+    --background: #101B2D;
+    --surface: #1B2B43;
+    --surface-secondary: #223650;
+    --input-background: #152238;
+    --sidebar-background: #0B1526;
+
+    --text-primary: #E8EEF7;
+    --text-secondary: #A7B5C9;
+    --text-muted: #7789A3;
+
+    --accent-primary: #668BCB;
+    --accent-primary-hover: #85A5D5;
+    --accent-secondary: #78A6B0;
+    --accent-secondary-bg: #263C4D;
+
+    --border: #2C3D56;
+    --border-dark: #405675;
+    --success: #72B695;
+    --success-indicator: #72B695;
+    --success-bg: #203A36;
+    --warning: #D6AC69;
+    --warning-indicator: #D6AC69;
+    --warning-bg: #3E3529;
+    --danger: #D47D83;
+    --danger-bg: #38232D;
+
+    --button-text: #101B2D;
+    --neutral-bg: #2A3A51;
+    --progress-track: #2C3D56;
+    --header-background: rgba(16, 27, 45, .96);
+    --focus-ring: rgba(102, 139, 203, .55);
+
+    --navy-950: var(--sidebar-background);
+    --navy-900: var(--text-primary);
+    --navy-800: var(--text-primary);
+    --navy-700: var(--text-secondary);
+    --blue-700: var(--accent-primary-hover);
+    --blue-600: var(--accent-primary);
+    --blue-500: #7FA0D4;
+    --blue-100: #263A56;
+
     --sidebar-width:260px; --header-height:72px; --content-max-width:1440px;
     --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
     --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
     --radius-sm:8px; --radius-md:12px; --radius-lg:16px;
-    --shadow-sm:0 2px 8px rgba(0,0,0,.18); --shadow-md:0 8px 20px rgba(0,0,0,.28);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, .18);
+    --shadow-md: 0 8px 20px rgba(0, 0, 0, .28);
     --font-family:"Inter","Segoe UI",Arial,sans-serif;
     --brand-font-family:var(--font-family);
 }
