@@ -124,6 +124,10 @@
 .course-content-block{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:8px;align-items:start;margin-top:7px;padding:8px;border:1px solid var(--border);border-radius:7px;background:var(--surface)}
 .course-content-block textarea{min-height:58px}
 .course-content-block input{width:100%;height:38px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--input-background);color:var(--text-primary)}
+.tqs-module-fields{display:grid;grid-template-columns:minmax(110px,1fr) minmax(180px,3fr) auto;align-items:end;gap:8px}
+.tqs-requirement-fields{grid-template-columns:minmax(110px,1fr) minmax(180px,3fr) auto;align-items:end}
+.tqs-requirement-fields label{min-width:0}
+@media(max-width:700px){.tqs-module-fields,.tqs-requirement-fields{grid-template-columns:1fr}}
 .course-block-actions{display:flex;gap:5px}
 .course-block-actions button{width:32px;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--danger)}
 .exam-builder-description{margin:0;padding:0 20px 14px;color:var(--text-secondary);font-size:12px;line-height:1.55}

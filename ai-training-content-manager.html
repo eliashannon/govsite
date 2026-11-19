@@ -5,7 +5,7 @@
 <script src="assets/shared/js/auth.js?v=2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | AI Training Content Manager</title>
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261118-12">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261119-13">
 </head>
 <body data-page="ai-training-content-manager">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -30,10 +30,16 @@
     <form id="handbookUploadForm" class="handbook-upload-form">
       <label for="handbookFiles">Standardized training documents</label>
       <input id="handbookFiles" class="form-control" type="file" accept=".docx,.txt,.md,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple required>
-      <p>Choose a DOCX, TXT, or Markdown course document using the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a>, then create a structured draft. Send the draft to Course Builder, then move it to Published Courses and publish it. PDF is supported for source extraction only.</p>
-      <button id="uploadHandbooksButton" class="btn btn-primary" type="submit">Upload and extract</button>
+      <p>Choose a document, then create a TQS for a role or a structured course draft. Course drafts use the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a> and support DOCX, TXT, and Markdown. TQS drafts also support PDF.</p>
+      <button id="createTqsDraftButton" class="btn btn-primary" type="button">Create TQS for Role</button>
       <button id="createCourseDraftButton" class="btn btn-secondary" type="button">Create structured course draft</button>
     </form>
+  </section>
+
+  <section class="ai-manager-panel" aria-labelledby="tqsDraftsTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">LOCAL TQS DRAFTS</span><h2 id="tqsDraftsTitle">TQS Builder</h2></div></div>
+    <p class="exam-builder-description">Create and edit role-specific TQS drafts in this browser. Drafts are not published to TQS Support or shared with other users.</p>
+    <div id="tqsDraftList" class="exam-builder-list"></div>
   </section>
 
   <section class="ai-manager-panel handbook-explorer-panel" aria-labelledby="contentExplorerTitle">
@@ -84,6 +90,42 @@
     <p id="previewWarnings" class="source-preview-warnings" hidden></p>
     <pre id="previewText" class="source-preview-text"></pre>
   </section>
+
+  <dialog id="tqsSourceDialog" class="ai-content-dialog course-draft-dialog" aria-labelledby="tqsSourceTitle">
+    <div class="ai-dialog-header"><div><span class="tqs-label">TQS SOURCE</span><h2 id="tqsSourceTitle">Choose an uploaded document</h2></div><button id="closeTqsSource" type="button" aria-label="Close document selection">×</button></div>
+    <label for="tqsSourceSelect">Uploaded document</label>
+    <select id="tqsSourceSelect" class="form-control"></select>
+    <p id="tqsSourceNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
+    <div class="ai-dialog-actions"><button id="openTqsSource" class="btn btn-primary" type="button">Create draft</button></div>
+  </dialog>
+
+  <dialog id="tqsDraftDialog" class="ai-content-dialog course-draft-dialog" aria-labelledby="tqsDraftTitle">
+    <div class="ai-dialog-header"><div><span class="tqs-label">LOCAL TQS DRAFT</span><h2 id="tqsDraftTitle">Edit TQS for Role</h2></div><button id="closeTqsDraft" type="button" aria-label="Close TQS editor">×</button></div>
+    <p class="module-source-summary">Review the original document and all warnings. This prototype saves drafts only in this browser.</p>
+    <p id="tqsDraftNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
+    <form id="tqsDraftForm" class="course-draft-form">
+      <fieldset><legend>TQS information and role</legend>
+        <div class="course-field-grid">
+          <label>TQS ID<input id="tqsEditorIdentifier" class="form-control" type="text"></label>
+          <label>TQS title<input id="tqsEditorTitle" class="form-control" type="text"></label>
+          <label>Version<input id="tqsEditorVersion" class="form-control" type="text"></label>
+          <label>Effective date<input id="tqsEditorDate" class="form-control" type="date"></label>
+          <label>Assigned role<select id="tqsEditorRole" class="form-control"></select></label>
+          <label>Source document<input id="tqsEditorSource" class="form-control" type="text" readonly></label>
+        </div>
+      </fieldset>
+      <fieldset><legend>Import review</legend>
+        <p class="module-source-summary">Warnings and unassigned requirements must be reviewed against the source. Unassigned requirements can be edited and assigned to a module below.</p>
+        <div id="tqsImportWarnings"></div>
+        <div id="tqsUnassignedEditor" class="course-module-editor"></div>
+      </fieldset>
+      <fieldset><legend>Modules and requirements</legend>
+        <div id="tqsModuleEditor" class="course-module-editor"></div>
+        <button id="addTqsModule" class="btn btn-secondary" type="button">Add module</button>
+      </fieldset>
+      <div class="ai-dialog-actions"><button id="saveTqsDraft" class="btn btn-primary" type="submit">Save TQS draft</button></div>
+    </form>
+  </dialog>
 
   <dialog id="courseDraftDialog" class="ai-content-dialog course-draft-dialog" aria-labelledby="courseDraftDialogTitle">
     <div class="ai-dialog-header"><div><span class="tqs-label">COURSE WORKFLOW</span><h2 id="courseDraftDialogTitle">Edit course draft</h2></div><button id="closeCourseDraftDialog" type="button" aria-label="Close course draft">×</button></div>
@@ -147,7 +189,8 @@
   </dialog>
 </main></div></div>
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
-<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=4"></script><script src="assets/shared/js/course-workflow.js?v=2"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261119-1"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261119-5"></script>
+<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=4"></script><script src="assets/shared/js/course-workflow.js?v=2"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261119-1"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261119-6"></script>
 <script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261119-3"></script>
+<script src="assets/pages/tqs-support/tqs-parser.js"></script><script src="assets/pages/ai-training-content-manager/tqs-editor.js"></script>
 </body>
 </html>

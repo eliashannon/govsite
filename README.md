@@ -88,3 +88,9 @@ Sessions are stored in session storage; newly created prototype accounts and sal
 Structured course drafts accept DOCX, TXT, or Markdown documents in the [handbook format](HANDBOOKFORMAT.txt). The COURSE section must include a lowercase, hyphen-separated Course ID, Course Title, Short Description, Category, Difficulty, and a positive whole-number Duration Minutes, followed by a COURSE DESCRIPTION heading. Invalid or missing metadata must be corrected in the document before creating a draft.
 
 Use View / edit in Course Builder to reopen a course in the structured draft editor, or select courses and source items to delete them. Deleting a course leaves its original handbook intact. Move courses from Course Builder to Exam Builder or Published Courses. A course appears in only one of these sections. Publish and unpublish from Published Courses; unpublishing leaves the course there until it is moved to a builder. Course locations and publication remain browser-local prototype data.
+
+## TQS parser
+
+In Training Content Manager, select a document and choose **Create TQS for Role**, or select a previously uploaded document from the document list. Select an existing role, review the extraction warnings, edit or add module and requirement blocks, and save the draft. Reopen saved drafts in TQS Builder. Unassigned requirements can be edited and assigned to a module. Documents and drafts remain in this browser; drafts are not published to TQS Support.
+
+The TQS parser handles line-separated numbered module headings and requirements, preserving source numbering and order. It reports unassigned requirements, duplicate numbers, and unrecognized lines for review. Check all extracted content against the original, especially PDF layout and DOCX text boxes or tables. Secure TQS administration, completion records, and audit trails require a trusted backend; the existing browser-only sign-in and progress tracker cannot enforce those controls.

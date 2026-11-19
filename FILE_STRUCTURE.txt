@@ -20,6 +20,7 @@ Git internals and empty, untracked directories are omitted.
 |   |   |   |-- ai-training-content-manager.js
 |   |   |   |-- course-editor.js
 |   |   |   |-- document-processing.js
+|   |   |   |-- tqs-editor.js
 |   |   |   `-- vendor
 |   |   |       |-- MAMMOTH-LICENSE.txt
 |   |   |       |-- PDFJS-LICENSE.txt
@@ -38,6 +39,7 @@ Git internals and empty, untracked directories are omitted.
 |   |   |   `-- role-overview.js
 |   |   |-- tqs-support
 |   |   |   |-- tqs-support.css
+|   |   |   |-- tqs-parser.js
 |   |   |   `-- tqs-support.js
 |   |   `-- training-courses
 |   |       |-- required-training.css
@@ -71,5 +73,7 @@ Git internals and empty, untracked directories are omitted.
 |-- role-overview.html
 |-- tqs-support.html
 |-- tests
-|   `-- course-extraction.test.js
+|   |-- course-extraction.test.js
+|   |-- tqs-editor.test.js
+|   `-- tqs-parser.test.js
 `-- training.html

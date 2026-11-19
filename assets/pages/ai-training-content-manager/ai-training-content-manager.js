@@ -1557,11 +1557,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             showNotice("Choose at least one PDF or DOCX handbook.", true);
             return;
         }
-        document.getElementById("uploadHandbooksButton").disabled = true;
+        const submitter = event.submitter;
+        if (submitter) submitter.disabled = true;
         try {
             await uploadFiles([...fileInput.files]);
         } finally {
-            document.getElementById("uploadHandbooksButton").disabled = false;
+            if (submitter) submitter.disabled = false;
         }
     });
     contentExplorer.addEventListener("change", event => {
