@@ -82,3 +82,7 @@ Final Goal: The website should feel like a premium government training and quali
 Sign-in is a browser-only prototype, not security or authorization. Do not use real credentials, personal information, or sensitive content. The **Use Demo Account!** button uses public synthetic test credentials and is for local testing only. Existing prototype admin access is unchanged.
 
 Sessions are stored in session storage; newly created prototype accounts and salted password-derived values are stored locally in the same browser. Clearing browser data removes them. Signing out also signs out other open portal tabs in the same browser, while preserving saved roles and course progress. Client-side checks and password derivation do not protect accounts or page content from a user with browser access. Production requires server-side authentication and authorization, secure password hashing and cookies, CSRF protection, audit logging, and approved hosting.
+
+## Training manager workflow
+
+Review courses in Course Builder, then move approved courses to Exam Builder or Published Courses. A course appears in only one of these sections. Publish and unpublish from Published Courses; unpublishing leaves the course there until it is moved to a builder. To reject a published course, unpublish it and move it back to Course Builder first. Course locations and publication remain browser-local prototype data.

@@ -30,7 +30,7 @@
     <form id="handbookUploadForm" class="handbook-upload-form">
       <label for="handbookFiles">Standardized training documents</label>
       <input id="handbookFiles" class="form-control" type="file" accept=".docx,.txt,.md,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple required>
-      <p>Choose a DOCX, TXT, or Markdown course document using the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a>, then create a structured draft. Choose a valid organization assignment and send the draft to Course Builder. Preview and approve or reject it, then publish an approved course separately. PDF is supported for source extraction only.</p>
+      <p>Choose a DOCX, TXT, or Markdown course document using the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a>, then create a structured draft. Choose a valid organization assignment and send the draft to Course Builder for review. Move approved courses to Published Courses to publish them. PDF is supported for source extraction only.</p>
       <button id="uploadHandbooksButton" class="btn btn-primary" type="submit">Upload and extract</button>
       <button id="createCourseDraftButton" class="btn btn-secondary" type="button">Create structured course draft</button>
     </form>
@@ -59,8 +59,8 @@
       <button id="approveSelectedButton" class="btn btn-secondary" type="button" disabled>Approve all selected</button>
       <button id="rejectSelectedButton" class="btn btn-secondary" type="button" disabled>Reject selected</button>
       <button id="deleteSelectedContentButton" class="btn btn-secondary" type="button" disabled>Delete selected</button>
-      <button id="unpublishSelectedCoursesButton" class="btn btn-secondary" type="button" disabled>Unpublish selected courses</button>
       <button id="addSelectedExamCoursesButton" class="btn btn-primary" type="button" disabled>Add approved courses to Exam Builder</button>
+      <button id="addSelectedPublishedCoursesButton" class="btn btn-secondary" type="button" disabled>Move approved courses to Published Courses</button>
     </div>
     <div id="contentExplorer" class="handbook-content-explorer"></div>
   </section>
@@ -72,8 +72,15 @@
       <span id="examBuilderSelectionCount">0 selected</span>
       <button id="selectAllExamCoursesButton" class="ai-text-button" type="button">Select all</button>
       <button id="returnSelectedExamCoursesButton" class="btn btn-secondary" type="button" disabled>Return selected to Course Builder</button>
+      <button id="publishSelectedExamCoursesButton" class="btn btn-secondary" type="button" disabled>Move selected to Published Courses</button>
     </div>
     <div id="examBuilderList" class="exam-builder-list"></div>
+  </section>
+
+  <section class="ai-manager-panel published-courses-panel" aria-labelledby="publishedCoursesTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">PUBLICATION CONTROL</span><h2 id="publishedCoursesTitle">Published Courses</h2></div><span id="publishedCoursesCount" class="ai-content-count">0 courses</span></div>
+    <p class="exam-builder-description">Publish approved courses here. Unpublish a course before returning it to Course Builder or moving it to Exam Builder.</p>
+    <div id="publishedCoursesList" class="exam-builder-list"></div>
   </section>
 
   <section class="ai-manager-panel source-preview-panel" id="sourcePreview" aria-labelledby="previewTitle" hidden>
@@ -89,7 +96,6 @@
     <div class="prototype-course-toolbar">
       <button id="viewLocalCoursesButton" class="btn btn-secondary" type="button">View Saved Local Courses</button>
       <button id="openSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Open Selected Course</button>
-      <button id="unpublishSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Unpublish Selected Course</button>
       <button id="deleteSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Delete Selected Local Course</button>
       <button id="archiveSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Archive Selected Local Course</button>
       <button id="clearLocalCoursesButton" class="btn btn-secondary" type="button">Clear All Prototype Courses</button>
@@ -197,7 +203,7 @@ Every user contributes to organizational security.</pre>
   </dialog>
 </main></div></div>
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
-<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=4"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-4"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-14"></script>
-<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261118-7"></script>
+<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=4"></script><script src="assets/shared/js/course-workflow.js?v=1"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-4"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261119-1"></script>
+<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261119-1"></script>
 </body>
 </html>

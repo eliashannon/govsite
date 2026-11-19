@@ -32,14 +32,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const approveSelectedButton = document.getElementById("approveSelectedButton");
     const rejectSelectedButton = document.getElementById("rejectSelectedButton");
     const deleteSelectedContentButton = document.getElementById("deleteSelectedContentButton");
-    const unpublishSelectedCoursesButton = document.getElementById("unpublishSelectedCoursesButton");
     const addSelectedExamCoursesButton = document.getElementById("addSelectedExamCoursesButton");
+    const addSelectedPublishedCoursesButton = document.getElementById("addSelectedPublishedCoursesButton");
     const selectAllVisibleButton = document.getElementById("selectAllVisibleButton");
     const examBuilderList = document.getElementById("examBuilderList");
     const examBuilderCount = document.getElementById("examBuilderCount");
     const examBuilderSelectionCount = document.getElementById("examBuilderSelectionCount");
     const selectAllExamCoursesButton = document.getElementById("selectAllExamCoursesButton");
     const returnSelectedExamCoursesButton = document.getElementById("returnSelectedExamCoursesButton");
+    const publishSelectedExamCoursesButton = document.getElementById("publishSelectedExamCoursesButton");
+    const publishedCoursesList = document.getElementById("publishedCoursesList");
+    const publishedCoursesCount = document.getElementById("publishedCoursesCount");
     const examEditorDialog = document.getElementById("examEditorDialog");
     const examModuleSelect = document.getElementById("examModuleSelect");
     const examTitleInput = document.getElementById("examTitleInput");
@@ -114,21 +117,29 @@ document.addEventListener("DOMContentLoaded", async () => {
             return null;
         }
     };
-    const isEligibleExamCourse = courseId => ["approved", "published"].includes(getStructuredCourse(courseId)?.status);
-    const persistExamBuilderQueue = courseIds => {
+    const isEligibleExamCourse = courseId => getStructuredCourse(courseId)?.status === "approved";
+    const moveCourses = (courseIds, source, destination) => {
         if (!examBuilderStorageAvailable) {
             showNotice("The Exam Builder queue is unavailable until its saved data is repaired.", true);
             return false;
         }
         try {
+            const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
             const uniqueIds = [...new Set(courseIds)];
-            localStorage.setItem("trainingExamBuilderCourseIds", JSON.stringify(uniqueIds));
-            examBuilderCourseIds.clear();
-            uniqueIds.forEach(id => examBuilderCourseIds.add(id));
+            if (!uniqueIds.length) throw new Error("Select at least one course.");
+            uniqueIds.forEach(id => {
+                const course = records[id];
+                if (!course || window.CourseWorkflow.zone(course) !== source) {
+                    throw new Error("A selected course is no longer in this section. Refresh and try again.");
+                }
+                records[id] = window.CourseWorkflow.move(course, destination);
+            });
+            localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+            window.dispatchEvent(new Event("training-course-changed"));
             return true;
         } catch (error) {
-            console.error("Unable to save the Exam Builder course queue.", error);
-            showNotice(error instanceof Error ? error.message : "Unable to save the Exam Builder course queue.", true);
+            console.error("Unable to move the selected courses.", error);
+            showNotice(error instanceof Error ? error.message : "Unable to move the selected courses.", true);
             return false;
         }
     };
@@ -146,14 +157,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         "Published": "status-published"
     }[status] || "");
     const statusBadge = status => `<span class="status-badge ${statusClass(status)}">${escapeHtml(status)}</span>`;
-    const findMetadata = contentId => state.organizationMetadata.find(item => item.contentId === contentId);
+    const findMetadata = contentId => {
+        const metadata = state.organizationMetadata.find(item => item.contentId === contentId);
+        if (metadata || !contentId.startsWith("structured-course-")) return metadata;
+        const course = getStructuredCourse(contentId.slice("structured-course-".length));
+        return course ? {category:course.category, headingPath:[course.title || course.id], contentType:"Structured course"} : null;
+    };
     const findReview = contentId => {
         const review = state.reviews.find(item => item.contentId === contentId)
             || {contentId, status: "Pending Review", reviewedAt: null, reviewer: ""};
         const item = state.sourceContent.find(source => source.id === contentId);
-        if (!item?.structuredCourseId) return review;
+        const courseId = item?.structuredCourseId || (contentId.startsWith("structured-course-")
+            ? contentId.slice("structured-course-".length) : "");
+        if (!courseId) return review;
         try {
-            const course = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}")[item.structuredCourseId];
+            const course = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}")[courseId];
             const status = ["approved", "published"].includes(course?.status) ? "Approved" : course?.status === "rejected" ? "Rejected" : "Pending Review";
             return {...review, status};
         } catch (error) {
@@ -171,12 +189,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             uniqueIds.forEach(courseId => {
                 const course = records[courseId];
                 if (!course || course.status !== "published") return;
-                records[courseId] = {
-                    ...course,
-                    status:"approved",
-                    publishedAt:null,
-                    unpublishedAt:new Date().toISOString()
-                };
+                records[courseId] = window.CourseWorkflow.unpublish(course);
                 changed += 1;
             });
             if (!changed) {
@@ -205,13 +218,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         approveSelectedButton.disabled = selectedContentIds.size === 0;
         rejectSelectedButton.disabled = selectedContentIds.size === 0;
         deleteSelectedContentButton.disabled = selectedContentIds.size === 0;
-        const selectedPublishedCourseIds = [...selectedStructuredCourseIds].filter(id => getStructuredCourse(id)?.status === "published");
         const selectedExamCourseIds = [...selectedStructuredCourseIds].filter(isEligibleExamCourse);
-        unpublishSelectedCoursesButton.disabled = selectedPublishedCourseIds.length === 0;
         addSelectedExamCoursesButton.disabled = selectedExamCourseIds.length === 0 || !examBuilderStorageAvailable;
-        const visibleCheckboxes = [...contentExplorer.querySelectorAll("[data-select-content]")];
+        addSelectedPublishedCoursesButton.disabled = selectedExamCourseIds.length === 0 || !examBuilderStorageAvailable;
+        const visibleCheckboxes = [...contentExplorer.querySelectorAll("[data-select-content], [data-select-structured-course]")];
         selectAllVisibleButton.textContent = visibleCheckboxes.length > 0
-            && visibleCheckboxes.every(checkbox => selectedContentIds.has(checkbox.dataset.selectContent))
+            && visibleCheckboxes.every(checkbox => checkbox.dataset.selectContent
+                ? selectedContentIds.has(checkbox.dataset.selectContent)
+                : selectedStructuredCourseIds.has(checkbox.dataset.selectStructuredCourse))
             ? "Deselect visible"
             : "Select all visible";
     };
@@ -279,7 +293,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const updateCategoryOptions = () => {
         const currentCategory = categoryFilter.value || "All";
-        const categories = [...new Set(state.organizationMetadata.map(item => item.category).filter(Boolean))]
+        const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+        const categories = [...new Set([
+            ...state.organizationMetadata.map(item => item.category),
+            ...Object.values(records).filter(course => course?.managerZone === "course").map(course => course.category)
+        ].filter(Boolean))]
             .sort((left, right) => left.localeCompare(right));
         categoryFilter.innerHTML = `<option value="All">All categories</option>${categories.map(category =>
             `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`
@@ -308,7 +326,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 : course?.status === "approved" ? "Approved"
                 : course?.status === "rejected" ? "Rejected"
                 : course?.status === "needs-review" ? "Pending Review" : "Unpublished";
-            const canSelectForExam = ["approved", "published"].includes(course?.status);
+            const canSelectForExam = course?.status === "approved";
             return `
                 <article class="source-content-item">
                     ${canSelectForExam
@@ -321,7 +339,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </div>
                     <div class="source-item-actions">
                         <button class="manager-small-button" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">Open course preview</button>
-                        ${course?.status === "published" ? `<button class="manager-small-button" type="button" data-unpublish-course="${escapeHtml(item.structuredCourseId)}">Unpublish course</button>` : ""}
                     </div>
                 </article>`;
         }
@@ -353,7 +370,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         const query = contentSearch.value.trim().toLocaleLowerCase();
         const selectedCategory = categoryFilter.value;
         const selectedReview = reviewFilter.value;
-        const visibleItems = state.sourceContent.filter(item => {
+        const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+        const existingCourseIds = new Set(state.sourceContent.map(item => item.structuredCourseId).filter(Boolean));
+        const recoveredCourses = Object.values(records).filter(course => course?.managerZone === "course"
+            && !existingCourseIds.has(course.id)).map(course => ({
+                id:`structured-course-${course.id}`,
+                documentId:`structured-course-${course.id}`,
+                structuredCourseId:course.id,
+                originalDocumentName:course.title || course.id,
+                sourceText:(course.modules || []).map(module => module.title || "").join("\n")
+            }));
+        const visibleItems = [...state.sourceContent, ...recoveredCourses].filter(item => {
+            if (item.structuredCourseId) {
+                const course = getStructuredCourse(item.structuredCourseId);
+                if (course && window.CourseWorkflow.zone(course) !== "course") return false;
+            }
             const metadata = findMetadata(item.id) || {};
             const review = findReview(item.id);
             const documentRecord = findDocument(item.documentId);
@@ -521,6 +552,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         examBuilderSelectionCount.textContent = `${selectedExamBuilderCourseIds.size} selected`;
         returnSelectedExamCoursesButton.disabled = selectedExamBuilderCourseIds.size === 0 || !examBuilderStorageAvailable;
+        publishSelectedExamCoursesButton.disabled = selectedExamBuilderCourseIds.size === 0 || !examBuilderStorageAvailable;
         selectAllExamCoursesButton.textContent = examBuilderCourseIds.size > 0
             && [...examBuilderCourseIds].every(id => selectedExamBuilderCourseIds.has(id))
             ? "Deselect all"
@@ -554,7 +586,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <div class="exam-builder-course-actions"><button class="manager-small-button" type="button" data-return-exam-course="${escapeHtml(courseId)}">Return to Course Builder</button></div>
                 </article>`;
             }
-            const eligible = ["approved", "published"].includes(course.status);
+            const eligible = course.status === "approved";
             const exams = (Array.isArray(course.modules) ? course.modules : []).flatMap((module, moduleIndex) =>
                 getModuleAssessments(module).map(exam => ({...exam, moduleId:module.id, moduleTitle:module.title || `Module ${moduleIndex + 1}`}))
             );
@@ -678,7 +710,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const openExamEditor = (courseId, moduleId = null, examId = null) => {
         if (!requireMaster(examEditorNotice)) return;
         const course = getStructuredCourse(courseId);
-        if (!course || !["approved", "published"].includes(course.status)) {
+        if (!course || course.status !== "approved" || window.CourseWorkflow.zone(course) !== "exam") {
             showNotice("Only an approved course can be edited in the Exam Builder.", true, examEditorNotice);
             return;
         }
@@ -764,13 +796,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!current || JSON.stringify(current) !== JSON.stringify(editingExamOriginalCourse)) {
                 throw new Error("The course changed while the exam was being edited. Close this dialog and reopen the course.");
             }
-            if (!["approved", "published"].includes(current.status)) {
+            if (current.status !== "approved" || window.CourseWorkflow.zone(current) !== "exam") {
                 throw new Error("Only an approved course can be updated in the Exam Builder.");
             }
             if (!editingExamCourse.modules.some(module => module.id === examModuleSelect.value)) {
                 throw new Error("Choose a module for this exam.");
             }
-            const changedAt = new Date().toISOString();
             const exam = {id:editingExamId, title, questions:JSON.parse(JSON.stringify(editingExamQuestions))};
             const modules = editingExamCourse.modules.map(module => {
                 const exams = getModuleAssessments(module).filter(item => item.id !== editingExamId);
@@ -782,7 +813,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
             const updatedCourse = {
                 ...current,
-                ...(current.status === "published" ? {status:"approved", publishedAt:null, unpublishedAt:changedAt} : {}),
                 modules
             };
             const validationErrors = window.CourseSchema.validateCourse(updatedCourse);
@@ -814,7 +844,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const removeCourseExam = (courseId, moduleId, examId) => {
         if (!requireMaster()) return;
         const course = getStructuredCourse(courseId);
-        if (!course || !window.confirm("Remove this exam from the course? This cannot be undone.")) return;
+        if (!course || course.status !== "approved" || window.CourseWorkflow.zone(course) !== "exam") {
+            showNotice("Only an approved course in Exam Builder can be edited.", true);
+            return;
+        }
+        if (!window.confirm("Remove this exam from the course? This cannot be undone.")) return;
         try {
             const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
             const current = records[courseId];
@@ -839,7 +873,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!removed) throw new Error("The selected exam is no longer available.");
             records[courseId] = {
                 ...current,
-                ...(current.status === "published" ? {status:"approved", publishedAt:null, unpublishedAt:new Date().toISOString()} : {}),
                 modules
             };
             localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
@@ -859,21 +892,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             showNotice("Select one or more approved courses in Course Builder first.", true);
             return;
         }
-        const queuedBefore = examBuilderCourseIds.size;
-        if (!persistExamBuilderQueue([...examBuilderCourseIds, ...eligibleIds])) return;
+        if (!moveCourses(eligibleIds, "course", "exam")) return;
         eligibleIds.forEach(id => selectedStructuredCourseIds.delete(id));
         render();
-        showNotice(`Added ${examBuilderCourseIds.size - queuedBefore} course(s) to Exam Builder.`);
+        showNotice(`Moved ${eligibleIds.length} course(s) to Exam Builder.`);
     };
 
     const returnCoursesToCourseBuilder = courseIds => {
         if (!requireMaster()) return;
         const idsToReturn = [...new Set(courseIds)].filter(id => examBuilderCourseIds.has(id));
         if (!idsToReturn.length) return;
-        const returned = new Set(idsToReturn);
-        if (!persistExamBuilderQueue([...examBuilderCourseIds].filter(id => !returned.has(id)))) return;
+        if (!moveCourses(idsToReturn, "exam", "course")) return;
         idsToReturn.forEach(id => selectedExamBuilderCourseIds.delete(id));
-        renderExamBuilder();
+        render();
         showNotice(`Returned ${idsToReturn.length} course(s) to Course Builder.`);
     };
 
@@ -888,7 +919,66 @@ document.addEventListener("DOMContentLoaded", async () => {
         else preview.opener = null;
     };
 
+    const renderPublishedCourses = courses => {
+        publishedCoursesCount.textContent = `${courses.length} ${courses.length === 1 ? "course" : "courses"}`;
+        publishedCoursesList.innerHTML = courses.length ? courses.map(course => `
+            <article class="exam-builder-course">
+                <span></span>
+                <div class="exam-builder-course-copy"><h3>${escapeHtml(course.title || course.id)}</h3>
+                    <p>${course.status === "published" ? "Published in this browser's Training Courses catalog." : "Unpublished and ready to publish or move."}</p>
+                    <div class="exam-builder-course-meta">${statusBadge(course.status === "published" ? "Published" : "Approved")}</div>
+                </div>
+                <div class="exam-builder-course-actions">
+                    <button class="manager-small-button" type="button" data-preview-published="${escapeHtml(course.id)}">Preview course</button>
+                    ${course.status === "published"
+                        ? `<button class="manager-small-button" type="button" data-unpublish-course="${escapeHtml(course.id)}">Unpublish</button>`
+                        : `<button class="manager-small-button" type="button" data-publish-course="${escapeHtml(course.id)}">Publish</button>
+                           <button class="manager-small-button" type="button" data-move-published-course="${escapeHtml(course.id)}" data-destination="course">Move to Course Builder</button>
+                           <button class="manager-small-button" type="button" data-move-published-course="${escapeHtml(course.id)}" data-destination="exam">Move to Exam Builder</button>`}
+                </div>
+            </article>`).join("") : '<div class="handbook-empty">No courses are in Published Courses. Move an approved course here to publish it.</div>';
+    };
+
+    const publishCourse = courseId => {
+        if (!requireMaster()) return;
+        try {
+            const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+            const course = records[courseId];
+            if (!course) throw new Error("The selected course is no longer available.");
+            const updated = window.CourseWorkflow.publish(course);
+            const errors = window.CourseSchema.validateCourse(updated, {complete:true, hierarchy:window.PortalData?.organizationHierarchy});
+            if (errors.length) throw new Error(`Course validation failed: ${errors.join(" ")}`);
+            records[courseId] = updated;
+            localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+            window.dispatchEvent(new Event("training-course-changed"));
+            showNotice(`Published "${course.title || courseId}" to this browser's Training Courses catalog.`);
+        } catch (error) {
+            console.error("Unable to publish the course.", error);
+            showNotice(error instanceof Error ? error.message : "Unable to publish the course.", true);
+        }
+    };
+
     const render = () => {
+        try {
+            const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+            if (!records || typeof records !== "object" || Array.isArray(records)) throw new Error("The structured course store has an invalid format.");
+            examBuilderCourseIds.clear();
+            const published = [];
+            Object.values(records).forEach(course => {
+                if (!course || typeof course !== "object") return;
+                const zone = window.CourseWorkflow.zone(course);
+                if (zone === "exam") examBuilderCourseIds.add(course.id);
+                else if (zone === "published") published.push(course);
+            });
+            selectedStructuredCourseIds.forEach(id => {
+                if (!records[id] || window.CourseWorkflow.zone(records[id]) !== "course") selectedStructuredCourseIds.delete(id);
+            });
+            renderPublishedCourses(published);
+        } catch (error) {
+            console.error("Unable to load course locations.", error);
+            showNotice(error instanceof Error ? error.message : "Unable to load course locations.", true);
+            return;
+        }
         renderDocuments();
         updateCategoryOptions();
         renderContent();
@@ -922,7 +1012,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     window.addEventListener("training-course-changed", render);
     window.addEventListener("storage", event => {
-        if (event.key === "trainingManagerCourses") render();
+        if (event.key === "trainingManagerCourses" || event.key === "trainingExamBuilderCourseIds") render();
     });
 
     const openOriginal = async (documentId, pageNumber = null, shouldDownload = false) => {
@@ -1556,11 +1646,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateExamBuilderSelectionControls();
     });
     contentExplorer.addEventListener("click", event => {
-        const unpublishCourseButton = event.target.closest("[data-unpublish-course]");
-        if (unpublishCourseButton) {
-            unpublishStructuredCourses([unpublishCourseButton.dataset.unpublishCourse]);
-            return;
-        }
         const courseButton = event.target.closest("[data-preview-course]");
         if (courseButton) {
             window.location.href = `training.html?preview=1&course=${encodeURIComponent(courseButton.dataset.previewCourse)}`;
@@ -1620,6 +1705,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         const returnButton = event.target.closest("[data-return-exam-course]");
         if (returnButton) returnCoursesToCourseBuilder([returnButton.dataset.returnExamCourse]);
     });
+    publishedCoursesList.addEventListener("click", event => {
+        const unpublish = event.target.closest("[data-unpublish-course]");
+        if (unpublish) return unpublishStructuredCourses([unpublish.dataset.unpublishCourse]);
+        const publish = event.target.closest("[data-publish-course]");
+        if (publish) return publishCourse(publish.dataset.publishCourse);
+        const move = event.target.closest("[data-move-published-course]");
+        if (move) {
+            if (moveCourses([move.dataset.movePublishedCourse], "published", move.dataset.destination)) {
+                showNotice(`Moved course to ${move.dataset.destination === "exam" ? "Exam Builder" : "Course Builder"}.`);
+            }
+            return;
+        }
+        const preview = event.target.closest("[data-preview-published]");
+        if (preview) previewExamCourse(preview.dataset.previewPublished);
+    });
     contentSearch.addEventListener("input", renderContent);
     categoryFilter.addEventListener("change", renderContent);
     reviewFilter.addEventListener("change", renderContent);
@@ -1648,10 +1748,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Unable to delete selected source content.", error);
         showNotice(error instanceof Error ? error.message : String(error), true);
     }));
-    unpublishSelectedCoursesButton.addEventListener("click", () => {
-        unpublishStructuredCourses([...selectedStructuredCourseIds].filter(id => getStructuredCourse(id)?.status === "published"));
-    });
     addSelectedExamCoursesButton.addEventListener("click", addSelectedCoursesToExamBuilder);
+    addSelectedPublishedCoursesButton.addEventListener("click", () => {
+        const ids = [...selectedStructuredCourseIds].filter(isEligibleExamCourse);
+        if (moveCourses(ids, "course", "published")) {
+            selectedStructuredCourseIds.clear();
+            render();
+            showNotice(`Moved ${ids.length} course(s) to Published Courses.`);
+        }
+    });
     selectAllExamCoursesButton.addEventListener("click", () => {
         const allSelected = examBuilderCourseIds.size > 0
             && [...examBuilderCourseIds].every(id => selectedExamBuilderCourseIds.has(id));
@@ -1661,6 +1766,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     returnSelectedExamCoursesButton.addEventListener("click", () => {
         returnCoursesToCourseBuilder([...selectedExamBuilderCourseIds]);
+    });
+    publishSelectedExamCoursesButton.addEventListener("click", () => {
+        const ids = [...selectedExamBuilderCourseIds];
+        if (moveCourses(ids, "exam", "published")) {
+            selectedExamBuilderCourseIds.clear();
+            render();
+            showNotice(`Moved ${ids.length} course(s) to Published Courses.`);
+        }
     });
     document.getElementById("addExamQuestionButton").addEventListener("click", () => {
         editingExamQuestions.push({prompt:"", choices:["","","",""], answerIndex:-1});

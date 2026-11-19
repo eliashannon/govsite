@@ -31,13 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
         complete:true, hierarchy:window.PortalData?.organizationHierarchy
     });
 
-    function publishLocalCourse(course) {
-        if (course.status !== "approved") throw new Error("Only an approved course can be published.");
-        const errors = validatePublishedCourse(course);
-        if (errors.length) throw new Error(`Course validation failed: ${errors.join(" ")}`);
-        return {...course, status:"published"};
-    }
-
     async function loadCourses() {
         try {
             if (window.PortalDataReady) await window.PortalDataReady;
@@ -741,24 +734,31 @@ document.addEventListener("DOMContentLoaded", () => {
             controls.hidden = false;
             const approve = document.getElementById("approvePreviewCourse");
             const reject = document.getElementById("rejectPreviewCourse");
-            const publish = document.getElementById("publishPreviewCourse");
             const notice = document.getElementById("courseReviewNotice");
             const renderReviewControls = () => {
-                approve.hidden = previewType === "editor" || selectedCourse.status !== "needs-review";
-                reject.hidden = previewType === "editor" || !["needs-review", "approved"].includes(selectedCourse.status);
-                publish.hidden = previewType === "editor" || selectedCourse.status !== "approved";
-                approve.disabled = reject.disabled = publish.disabled = false;
+                let inCourseBuilder = false;
+                try {
+                    inCourseBuilder = previewType !== "editor" && window.CourseWorkflow.zone(selectedCourse) === "course";
+                } catch (error) {
+                    console.error("Unable to determine the course location.", error);
+                    notice.textContent = error instanceof Error ? error.message : "Unable to determine the course location.";
+                    approve.hidden = reject.hidden = true;
+                    return;
+                }
+                approve.hidden = !inCourseBuilder || selectedCourse.status !== "needs-review";
+                reject.hidden = !inCourseBuilder || !["needs-review", "approved"].includes(selectedCourse.status);
+                approve.disabled = reject.disabled = false;
                 const errors = previewType === "editor" ? [] : validatePublishedCourse(selectedCourse);
-                approve.disabled = publish.disabled = errors.length > 0;
+                approve.disabled = errors.length > 0;
                 notice.textContent = previewType === "editor"
                     ? "Editor preview only. Submit the draft to Course Builder for approval."
                     : errors.length
                         ? `Course validation failed: ${errors.join(" ")}`
-                        : `Course status: ${selectedCourse.status}. ${selectedCourse.status === "approved" ? "Publish when ready." : ""}`;
+                        : `Course status: ${selectedCourse.status}. ${selectedCourse.status === "published" ? "Unpublish in Published Courses before moving or rejecting." : inCourseBuilder && selectedCourse.status === "approved" ? "Move to Published Courses to publish." : ""}`;
             };
             renderReviewControls();
             const decide = async action => {
-                approve.disabled = reject.disabled = publish.disabled = true;
+                approve.disabled = reject.disabled = true;
                 try {
                     const currentProfile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
                     if (!currentProfile || currentProfile.isMaster !== true || typeof currentProfile.email !== "string"
@@ -769,8 +769,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (JSON.stringify(records[selectedCourse.id]) !== JSON.stringify(selectedCourse)) {
                         throw new Error("The course changed since this preview opened. Return to Course Builder and reopen it.");
                     }
+                    if (window.CourseWorkflow.zone(records[selectedCourse.id]) !== "course") {
+                        throw new Error("Return the unpublished course to Course Builder before reviewing it.");
+                    }
                     if ((action === "approve" && selectedCourse.status !== "needs-review")
-                        || (action === "publish" && selectedCourse.status !== "approved")
                         || (action === "reject" && !["needs-review", "approved"].includes(selectedCourse.status))) {
                         throw new Error("This action is not available for the current course status.");
                     }
@@ -778,13 +780,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         const errors = validatePublishedCourse(selectedCourse);
                         if (errors.length) throw new Error(`Course validation failed: ${errors.join(" ")}`);
                     }
-                    const updated = action === "publish"
-                        ? publishLocalCourse(selectedCourse)
-                        : {...selectedCourse, status: action === "approve" ? "approved" : "rejected"};
+                    const updated = {...selectedCourse, status: action === "approve" ? "approved" : "rejected"};
                     records[selectedCourse.id] = updated;
                     localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
                     try {
-                        if (action !== "publish") await window.TrainingContentStore.saveMany({reviews: [{
+                        await window.TrainingContentStore.saveMany({reviews: [{
                             contentId: `structured-course-${selectedCourse.id}`,
                             status: action === "approve" ? "Approved" : "Rejected", reviewedAt: new Date().toISOString(), reviewer: profile.email
                         }]});
@@ -800,13 +800,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     notice.textContent = error instanceof Error ? error.message : "Unable to save the course decision.";
                     if (!/changed since this preview|Only the master account/.test(notice.textContent)) {
                         reject.disabled = false;
-                        approve.disabled = publish.disabled = validatePublishedCourse(selectedCourse).length > 0;
+                        approve.disabled = validatePublishedCourse(selectedCourse).length > 0;
                     }
                 }
             };
             approve.addEventListener("click", () => decide("approve"));
             reject.addEventListener("click", () => decide("reject"));
-            publish.addEventListener("click", () => decide("publish"));
         } else {
         const loaded = await loadCourses();
         if (!loaded) return;

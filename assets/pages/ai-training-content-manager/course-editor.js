@@ -145,6 +145,18 @@ document.addEventListener("DOMContentLoaded", () => {
         notice.classList.toggle("is-error", isError);
     };
 
+    const canEditCourse = course => {
+        if (!course) return true;
+        try {
+            if (window.CourseWorkflow.zone(course) === "course") return true;
+            showDraftNotice("Unpublish and move this course back to Course Builder before editing it.", true);
+        } catch (error) {
+            console.error("Unable to determine the course location.", error);
+            showDraftNotice(error instanceof Error ? error.message : "Unable to determine the course location.", true);
+        }
+        return false;
+    };
+
     const createBlankDraft = fileName => ({
         id: "",
         title: "",
@@ -554,6 +566,7 @@ document.addEventListener("DOMContentLoaded", () => {
             version: draft.version || "1.0",
             roleAssignments: draft.roleAssignments.map(item => ({...item, required:item.required !== false})),
             status: draft.status,
+            managerZone: "course",
             source: {...draft.source},
             warnings: [...(draft.warnings || [])],
             modules
@@ -692,8 +705,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         const previous = getLocalCourse(editingCourseId);
-        if (previous?.status === "published"
-            && !window.confirm("Saving this draft removes the published course from this browser's catalog until it is approved again. Continue?")) return;
+        if (!canEditCourse(previous)) return;
         const previousStore = localStorage.getItem(STORAGE_KEY);
         const previousEditingId = editingCourseId;
         const previousStatus = draft.status;
@@ -718,14 +730,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const statusTransition = async status => {
         if (!draft) return;
+        const current = getLocalCourse(editingCourseId);
+        if (!canEditCourse(current)) return;
         if (status === "needs-review") {
             const result = validateDraftCourse();
             if (result.errors.length) {
                 showDraftNotice(`Submission blocked: ${result.errors.join(" ")}`, true);
                 return;
             }
-            if (getLocalCourse(editingCourseId)?.status === "published"
-                && !window.confirm("Submitting changes removes the published course from this browser's catalog until it is approved again. Continue?")) return;
         }
         const previousStore = localStorage.getItem(STORAGE_KEY);
         const previousEditingId = editingCourseId;
@@ -904,8 +916,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("openSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
-        document.getElementById("unpublishSelectedLocalCourseButton").disabled = !hasSelection
-            || getLocalCourse(select.value)?.status !== "published";
         document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
     };
 
@@ -918,8 +928,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("openSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
         document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
-        document.getElementById("unpublishSelectedLocalCourseButton").disabled = !hasSelection
-            || getLocalCourse(event.target.value)?.status !== "published";
         document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
     });
     document.getElementById("savedLocalCourses").addEventListener("dblclick", event => {
@@ -948,10 +956,15 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("deleteSelectedLocalCourseButton").addEventListener("click", async () => {
         const courseId = document.getElementById("savedLocalCourses").value;
         if (!courseId) return;
+        if (getLocalCourse(courseId)?.status === "published") {
+            showDraftNotice("Unpublish this course in Published Courses before deleting it.", true);
+            return;
+        }
         if (!window.confirm(`Delete local prototype course "${courseId}"?`)) return;
         try {
             await removeCourseEntries([courseId]);
             deleteLocalCourse(courseId);
+            window.dispatchEvent(new Event("training-course-changed"));
             if (editingCourseId === courseId) { draft = null; editingCourseId = null; }
             renderSavedLocalCourses();
             showDraftNotice(`Deleted local course ${courseId}.`);
@@ -963,30 +976,23 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("archiveSelectedLocalCourseButton").addEventListener("click", () => {
         const courseId = document.getElementById("savedLocalCourses").value;
         if (!courseId) return;
+        const course = getLocalCourse(courseId);
+        if (!canEditCourse(course)) return;
         archiveLocalCourse(courseId);
         renderSavedLocalCourses();
         window.dispatchEvent(new Event("training-course-changed"));
         showDraftNotice(`Archived local course ${courseId}.`);
     });
-    document.getElementById("unpublishSelectedLocalCourseButton").addEventListener("click", () => {
-        const courseId = document.getElementById("savedLocalCourses").value;
-        if (!courseId) return;
-        const course = getLocalCourse(courseId);
-        if (!course || course.status !== "published") return;
-        if (!window.confirm(`Unpublish "${course.title || courseId}" from Training Courses?`)) return;
-        course.status = "approved";
-        course.publishedAt = null;
-        course.unpublishedAt = new Date().toISOString();
-        saveLocalCourse(course);
-        renderSavedLocalCourses();
-        window.dispatchEvent(new Event("training-course-changed"));
-        showDraftNotice(`Unpublished "${course.title || courseId}" from Training Courses.`);
-    });
     document.getElementById("clearLocalCoursesButton").addEventListener("click", async () => {
+        if (Object.values(loadLocalCourses()).some(course => course?.status === "published")) {
+            showDraftNotice("Unpublish all published courses before clearing prototype storage.", true);
+            return;
+        }
         if (!window.confirm("Clear all prototype courses from trainingManagerCourses? This cannot be undone.")) return;
         try {
             await removeCourseEntries(Object.keys(loadLocalCourses()));
             localStorage.removeItem(STORAGE_KEY);
+            window.dispatchEvent(new Event("training-course-changed"));
             draft = null;
             editingCourseId = null;
             renderSavedLocalCourses();
@@ -1019,6 +1025,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const normalized = normalizeParsedDraft(course);
             if (getLocalCourse(normalized.id)) throw new Error("Course ID already exists in local storage. Delete or rename the existing course before importing.");
             normalized.status = "draft";
+            normalized.managerZone = "course";
             saveLocalCourse(normalized);
             renderSavedLocalCourses();
             openDraftEditor(normalized, normalized.id);

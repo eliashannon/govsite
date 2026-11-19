@@ -92,6 +92,7 @@ async function player(preview = false, savedStorage = null, fixture = null) {
         fetch:async () => ({ok:true, json:async () => ({courses:[course]})})
     };
     vm.runInNewContext(source("assets/shared/js/course-schema.js"), context);
+    vm.runInNewContext(source("assets/shared/js/course-workflow.js"), context);
     vm.runInNewContext(source("assets/pages/training-courses/training.js"), context);
     await new Promise(resolve => setImmediate(resolve));
     const button = label => descendants(elements.moduleContent).find(element => element.tagName === "BUTTON" && element.textContent === label);
@@ -159,7 +160,7 @@ test("course player shows module states, renders structured material, and comple
     assert.ok(!JSON.parse(p.localStorage.getItem("portal.inProgressCourses")).includes(p.course.id));
 });
 
-test("review preview has learner navigation without changing learner progress and can approve then publish", async () => {
+test("review preview has learner navigation without changing learner progress and can approve", async () => {
     const p = await player(true);
     assert.equal(p.elements.courseReviewControls.hidden, false);
     for (let index = 0; index < 4; index += 1) p.button("Continue").click();
@@ -172,9 +173,7 @@ test("review preview has learner navigation without changing learner progress an
     p.elements.approvePreviewCourse.click();
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(JSON.parse(p.localStorage.getItem("trainingManagerCourses"))[p.course.id].status, "approved");
-    p.elements.publishPreviewCourse.click();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.equal(JSON.parse(p.localStorage.getItem("trainingManagerCourses"))[p.course.id].status, "published");
+    assert.match(p.elements.courseReviewNotice.textContent, /Published Courses/);
 });
 
 test("reviewers can reject a course from its preview", async () => {
@@ -182,7 +181,44 @@ test("reviewers can reject a course from its preview", async () => {
     p.elements.rejectPreviewCourse.click();
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(JSON.parse(p.localStorage.getItem("trainingManagerCourses"))[p.course.id].status, "rejected");
-    assert.equal(p.elements.publishPreviewCourse.hidden, true);
+});
+
+test("rejection requires unpublishing and returning the course to Course Builder", async () => {
+    const initial = await player(true);
+    const course = JSON.parse(initial.localStorage.getItem("trainingManagerCourses"))[initial.course.id];
+    course.status = "published";
+    initial.localStorage.setItem("trainingManagerCourses", JSON.stringify({[course.id]:course}));
+    let preview = await player(true, initial.localStorage, course);
+    assert.equal(preview.elements.rejectPreviewCourse.hidden, true);
+    preview.elements.rejectPreviewCourse.click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(JSON.parse(initial.localStorage.getItem("trainingManagerCourses"))[course.id].status, "published");
+
+    course.status = "approved";
+    course.managerZone = "published";
+    initial.localStorage.setItem("trainingManagerCourses", JSON.stringify({[course.id]:course}));
+    preview = await player(true, initial.localStorage, course);
+    assert.equal(preview.elements.rejectPreviewCourse.hidden, true);
+    course.managerZone = "course";
+    initial.localStorage.setItem("trainingManagerCourses", JSON.stringify({[course.id]:course}));
+    preview = await player(true, initial.localStorage, course);
+    assert.equal(preview.elements.rejectPreviewCourse.hidden, false);
+    preview.elements.rejectPreviewCourse.click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(JSON.parse(initial.localStorage.getItem("trainingManagerCourses"))[course.id].status, "rejected");
+});
+
+test("a stale preview cannot reject a course moved to Exam Builder", async () => {
+    const p = await player(true);
+    const records = JSON.parse(p.localStorage.getItem("trainingManagerCourses"));
+    records[p.course.id].status = "approved";
+    p.localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+    const preview = await player(true, p.localStorage, records[p.course.id]);
+    p.localStorage.setItem("trainingExamBuilderCourseIds", JSON.stringify([p.course.id]));
+    preview.elements.rejectPreviewCourse.click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(JSON.parse(p.localStorage.getItem("trainingManagerCourses"))[p.course.id].status, "approved");
+    assert.match(preview.elements.courseReviewNotice.textContent, /Course Builder/);
 });
 
 async function overviewPage(page, localStorage) {
@@ -292,25 +328,21 @@ test("Training Courses no longer exposes catalog-wide division, branch, or role 
     assert.match(script, /const roleName = hasSignedInAccount \? roleSelection\?\.role/);
 });
 
-test("published courses can be selected, queued for exam building, and returned to Course Builder", () => {
+test("manager provides separate exam and publication controls", () => {
     const explorerHtml = source("ai-training-content-manager.html");
     const explorer = source("assets/pages/ai-training-content-manager/ai-training-content-manager.js");
-    const localEditor = source("assets/pages/ai-training-content-manager/course-editor.js");
     const playerHtml = source("training.html");
     const player = source("assets/pages/training-courses/training.js");
-    assert.match(explorerHtml, /unpublishSelectedCoursesButton/);
-    assert.match(explorerHtml, /unpublishSelectedLocalCourseButton/);
+    assert.match(explorerHtml, /id="publishedCoursesTitle">Published Courses/);
     assert.match(explorerHtml, /id="examBuilderTitle">Exam Builder/);
     assert.match(explorerHtml, /id="addAnotherExamButton".*Add Another Exam/);
     assert.match(explorerHtml, /addSelectedExamCoursesButton/);
     assert.match(explorerHtml, /returnSelectedExamCoursesButton/);
     assert.match(explorer, /data-select-structured-course/);
-    assert.match(explorer, /trainingExamBuilderCourseIds/);
     assert.match(explorer, /data-view-exam-course/);
     assert.match(explorerHtml, /Place exam after module/);
     assert.match(explorer, /unpublishStructuredCourses/);
-    assert.match(explorer, /status:"approved"/);
-    assert.match(explorerHtml, /Unpublish Selected Course/);
+    assert.match(explorer, /data-unpublish-course/);
     assert.match(explorerHtml, /Course Builder/);
     assert.match(playerHtml, /id="courseBackLink"/);
     assert.match(player, /Back to Training Courses/);
