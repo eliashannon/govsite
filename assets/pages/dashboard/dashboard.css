@@ -1,7 +1,7 @@
 body[data-page="dashboard"] .main-area{background:var(--background)}
 body[data-page="dashboard"] .dashboard-content{font-family:"Inter","Segoe UI",Arial,sans-serif}
 body[data-page="dashboard"] .topbar{background:var(--header-background);border-color:var(--border)}
-body[data-page="dashboard"] .portal-title{font-family:"Inter","Segoe UI",Arial,sans-serif;font-size:clamp(24px,1.7vw,30px);font-weight:700;letter-spacing:-.02em;color:var(--text-primary)}
+body[data-page="dashboard"] .portal-title{font-family:"Inter","Segoe UI",Arial,sans-serif;font-size:clamp(28px,2vw,36px);font-weight:700;letter-spacing:-.02em;color:var(--text-primary)}
 body[data-page="dashboard"] .topbar-actions{gap:18px}
 body[data-page="dashboard"] .icon-button{width:40px;height:40px;border-color:var(--border);box-shadow:none}
 body[data-page="dashboard"] .icon-button>svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
