@@ -107,6 +107,7 @@ test("course player shows module states, renders structured material, and comple
     assert.equal(p.sidebar(0).attributes["aria-current"], "page");
     assert.equal(p.sidebar(1).disabled, true);
     assert.equal(p.sidebar(1).children[0].textContent, "🔒");
+    assert.equal(p.sidebar(0).children[1].textContent, "Module 1.1: Welcome and Responsibilities");
     assert.match(p.elements.moduleContent.textContent, /Module 1\.1/);
     assert.match(p.elements.moduleContent.textContent, /Module Objectives/);
     assert.match(p.elements.moduleContent.textContent, /Training Material/);

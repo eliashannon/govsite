@@ -67,8 +67,9 @@ document.addEventListener("DOMContentLoaded", () => {
         window.dispatchEvent(new CustomEvent("training-content-removed", {detail: {contentIds}}));
     }
 
-    function formatModuleSourceText(module) {
-        const lines = [`${module.sourceModuleNumber ? `${module.sourceModuleNumber} ` : ""}${module.title || "Untitled module"}`];
+    function formatModuleSourceText(module, index = 0) {
+        const moduleNumber = module.sourceModuleNumber || String(index + 1);
+        const lines = [`Module ${moduleNumber}: ${module.title || "Untitled module"}`];
         (Array.isArray(module.content) ? module.content : []).forEach(block => {
             if (!block || typeof block !== "object") return;
             if (block.type === "heading" || block.type === "paragraph") lines.push(block.text || "");

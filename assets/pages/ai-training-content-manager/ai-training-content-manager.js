@@ -775,7 +775,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         examModuleSelect.replaceChildren(...editingExamCourse.modules.map((module, index) => {
             const option = document.createElement("option");
             option.value = module.id;
-            option.textContent = `${module.sourceModuleNumber ? `${module.sourceModuleNumber}: ` : `Module ${index + 1}: `}${module.title || "Untitled module"}`;
+            option.textContent = `Module ${module.sourceModuleNumber || index + 1}: ${module.title || "Untitled module"}`;
             option.selected = module.id === editingExamModuleId;
             return option;
         }));
