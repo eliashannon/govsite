@@ -132,14 +132,6 @@
 .course-content-block input{width:100%;height:38px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--input-background);color:var(--text-primary)}
 .course-block-actions{display:flex;gap:5px}
 .course-block-actions button{width:32px;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--danger)}
-.prototype-course-storage-panel{padding-bottom:16px}
-.prototype-storage-description{margin:0 20px 10px;color:var(--text-secondary);font-size:12px}
-.prototype-course-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 20px 12px}
-.prototype-course-toolbar .btn{font-size:12px}
-.import-to-explorer-option{display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:12px}
-.import-to-explorer-option input{accent-color:var(--blue-600)}
-.prototype-course-storage-panel>label{display:block;margin:0 20px 6px;color:var(--text-secondary);font-size:12px;font-weight:600}
-#savedLocalCourses{width:calc(100% - 40px);margin:0 20px;height:auto}
 .exam-builder-description{margin:0;padding:0 20px 14px;color:var(--text-secondary);font-size:12px;line-height:1.55}
 .exam-builder-list{border-top:1px solid var(--border)}
 .exam-builder-course{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:start;gap:12px;padding:15px 20px;border-bottom:1px solid var(--border)}

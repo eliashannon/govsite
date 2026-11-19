@@ -59,6 +59,14 @@ document.addEventListener("DOMContentLoaded", () => {
         saveLocalCourse(course);
     }
 
+    async function removeCourseEntries(courseIds) {
+        const contentIds = courseIds.map(id => `structured-course-${id}`);
+        await window.TrainingContentStore.saveMany({}, {
+            sourceContent: contentIds, organizationMetadata: contentIds, reviews: contentIds
+        });
+        window.dispatchEvent(new CustomEvent("training-content-removed", {detail: {contentIds}}));
+    }
+
     function formatModuleSourceText(module) {
         const lines = [`${module.sourceModuleNumber ? `${module.sourceModuleNumber} ` : ""}${module.title || "Untitled module"}`];
         (Array.isArray(module.content) ? module.content : []).forEach(block => {
@@ -755,7 +763,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (status === "needs-review") {
             try {
                 await sendCourseToContentExplorer(canonicalCourse(), "Pending Review", previous?.id);
-                renderSavedLocalCourses();
                 dialog.close();
                 showDraftNotice(`"${draft.title}" is in Course Builder for review. It is not yet in Training Courses.`);
                 return;
@@ -901,142 +908,4 @@ document.addEventListener("DOMContentLoaded", () => {
         showDraftNotice(`Exported backup JSON for ${course.id || "the selected course"}.`);
     };
 
-    const renderSavedLocalCourses = () => {
-        const select = document.getElementById("savedLocalCourses");
-        select.replaceChildren();
-        const records = loadLocalCourses();
-        Object.entries(records).forEach(([key, course]) => {
-            if (!course || typeof course !== "object") return;
-            const option = document.createElement("option");
-            option.value = key;
-            option.textContent = `${course.title || course.id || "Untitled draft"} — ${course.status || "draft"} — v${course.version || "1.0"}`;
-            select.append(option);
-        });
-        const hasSelection = Boolean(select.value);
-        document.getElementById("openSelectedLocalCourseButton").disabled = !hasSelection;
-        document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
-        document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
-        document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
-    };
-
-    document.getElementById("viewLocalCoursesButton").addEventListener("click", () => {
-        renderSavedLocalCourses();
-        showDraftNotice("Saved local prototype courses are listed below.");
-    });
-    document.getElementById("savedLocalCourses").addEventListener("change", event => {
-        const hasSelection = Boolean(event.target.value);
-        document.getElementById("openSelectedLocalCourseButton").disabled = !hasSelection;
-        document.getElementById("deleteSelectedLocalCourseButton").disabled = !hasSelection;
-        document.getElementById("archiveSelectedLocalCourseButton").disabled = !hasSelection;
-        document.getElementById("exportSelectedLocalCourseButton").disabled = !hasSelection;
-    });
-    document.getElementById("savedLocalCourses").addEventListener("dblclick", event => {
-        const course = getLocalCourse(event.target.value);
-        if (course) {
-            openDraftEditor(course, event.target.value);
-            showDraftNotice(`Opened local course ${course.id || "(no ID yet)"}.`);
-        }
-    });
-    document.getElementById("openSelectedLocalCourseButton").addEventListener("click", () => {
-        const key = document.getElementById("savedLocalCourses").value;
-        const course = getLocalCourse(key);
-        if (course) {
-            openDraftEditor(course, key);
-            showDraftNotice(`Opened local course ${course.id || "(no ID yet)"}.`);
-        } else showDraftNotice("The selected course is no longer available.", true);
-    });
-    async function removeCourseEntries(courseIds) {
-        const contentIds = courseIds.map(id => `structured-course-${id}`);
-        await window.TrainingContentStore.saveMany({}, {
-            sourceContent: contentIds, organizationMetadata: contentIds, reviews: contentIds
-        });
-        window.dispatchEvent(new CustomEvent("training-content-removed", {detail: {contentIds}}));
-    }
-
-    document.getElementById("deleteSelectedLocalCourseButton").addEventListener("click", async () => {
-        const courseId = document.getElementById("savedLocalCourses").value;
-        if (!courseId) return;
-        if (getLocalCourse(courseId)?.status === "published") {
-            showDraftNotice("Unpublish this course in Published Courses before deleting it.", true);
-            return;
-        }
-        if (!window.confirm(`Delete local prototype course "${courseId}"?`)) return;
-        try {
-            await removeCourseEntries([courseId]);
-            deleteLocalCourse(courseId);
-            window.dispatchEvent(new Event("training-course-changed"));
-            if (editingCourseId === courseId) { draft = null; editingCourseId = null; }
-            renderSavedLocalCourses();
-            showDraftNotice(`Deleted local course ${courseId}.`);
-        } catch (error) {
-            console.error("Unable to delete the local course.", error);
-            showDraftNotice(error instanceof Error ? error.message : "Unable to delete the local course.", true);
-        }
-    });
-    document.getElementById("archiveSelectedLocalCourseButton").addEventListener("click", () => {
-        const courseId = document.getElementById("savedLocalCourses").value;
-        if (!courseId) return;
-        const course = getLocalCourse(courseId);
-        if (!canEditCourse(course)) return;
-        archiveLocalCourse(courseId);
-        renderSavedLocalCourses();
-        window.dispatchEvent(new Event("training-course-changed"));
-        showDraftNotice(`Archived local course ${courseId}.`);
-    });
-    document.getElementById("clearLocalCoursesButton").addEventListener("click", async () => {
-        if (Object.values(loadLocalCourses()).some(course => course?.status === "published")) {
-            showDraftNotice("Unpublish all published courses before clearing prototype storage.", true);
-            return;
-        }
-        if (!window.confirm("Clear all prototype courses from trainingManagerCourses? This cannot be undone.")) return;
-        try {
-            await removeCourseEntries(Object.keys(loadLocalCourses()));
-            localStorage.removeItem(STORAGE_KEY);
-            window.dispatchEvent(new Event("training-course-changed"));
-            draft = null;
-            editingCourseId = null;
-            renderSavedLocalCourses();
-            showDraftNotice("Cleared all prototype courses from this browser.");
-        } catch (error) {
-            console.error("Unable to clear local courses.", error);
-            showDraftNotice(error instanceof Error ? error.message : "Unable to clear local courses.", true);
-        }
-    });
-    document.getElementById("exportSelectedLocalCourseButton").addEventListener("click", () => {
-        exportCourseJson(document.getElementById("savedLocalCourses").value);
-    });
-    document.getElementById("importLocalCourseButton").addEventListener("click", () => {
-        document.getElementById("importLocalCourseFile").click();
-    });
-    document.getElementById("importLocalCourseFile").addEventListener("change", async event => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        if (file.size > 5 * 1024 * 1024) {
-            showDraftNotice("The imported course JSON is too large.", true);
-            event.target.value = "";
-            return;
-        }
-        try {
-            const parsed = JSON.parse(await file.text());
-            const course = parsed && Array.isArray(parsed.courses) ? parsed.courses[0] : parsed;
-            if (!course || typeof course !== "object" || typeof course.id !== "string") {
-                throw new Error("The JSON does not contain a valid course object.");
-            }
-            const normalized = normalizeParsedDraft(course);
-            if (getLocalCourse(normalized.id)) throw new Error("Course ID already exists in local storage. Delete or rename the existing course before importing.");
-            normalized.status = "draft";
-            normalized.managerZone = "course";
-            saveLocalCourse(normalized);
-            renderSavedLocalCourses();
-            openDraftEditor(normalized, normalized.id);
-            if (document.getElementById("sendImportToExplorer").checked) await statusTransition("needs-review");
-            else showDraftNotice(`Imported ${normalized.id} as a draft.`);
-        } catch (error) {
-            showDraftNotice(error instanceof Error ? error.message : "Unable to import course JSON.", true);
-        } finally {
-            event.target.value = "";
-        }
-    });
-
-    renderSavedLocalCourses();
 });
