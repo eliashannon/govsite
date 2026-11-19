@@ -88,8 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function sendCourseToContentExplorer(course, reviewStatus, previousCourseId = "") {
-        if (!window.TrainingContentStore || !Array.isArray(course.modules) || !course.modules.length) {
-            throw new Error("Course Builder storage is unavailable or the course has no modules.");
+        if (!window.TrainingContentStore || !Array.isArray(course.modules)) {
+            throw new Error("Course Builder storage is unavailable or the course modules are invalid.");
         }
         await window.PortalDataReady;
         const contentId = `structured-course-${course.id}`;
@@ -678,6 +678,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const openDraftEditor = (parsedDraft, savedCourseId = null) => {
         draft = normalizeParsedDraft(parsedDraft || createBlankDraft());
+        if (["approved", "needs-review", "rejected"].includes(draft.status)) draft.status = "ready";
         editingCourseId = savedCourseId;
         populateCourseFields();
         populateAssignmentDivision();
@@ -714,6 +715,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         const previous = getLocalCourse(editingCourseId);
+        if (editingCourseId && !previous) {
+            showDraftNotice("This course is no longer available. Close the editor and refresh Course Builder.", true);
+            return;
+        }
         if (!canEditCourse(previous)) return;
         const previousStore = localStorage.getItem(STORAGE_KEY);
         const previousEditingId = editingCourseId;
@@ -722,7 +727,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("courseDraftStatus").value = "draft";
         try {
             editingCourseId = saveDraftStore();
-            if (previous?.id && previous.id !== draft.id) await removeCourseEntries([previous.id]);
+            if (previous) await sendCourseToContentExplorer(canonicalCourse(), "Ready", previous.id);
         } catch (error) {
             if (previousStore === null) localStorage.removeItem(STORAGE_KEY);
             else localStorage.setItem(STORAGE_KEY, previousStore);
@@ -740,6 +745,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusTransition = async status => {
         if (!draft) return;
         const current = getLocalCourse(editingCourseId);
+        if (editingCourseId && !current) {
+            showDraftNotice("This course is no longer available. Close the editor and refresh Course Builder.", true);
+            return;
+        }
         if (!canEditCourse(current)) return;
         if (status === "ready") {
             const result = validateDraftCourse();
@@ -825,6 +834,22 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Unable to create a course draft.", error);
             showDraftNotice(error instanceof Error ? error.message : "The course document could not be processed.", true);
         }
+    });
+
+    document.getElementById("contentExplorer").addEventListener("click", event => {
+        const button = event.target.closest("[data-edit-course]");
+        if (!button) return;
+        const course = getLocalCourse(button.dataset.editCourse);
+        if (!course) {
+            showDraftNotice("This course is no longer available. Refresh Course Builder and try again.", true);
+            return;
+        }
+        if (!canEditCourse(course)) return;
+        if (dialog.open) {
+            showDraftNotice("Close the current course editor before opening another course.", true);
+            return;
+        }
+        openDraftEditor(course, button.dataset.editCourse);
     });
 
     const openTrainingPreview = () => {

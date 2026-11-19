@@ -218,7 +218,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const findDocument = documentId => state.documents.find(item => item.id === documentId);
     const updateSelectionControls = () => {
         selectionCount.textContent = `${selectedContentIds.size + selectedStructuredCourseIds.size} selected`;
-        deleteSelectedContentButton.disabled = selectedContentIds.size === 0;
+        deleteSelectedContentButton.disabled = selectedContentIds.size === 0 && selectedStructuredCourseIds.size === 0;
         const selectedExamCourseIds = [...selectedStructuredCourseIds].filter(isEligibleCourse);
         addSelectedExamCoursesButton.disabled = selectedExamCourseIds.length === 0 || !examBuilderStorageAvailable;
         addSelectedPublishedCoursesButton.disabled = selectedExamCourseIds.length === 0 || !examBuilderStorageAvailable;
@@ -325,11 +325,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             const courseStatus = course?.status === "published" ? "Published"
                 : isEligibleCourse(item.structuredCourseId) ? "Ready" : "Unpublished";
-            const canSelectForExam = isEligibleCourse(item.structuredCourseId);
             return `
                 <article class="source-content-item">
-                    ${canSelectForExam
-                        ? `<input type="checkbox" data-select-structured-course="${escapeHtml(item.structuredCourseId)}"                         aria-label="Select course ${escapeHtml(course.title || item.structuredCourseId)}" ${selectedStructuredCourseIds.has(item.structuredCourseId) ? "checked" : ""}>`
+                    ${course
+                        ? `<input type="checkbox" data-select-structured-course="${escapeHtml(item.structuredCourseId)}" aria-label="Select course ${escapeHtml(course.title || item.structuredCourseId)}" ${selectedStructuredCourseIds.has(item.structuredCourseId) ? "checked" : ""}>`
                         : `<span></span>`}
                     <div class="source-content-copy">
                         <button class="source-item-preview" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">${escapeHtml(heading || item.structuredCourseId)}</button>
@@ -337,6 +336,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         <div class="content-meta"><span>${escapeHtml(item.originalDocumentName)}</span><span>Structured course</span>${statusBadge(courseStatus)}</div>
                     </div>
                     <div class="source-item-actions">
+                        ${course ? `<button class="manager-small-button" type="button" data-edit-course="${escapeHtml(item.structuredCourseId)}">View / edit</button>` : ""}
                         <button class="manager-small-button" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">Open course preview</button>
                     </div>
                 </article>`;
@@ -1198,27 +1198,52 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const deleteSelectedSourceContent = async () => {
         if (!requireMaster()) return;
-        const contentIds = [...selectedContentIds].filter(id => state.sourceContent.some(item => item.id === id));
-        if (!contentIds.length) return;
+        const courseIds = [...selectedStructuredCourseIds];
+        const sourceIds = [...selectedContentIds].filter(id => state.sourceContent.some(item => item.id === id && !item.structuredCourseId));
+        if (!courseIds.length && !sourceIds.length) return;
+        const contentIds = [...new Set([
+            ...sourceIds,
+            ...courseIds.map(id => `structured-course-${id}`),
+            ...state.sourceContent.filter(item => courseIds.includes(item.structuredCourseId)).map(item => item.id)
+        ])];
         const affectedModules = state.modules
             .filter(module => module.publicationStatus === "Published"
                 && Array.isArray(module.sourceContentIds)
                 && module.sourceContentIds.some(id => contentIds.includes(id)))
             .map(module => ({...module, publicationStatus: "Unpublished", unpublishedAt: new Date().toISOString()}));
-        const confirmation = `Delete ${contentIds.length} selected source item(s)? Original documents will remain.`
+        const confirmation = `Delete ${courseIds.length} selected course(s) and ${sourceIds.length} selected source item(s)? Original documents will remain.`
             + (affectedModules.length
                 ? ` ${affectedModules.length} published module(s) that use this content will be unpublished.`
                 : "");
         if (!window.confirm(confirmation)) return;
 
-        await store.saveMany(
-            {modules: affectedModules},
-            {
+        const previousStore = localStorage.getItem("trainingManagerCourses");
+        const records = JSON.parse(previousStore || "{}");
+        if (!records || typeof records !== "object" || Array.isArray(records)) throw new Error("The structured course store has an invalid format.");
+        courseIds.forEach(id => {
+            if (!records[id] || window.CourseWorkflow.zone(records[id]) !== "course") {
+                throw new Error("A selected course is no longer in Course Builder. Refresh and try again.");
+            }
+        });
+        const deletedCourses = Object.fromEntries(courseIds.map(id => [id, records[id]]));
+        courseIds.forEach(id => delete records[id]);
+        if (courseIds.length) localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+        try {
+            await store.saveMany({modules: affectedModules}, {
                 sourceContent: contentIds,
                 organizationMetadata: contentIds,
                 reviews: contentIds
+            });
+        } catch (error) {
+            if (courseIds.length) {
+                const current = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+                courseIds.forEach(id => {
+                    if (!Object.hasOwn(current, id)) current[id] = deletedCourses[id];
+                });
+                localStorage.setItem("trainingManagerCourses", JSON.stringify(current));
             }
-        );
+            throw error;
+        }
         const deletedIds = new Set(contentIds);
         state.sourceContent = state.sourceContent.filter(item => !deletedIds.has(item.id));
         state.organizationMetadata = state.organizationMetadata.filter(item => !deletedIds.has(item.contentId));
@@ -1228,12 +1253,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (index !== -1) state.modules[index] = updated;
         });
         contentIds.forEach(id => selectedContentIds.delete(id));
+        courseIds.forEach(id => selectedStructuredCourseIds.delete(id));
         if (deletedIds.has(state.activePreviewId)) {
             state.activePreviewId = null;
             previewPanel.hidden = true;
         }
         render();
-        showNotice(`Deleted ${contentIds.length} source item(s).${affectedModules.length ? ` Unpublished ${affectedModules.length} dependent module(s).` : ""}`);
+        if (courseIds.length) window.dispatchEvent(new Event("training-course-changed"));
+        showNotice(`Deleted ${courseIds.length} course(s) and ${sourceIds.length} source item(s).${affectedModules.length ? ` Unpublished ${affectedModules.length} dependent module(s).` : ""}`);
     };
 
     const deleteSelectedDocuments = async () => {

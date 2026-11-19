@@ -44,10 +44,14 @@ async function manager(courses, legacyQueue = [], includeSource = true) {
         id:`structured-course-${course.id}`, documentId:`structured-course-${course.id}`,
         structuredCourseId:course.id, originalDocumentName:course.id, sourceText:course.title
     }));
+    const savedOperations = [];
     const window = {
         PortalDataReady:Promise.resolve(),
         PortalData:{},
-        TrainingContentStore:{readAll:async () => ({documents:[], sourceContent, organizationMetadata:[], reviews:[], modules:[]})},
+        TrainingContentStore:{
+            readAll:async () => ({documents:[], sourceContent, organizationMetadata:[], reviews:[], modules:[]}),
+            saveMany:async (records, deletes) => { savedOperations.push({records, deletes}); }
+        },
         addEventListener:(name, callback) => { (callbacks[name] ||= []).push(callback); },
         dispatchEvent:event => { (callbacks[event.type] || []).forEach(callback => callback(event)); },
         confirm:() => true,
@@ -72,7 +76,7 @@ async function manager(courses, legacyQueue = [], includeSource = true) {
         target:target("[data-select-published-course]", {selectPublishedCourse:id})
     });
     const publishedAction = (selector, dataset) => elements.publishedCoursesList.events.click({target:target(selector, dataset)});
-    return {elements, localStorage, window, selectCourse, selectExam, selectPublished, publishedAction,
+    return {elements, localStorage, window, selectCourse, selectExam, selectPublished, publishedAction, savedOperations,
         course:id => JSON.parse(localStorage.getItem("trainingManagerCourses"))[id]};
 }
 
@@ -84,6 +88,55 @@ function fixture(id, status = "approved") {
     course.roleAssignments = [{divisionId:"division", branchId:"branch", roleId:"role", required:true}];
     return course;
 }
+
+test("deleting selected courses removes their saved records and source entries", async () => {
+    const m = await manager([fixture("alpha"), fixture("beta")]);
+    assert.match(m.elements.contentExplorer.innerHTML, /data-edit-course="alpha"[^>]*>View \/ edit/);
+    m.selectCourse("alpha");
+    assert.equal(m.elements.deleteSelectedContentButton.disabled, false);
+    await m.elements.deleteSelectedContentButton.events.click();
+    assert.equal(m.course("alpha"), undefined);
+    assert.ok(m.course("beta"));
+    assert.doesNotMatch(m.elements.contentExplorer.innerHTML, /Course alpha/);
+    assert.deepEqual(Array.from(m.savedOperations[0].deletes.sourceContent), ["structured-course-alpha"]);
+    assert.deepEqual(Array.from(m.savedOperations[0].deletes.organizationMetadata), ["structured-course-alpha"]);
+    assert.deepEqual(Array.from(m.savedOperations[0].deletes.reviews), ["structured-course-alpha"]);
+    assert.equal(m.elements.selectionCount.textContent, "0 selected");
+});
+
+test("failed course deletion restores saved course and selection", async () => {
+    const m = await manager([fixture("alpha")]);
+    m.window.TrainingContentStore.saveMany = async () => { throw new Error("Storage unavailable"); };
+    m.selectCourse("alpha");
+    await m.elements.deleteSelectedContentButton.events.click();
+    assert.ok(m.course("alpha"));
+    assert.equal(m.elements.selectionCount.textContent, "1 selected");
+    assert.match(m.elements.managerNotice.textContent, /Storage unavailable/);
+});
+
+test("deletion handles recovered courses and refuses courses moved after selection", async () => {
+    const course = fixture("recovered");
+    course.managerZone = "course";
+    const m = await manager([course], [], false);
+    m.selectCourse(course.id);
+    m.window.confirm = () => false;
+    await m.elements.deleteSelectedContentButton.events.click();
+    assert.ok(m.course(course.id));
+    assert.equal(m.savedOperations.length, 0);
+
+    m.window.confirm = () => true;
+    const moved = {...course, managerZone:"exam"};
+    m.localStorage.setItem("trainingManagerCourses", JSON.stringify({[course.id]:moved}));
+    await m.elements.deleteSelectedContentButton.events.click();
+    assert.equal(m.course(course.id).managerZone, "exam");
+    assert.match(m.elements.managerNotice.textContent, /no longer in Course Builder/);
+    assert.equal(m.savedOperations.length, 0);
+
+    m.localStorage.setItem("trainingManagerCourses", JSON.stringify({[course.id]:course}));
+    await m.elements.deleteSelectedContentButton.events.click();
+    assert.equal(m.course(course.id), undefined);
+    assert.doesNotMatch(m.elements.contentExplorer.innerHTML, /Course recovered/);
+});
 
 test("courses move exclusively between builders and publication requires explicit unpublishing", async () => {
     const m = await manager([fixture("alpha"), fixture("legacy", "published")]);

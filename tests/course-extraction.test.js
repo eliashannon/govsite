@@ -244,6 +244,68 @@ test("Create Structured Draft displays metadata errors and opens a valid draft",
     assert.equal(elements.courseEditorDuration.value, 45);
 });
 
+test("Course Builder View / edit opens saved course and saves edits to both stores", async () => {
+    class EditorElement {
+        constructor() {
+            this.events = {};
+            this.value = "";
+            this.dataset = {};
+            this.classList = {add() {}, remove() {}, toggle() {}};
+        }
+        addEventListener(name, callback) { this.events[name] = callback; }
+        append() {}
+        replaceChildren() {}
+        setAttribute() {}
+        showModal() { this.open = true; }
+        focus() {}
+    }
+    const elements = Object.fromEntries([...fs.readFileSync(path.join(root, "ai-training-content-manager.html"), "utf8")
+        .matchAll(/\bid="([^"]+)"/g)].map(match => [match[1], new EditorElement()]));
+    const course = {...JSON.parse(fs.readFileSync(path.join(root, "data/courses.json"), "utf8")).courses[0],
+        id:"editable", status:"ready", managerZone:"course", modules:[], roleAssignments:[]};
+    const values = {trainingManagerCourses:JSON.stringify({editable:course})};
+    const localStorage = {
+        getItem:key => values[key] ?? null,
+        setItem:(key, value) => { values[key] = value; },
+        removeItem:key => { delete values[key]; }
+    };
+    const saved = [];
+    let initialize;
+    const editorContext = {
+        window:{
+            PortalData:{}, PortalDataReady:Promise.resolve(),
+            TrainingContentStore:{saveMany:async records => saved.push(records)},
+            dispatchEvent() {}, location:{}
+        },
+        document:{
+            getElementById:id => elements[id] || null,
+            createElement:() => new EditorElement(),
+            addEventListener:(name, callback) => { if (name === "DOMContentLoaded") initialize = callback; }
+        },
+        sessionStorage:{getItem:() => JSON.stringify({isMaster:true, email:"elias@navy.mil"})},
+        localStorage, URL, Event, CustomEvent:class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
+        console
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(root, "assets/shared/js/course-schema.js"), "utf8"), editorContext);
+    vm.runInNewContext(fs.readFileSync(path.join(root, "assets/shared/js/course-workflow.js"), "utf8"), editorContext);
+    vm.runInNewContext(fs.readFileSync(path.join(root, "assets/pages/ai-training-content-manager/course-editor.js"), "utf8"), editorContext);
+    initialize();
+    elements.contentExplorer.events.click({
+        target:{closest:selector => selector === "[data-edit-course]" ? {dataset:{editCourse:"editable"}} : null}
+    });
+    assert.equal(elements.courseDraftDialog.open, true);
+    assert.equal(elements.courseEditorTitle.value, course.title);
+    elements.courseEditorTitle.value = "Updated title";
+    await elements.saveCourseDraftButton.events.click();
+    assert.equal(JSON.parse(values.trainingManagerCourses).editable.title, "Updated title");
+    assert.equal(saved[0].organizationMetadata[0].headingPath[0], "Updated title");
+    assert.equal(saved[0].sourceContent[0].structuredCourseId, "editable");
+    values.trainingManagerCourses = "{}";
+    await elements.saveCourseDraftButton.events.click();
+    assert.equal(JSON.parse(values.trainingManagerCourses).editable, undefined);
+    assert.match(elements.courseDraftNotice.textContent, /no longer available/);
+});
+
 test("reports incomplete course tables for review", async () => {
     const text = `${courseText(metadataLines.join("\n"))}MODULE 1.1: First\nTABLE: Review\n2 rows x 2 cols\none\ntwo`;
     const course = await context.window.HandbookProcessor.extractCourse({name: "example.txt", text: async () => text});
