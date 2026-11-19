@@ -69,8 +69,11 @@ async function manager(courses, legacyQueue = [], includeSource = true) {
     const selectExam = id => elements.examBuilderList.events.change({
         target:target("[data-select-exam-course]", {selectExamCourse:id})
     });
+    const selectPublished = id => elements.publishedCoursesList.events.change({
+        target:target("[data-select-published-course]", {selectPublishedCourse:id})
+    });
     const publishedAction = (selector, dataset) => elements.publishedCoursesList.events.click({target:target(selector, dataset)});
-    return {elements, localStorage, window, selectCourse, selectExam, publishedAction,
+    return {elements, localStorage, window, selectCourse, selectExam, selectPublished, publishedAction,
         course:id => JSON.parse(localStorage.getItem("trainingManagerCourses"))[id]};
 }
 
@@ -110,6 +113,18 @@ test("courses move exclusively between builders and publication requires explici
     m.publishedAction("[data-move-published-course]", {movePublishedCourse:"alpha", destination:"course"});
     assert.match(m.elements.contentExplorer.innerHTML, /Course alpha/);
     assert.doesNotMatch(m.elements.publishedCoursesList.innerHTML, /Course alpha/);
+});
+
+test("published courses support bulk selection and unpublishing", async () => {
+    const first = fixture("first", "published");
+    const second = fixture("second", "published");
+    const m = await manager([first, second]);
+    m.selectPublished("first");
+    m.selectPublished("second");
+    assert.equal(m.elements.publishedCoursesSelectionCount.textContent, "2 selected");
+    m.elements.unpublishSelectedPublishedCoursesButton.events.click();
+    assert.equal(m.course("first").status, "approved");
+    assert.equal(m.course("second").status, "approved");
 });
 
 test("legacy exam queues remain exclusive after reload and do not override explicit moves", async () => {

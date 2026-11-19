@@ -80,6 +80,14 @@
   <section class="ai-manager-panel published-courses-panel" aria-labelledby="publishedCoursesTitle">
     <div class="manager-section-heading"><div><span class="tqs-label">PUBLICATION CONTROL</span><h2 id="publishedCoursesTitle">Published Courses</h2></div><span id="publishedCoursesCount" class="ai-content-count">0 courses</span></div>
     <p class="exam-builder-description">Publish approved courses here. Unpublish a course before returning it to Course Builder or moving it to Exam Builder.</p>
+    <div class="handbook-selection-toolbar">
+      <span id="publishedCoursesSelectionCount">0 selected</span>
+      <button id="selectAllPublishedCoursesButton" class="ai-text-button" type="button">Select all</button>
+      <button id="publishSelectedPublishedCoursesButton" class="btn btn-secondary" type="button" disabled>Publish selected</button>
+      <button id="unpublishSelectedPublishedCoursesButton" class="btn btn-secondary" type="button" disabled>Unpublish selected</button>
+      <button id="moveSelectedPublishedCoursesToCourseBuilderButton" class="btn btn-secondary" type="button" disabled>Move selected to Course Builder</button>
+      <button id="moveSelectedPublishedCoursesToExamBuilderButton" class="btn btn-secondary" type="button" disabled>Move selected to Exam Builder</button>
+    </div>
     <div id="publishedCoursesList" class="exam-builder-list"></div>
   </section>
 

@@ -43,6 +43,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const publishSelectedExamCoursesButton = document.getElementById("publishSelectedExamCoursesButton");
     const publishedCoursesList = document.getElementById("publishedCoursesList");
     const publishedCoursesCount = document.getElementById("publishedCoursesCount");
+    const publishedCoursesSelectionCount = document.getElementById("publishedCoursesSelectionCount");
+    const selectAllPublishedCoursesButton = document.getElementById("selectAllPublishedCoursesButton");
+    const publishSelectedPublishedCoursesButton = document.getElementById("publishSelectedPublishedCoursesButton");
+    const unpublishSelectedPublishedCoursesButton = document.getElementById("unpublishSelectedPublishedCoursesButton");
+    const moveSelectedPublishedCoursesToCourseBuilderButton = document.getElementById("moveSelectedPublishedCoursesToCourseBuilderButton");
+    const moveSelectedPublishedCoursesToExamBuilderButton = document.getElementById("moveSelectedPublishedCoursesToExamBuilderButton");
     const examEditorDialog = document.getElementById("examEditorDialog");
     const examModuleSelect = document.getElementById("examModuleSelect");
     const examTitleInput = document.getElementById("examTitleInput");
@@ -55,8 +61,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const selectedContentIds = new Set();
     const selectedStructuredCourseIds = new Set();
     const selectedExamBuilderCourseIds = new Set();
+    const selectedPublishedCourseIds = new Set();
     const selectedModuleIds = new Set();
     const examBuilderCourseIds = new Set();
+    const publishedCourseIds = new Set();
     let examBuilderStorageAvailable = true;
     let editingExamOriginalCourse = null;
     let editingExamCourse = null;
@@ -198,6 +206,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
             selectedStructuredCourseIds.clear();
+            selectedPublishedCourseIds.clear();
             window.dispatchEvent(new Event("training-course-changed"));
             render();
             showNotice(`Unpublished ${changed} ${changed === 1 ? "course" : "courses"} from Training Courses.`);
@@ -555,6 +564,28 @@ document.addEventListener("DOMContentLoaded", async () => {
         publishSelectedExamCoursesButton.disabled = selectedExamBuilderCourseIds.size === 0 || !examBuilderStorageAvailable;
         selectAllExamCoursesButton.textContent = examBuilderCourseIds.size > 0
             && [...examBuilderCourseIds].every(id => selectedExamBuilderCourseIds.has(id))
+            ? "Deselect all"
+            : "Select all";
+    };
+
+    const updatePublishedCourseSelectionControls = () => {
+        const availableIds = new Set(publishedCourseIds);
+        selectedPublishedCourseIds.forEach(id => {
+            if (!availableIds.has(id)) selectedPublishedCourseIds.delete(id);
+        });
+        const selectedCourses = [...selectedPublishedCourseIds]
+            .map(id => getStructuredCourse(id))
+            .filter(Boolean);
+        publishedCoursesSelectionCount.textContent = `${selectedPublishedCourseIds.size} selected`;
+        publishSelectedPublishedCoursesButton.disabled = !selectedCourses.some(course => course.status === "approved");
+        unpublishSelectedPublishedCoursesButton.disabled = !selectedCourses.some(course => course.status === "published");
+        moveSelectedPublishedCoursesToCourseBuilderButton.disabled = !selectedCourses.length
+            || selectedCourses.some(course => course.status !== "approved");
+        moveSelectedPublishedCoursesToExamBuilderButton.disabled = !selectedCourses.length
+            || selectedCourses.some(course => course.status !== "approved")
+            || !examBuilderStorageAvailable;
+        selectAllPublishedCoursesButton.textContent = publishedCourseIds.size > 0
+            && [...publishedCourseIds].every(id => selectedPublishedCourseIds.has(id))
             ? "Deselect all"
             : "Select all";
     };
@@ -921,9 +952,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const renderPublishedCourses = courses => {
         publishedCoursesCount.textContent = `${courses.length} ${courses.length === 1 ? "course" : "courses"}`;
+        publishedCourseIds.clear();
+        courses.forEach(course => publishedCourseIds.add(course.id));
         publishedCoursesList.innerHTML = courses.length ? courses.map(course => `
             <article class="exam-builder-course">
-                <span></span>
+                <input type="checkbox" data-select-published-course="${escapeHtml(course.id)}" aria-label="Select ${escapeHtml(course.title || course.id)} in Published Courses" ${selectedPublishedCourseIds.has(course.id) ? "checked" : ""}>
                 <div class="exam-builder-course-copy"><h3>${escapeHtml(course.title || course.id)}</h3>
                     <p>${course.status === "published" ? "Published in this browser's Training Courses catalog." : "Unpublished and ready to publish or move."}</p>
                     <div class="exam-builder-course-meta">${statusBadge(course.status === "published" ? "Published" : "Approved")}</div>
@@ -937,6 +970,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                            <button class="manager-small-button" type="button" data-move-published-course="${escapeHtml(course.id)}" data-destination="exam">Move to Exam Builder</button>`}
                 </div>
             </article>`).join("") : '<div class="handbook-empty">No courses are in Published Courses. Move an approved course here to publish it.</div>';
+        updatePublishedCourseSelectionControls();
     };
 
     const publishCourse = courseId => {
@@ -958,17 +992,73 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
+    const publishSelectedCourses = () => {
+        if (!requireMaster()) return;
+        const ids = [...selectedPublishedCourseIds].filter(id => {
+            const course = getStructuredCourse(id);
+            return course?.status === "approved" && window.CourseWorkflow.zone(course) === "published";
+        });
+        if (!ids.length) {
+            showNotice("Select at least one unpublished course in Published Courses.", true);
+            return;
+        }
+        try {
+            const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+            let publishedCount = 0;
+            ids.forEach(courseId => {
+                const course = records[courseId];
+                if (!course) return;
+                const updated = window.CourseWorkflow.publish(course);
+                const errors = window.CourseSchema.validateCourse(updated, {complete:true, hierarchy:window.PortalData?.organizationHierarchy});
+                if (errors.length) throw new Error(`Course "${course.title || courseId}" validation failed: ${errors.join(" ")}`);
+                records[courseId] = updated;
+                publishedCount += 1;
+            });
+            localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+            selectedPublishedCourseIds.clear();
+            window.dispatchEvent(new Event("training-course-changed"));
+            render();
+            showNotice(`Published ${publishedCount} ${publishedCount === 1 ? "course" : "courses"} to this browser's Training Courses catalog.`);
+        } catch (error) {
+            console.error("Unable to publish selected courses.", error);
+            showNotice(error instanceof Error ? error.message : "Unable to publish selected courses.", true);
+        }
+    };
+
+    const moveSelectedPublishedCourses = destination => {
+        if (!requireMaster()) return;
+        const ids = [...selectedPublishedCourseIds].filter(id => {
+            const course = getStructuredCourse(id);
+            return course?.status === "approved" && window.CourseWorkflow.zone(course) === "published";
+        });
+        if (!ids.length) {
+            showNotice("Select at least one unpublished course before moving.", true);
+            return;
+        }
+        if (!moveCourses(ids, "published", destination)) return;
+        ids.forEach(id => selectedPublishedCourseIds.delete(id));
+        render();
+        showNotice(`Moved ${ids.length} ${ids.length === 1 ? "course" : "courses"} to ${destination === "exam" ? "Exam Builder" : "Course Builder"}.`);
+    };
+
     const render = () => {
         try {
             const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
             if (!records || typeof records !== "object" || Array.isArray(records)) throw new Error("The structured course store has an invalid format.");
             examBuilderCourseIds.clear();
             const published = [];
+            const publishedIds = new Set();
             Object.values(records).forEach(course => {
                 if (!course || typeof course !== "object") return;
                 const zone = window.CourseWorkflow.zone(course);
                 if (zone === "exam") examBuilderCourseIds.add(course.id);
-                else if (zone === "published") published.push(course);
+                else if (zone === "published") {
+                    published.push(course);
+                    publishedIds.add(course.id);
+                }
+            });
+            selectedPublishedCourseIds.forEach(id => {
+                if (!publishedIds.has(id)) selectedPublishedCourseIds.delete(id);
             });
             selectedStructuredCourseIds.forEach(id => {
                 if (!records[id] || window.CourseWorkflow.zone(records[id]) !== "course") selectedStructuredCourseIds.delete(id);
@@ -1720,6 +1810,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const preview = event.target.closest("[data-preview-published]");
         if (preview) previewExamCourse(preview.dataset.previewPublished);
     });
+    publishedCoursesList.addEventListener("change", event => {
+        const checkbox = event.target.closest("[data-select-published-course]");
+        if (!checkbox) return;
+        if (checkbox.checked) selectedPublishedCourseIds.add(checkbox.dataset.selectPublishedCourse);
+        else selectedPublishedCourseIds.delete(checkbox.dataset.selectPublishedCourse);
+        updatePublishedCourseSelectionControls();
+    });
     contentSearch.addEventListener("input", renderContent);
     categoryFilter.addEventListener("change", renderContent);
     reviewFilter.addEventListener("change", renderContent);
@@ -1774,6 +1871,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             render();
             showNotice(`Moved ${ids.length} course(s) to Published Courses.`);
         }
+    });
+    selectAllPublishedCoursesButton.addEventListener("click", () => {
+        const allSelected = publishedCourseIds.size > 0
+            && [...publishedCourseIds].every(id => selectedPublishedCourseIds.has(id));
+        if (allSelected) publishedCourseIds.forEach(id => selectedPublishedCourseIds.delete(id));
+        else publishedCourseIds.forEach(id => selectedPublishedCourseIds.add(id));
+        renderPublishedCourses([...publishedCourseIds].map(id => getStructuredCourse(id)).filter(Boolean));
+    });
+    publishSelectedPublishedCoursesButton.addEventListener("click", publishSelectedCourses);
+    unpublishSelectedPublishedCoursesButton.addEventListener("click", () => {
+        unpublishStructuredCourses([...selectedPublishedCourseIds]);
+    });
+    moveSelectedPublishedCoursesToCourseBuilderButton.addEventListener("click", () => {
+        moveSelectedPublishedCourses("course");
+    });
+    moveSelectedPublishedCoursesToExamBuilderButton.addEventListener("click", () => {
+        moveSelectedPublishedCourses("exam");
     });
     document.getElementById("addExamQuestionButton").addEventListener("click", () => {
         editingExamQuestions.push({prompt:"", choices:["","","",""], answerIndex:-1});
