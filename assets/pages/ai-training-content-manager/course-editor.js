@@ -108,10 +108,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 category: course.category || "Imported course",
                 contentType: "Structured course",
                 headingPath: [course.title || course.id],
-                confidence: "Needs review",
-                warnings: ["Review the complete course against its source before approval."]
+                confidence: "High",
+                warnings: ["Review the complete course against its source before publishing."]
             },
-            review: {contentId, status: reviewStatus, reviewedAt: null, reviewer: ""}
+            review: {contentId, status: "Ready", reviewedAt: null, reviewer: ""}
         }];
         const oldIds = previousCourseId && previousCourseId !== course.id ? [`structured-course-${previousCourseId}`] : [];
         await window.TrainingContentStore.saveMany({
@@ -523,7 +523,7 @@ document.addEventListener("DOMContentLoaded", () => {
         summary.replaceChildren();
         if (errors.length) {
             const heading = document.createElement("strong");
-            heading.textContent = `${errors.length} issue(s) must be resolved before approval.`;
+            heading.textContent = `${errors.length} issue(s) must be resolved before publishing.`;
             const list = document.createElement("ul");
             errors.forEach(errorText => {
                 const item = document.createElement("li");
@@ -540,7 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         document.getElementById("reviewCourseDraftButton").disabled = errors.length > 0 || draft.status === "archived";
         document.getElementById("exportCourseDraftButton").disabled =
-            !["approved","published"].includes(draft.status);
+            !["ready","published","approved"].includes(draft.status);
         return {errors, warnings};
     }
 
@@ -741,7 +741,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!draft) return;
         const current = getLocalCourse(editingCourseId);
         if (!canEditCourse(current)) return;
-        if (status === "needs-review") {
+        if (status === "ready") {
             const result = validateDraftCourse();
             if (result.errors.length) {
                 showDraftNotice(`Submission blocked: ${result.errors.join(" ")}`, true);
@@ -761,11 +761,11 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("courseDraftStatus").value = previousStatus;
             throw error;
         }
-        if (status === "needs-review") {
+        if (status === "ready") {
             try {
-                await sendCourseToContentExplorer(canonicalCourse(), "Pending Review", previous?.id);
+                await sendCourseToContentExplorer(canonicalCourse(), "Ready", previous?.id);
                 dialog.close();
-                showDraftNotice(`"${draft.title}" is in Course Builder for review. It is not yet in Training Courses.`);
+                showDraftNotice(`"${draft.title}" is in Course Builder. It is not yet in Training Courses.`);
                 return;
             } catch (error) {
                 if (previousStore === null) localStorage.removeItem(STORAGE_KEY);
@@ -820,7 +820,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const parsed = await window.HandbookProcessor.extractCourse(file);
             openDraftEditor(parsed);
-            showDraftNotice("Structured draft created locally. Review every extracted field before approval.");
+            showDraftNotice("Structured draft created locally. Review every extracted field before publishing.");
         } catch (error) {
             console.error("Unable to create a course draft.", error);
             showDraftNotice(error instanceof Error ? error.message : "The course document could not be processed.", true);
@@ -876,14 +876,14 @@ document.addEventListener("DOMContentLoaded", () => {
         validateDraftCourse();
     });
     document.getElementById("saveCourseDraftButton").addEventListener("click", saveDraft);
-    document.getElementById("reviewCourseDraftButton").addEventListener("click", () => statusTransition("needs-review")
-        .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to submit for review.", true)));
+    document.getElementById("reviewCourseDraftButton").addEventListener("click", () => statusTransition("ready")
+        .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to send to Course Builder.", true)));
     document.getElementById("archiveCourseDraftButton").addEventListener("click", () => statusTransition("archived")
         .catch(error => showDraftNotice(error instanceof Error ? error.message : "Unable to archive course.", true)));
     document.getElementById("exportCourseDraftButton").addEventListener("click", () => {
         if (!draft) return;
-        if (!["approved","published"].includes(draft.status)) {
-            showDraftNotice("Export is available after approval or publishing.", true);
+        if (!["ready","published","approved"].includes(draft.status)) {
+            showDraftNotice("Save or send the course to Course Builder before exporting.", true);
             return;
         }
         const result = validateDraftCourse();
@@ -893,7 +893,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const course = canonicalCourse();
         downloadJson(course, `${course.id}.json`);
-        showDraftNotice(`Exported approved course ${course.id}. Place it manually in data/courses.json or merge it into the courses wrapper.`);
+        showDraftNotice(`Exported course ${course.id}. Place it manually in data/courses.json or merge it into the courses wrapper.`);
     });
     ["courseEditorId","courseEditorTitle","courseEditorShortDescription","courseEditorDescription","courseEditorCategory",
      "courseEditorDifficulty","courseEditorDuration","courseEditorVersion","courseEditorObjectives","courseDraftStatus"]

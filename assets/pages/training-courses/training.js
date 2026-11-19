@@ -732,8 +732,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const controls = document.getElementById("courseReviewControls");
             controls.hidden = false;
-            const approve = document.getElementById("approvePreviewCourse");
-            const reject = document.getElementById("rejectPreviewCourse");
             const notice = document.getElementById("courseReviewNotice");
             const renderReviewControls = () => {
                 let inCourseBuilder = false;
@@ -742,70 +740,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 } catch (error) {
                     console.error("Unable to determine the course location.", error);
                     notice.textContent = error instanceof Error ? error.message : "Unable to determine the course location.";
-                    approve.hidden = reject.hidden = true;
                     return;
                 }
-                approve.hidden = !inCourseBuilder || selectedCourse.status !== "needs-review";
-                reject.hidden = !inCourseBuilder || !["needs-review", "approved"].includes(selectedCourse.status);
-                approve.disabled = reject.disabled = false;
                 const errors = previewType === "editor" ? [] : validatePublishedCourse(selectedCourse);
-                approve.disabled = errors.length > 0;
                 notice.textContent = previewType === "editor"
-                    ? "Editor preview only. Submit the draft to Course Builder for approval."
+                    ? "Editor preview only."
                     : errors.length
                         ? `Course validation failed: ${errors.join(" ")}`
-                        : `Course status: ${selectedCourse.status}. ${selectedCourse.status === "published" ? "Unpublish in Published Courses before moving or rejecting." : inCourseBuilder && selectedCourse.status === "approved" ? "Move to Published Courses to publish." : ""}`;
+                        : `Course status: ${selectedCourse.status === "published" ? "Published" : "Ready"}. ${inCourseBuilder ? "Move to Published Courses to publish." : ""}`;
             };
             renderReviewControls();
-            const decide = async action => {
-                approve.disabled = reject.disabled = true;
-                try {
-                    const currentProfile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
-                    if (!currentProfile || currentProfile.isMaster !== true || typeof currentProfile.email !== "string"
-                        || currentProfile.email.toLowerCase() !== "elias@navy.mil") {
-                        throw new Error("Only the master account can approve or publish a course.");
-                    }
-                    const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
-                    if (JSON.stringify(records[selectedCourse.id]) !== JSON.stringify(selectedCourse)) {
-                        throw new Error("The course changed since this preview opened. Return to Course Builder and reopen it.");
-                    }
-                    if (window.CourseWorkflow.zone(records[selectedCourse.id]) !== "course") {
-                        throw new Error("Return the unpublished course to Course Builder before reviewing it.");
-                    }
-                    if ((action === "approve" && selectedCourse.status !== "needs-review")
-                        || (action === "reject" && !["needs-review", "approved"].includes(selectedCourse.status))) {
-                        throw new Error("This action is not available for the current course status.");
-                    }
-                    if (action !== "reject") {
-                        const errors = validatePublishedCourse(selectedCourse);
-                        if (errors.length) throw new Error(`Course validation failed: ${errors.join(" ")}`);
-                    }
-                    const updated = {...selectedCourse, status: action === "approve" ? "approved" : "rejected"};
-                    records[selectedCourse.id] = updated;
-                    localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
-                    try {
-                        await window.TrainingContentStore.saveMany({reviews: [{
-                            contentId: `structured-course-${selectedCourse.id}`,
-                            status: action === "approve" ? "Approved" : "Rejected", reviewedAt: new Date().toISOString(), reviewer: profile.email
-                        }]});
-                    } catch (error) {
-                        records[selectedCourse.id] = selectedCourse;
-                        localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
-                        throw error;
-                    }
-                    selectedCourse = updated;
-                    renderReviewControls();
-                } catch (error) {
-                    console.error("Unable to save the course decision.", error);
-                    notice.textContent = error instanceof Error ? error.message : "Unable to save the course decision.";
-                    if (!/changed since this preview|Only the master account/.test(notice.textContent)) {
-                        reject.disabled = false;
-                        approve.disabled = validatePublishedCourse(selectedCourse).length > 0;
-                    }
-                }
-            };
-            approve.addEventListener("click", () => decide("approve"));
-            reject.addEventListener("click", () => decide("reject"));
         } else {
         const loaded = await loadCourses();
         if (!loaded) return;

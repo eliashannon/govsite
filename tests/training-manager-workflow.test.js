@@ -33,7 +33,6 @@ async function manager(courses, legacyQueue = [], includeSource = true) {
     const elements = Object.fromEntries([...source("ai-training-content-manager.html").matchAll(/\bid="([^"]+)"/g)]
         .map(match => [match[1], new Element()]));
     elements.categoryFilter.value = "All";
-    elements.reviewFilter.value = "All";
     const callbacks = {};
     let initialize;
     const document = {
@@ -108,7 +107,7 @@ test("courses move exclusively between builders and publication requires explici
     assert.equal(m.course("alpha").status, "published");
     assert.equal(m.course("alpha").managerZone, "published");
     m.publishedAction("[data-unpublish-course]", {unpublishCourse:"alpha"});
-    assert.equal(m.course("alpha").status, "approved");
+    assert.equal(m.course("alpha").status, "ready");
     assert.match(m.elements.publishedCoursesList.innerHTML, /data-move-published-course="alpha"/);
     m.publishedAction("[data-move-published-course]", {movePublishedCourse:"alpha", destination:"course"});
     assert.match(m.elements.contentExplorer.innerHTML, /Course alpha/);
@@ -123,8 +122,8 @@ test("published courses support bulk selection and unpublishing", async () => {
     m.selectPublished("second");
     assert.equal(m.elements.publishedCoursesSelectionCount.textContent, "2 selected");
     m.elements.unpublishSelectedPublishedCoursesButton.events.click();
-    assert.equal(m.course("first").status, "approved");
-    assert.equal(m.course("second").status, "approved");
+    assert.equal(m.course("first").status, "ready");
+    assert.equal(m.course("second").status, "ready");
 });
 
 test("legacy exam queues remain exclusive after reload and do not override explicit moves", async () => {

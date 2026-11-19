@@ -14,13 +14,13 @@
 <div style="position:relative"><button class="account-button" id="accountButton" aria-expanded="false" aria-controls="accountMenu"><span class="account-avatar">U</span><span>Sign in</span></button><div class="account-menu" id="accountMenu" hidden><a href="contact.html">Contact Support</a><a href="index.html">Dashboard</a></div></div></div></header>
 <main class="page-content ai-manager-page">
   <section class="ai-manager-heading">
-    <div><p class="tqs-eyebrow">MASTER ACCOUNT TOOL</p><h1>Training Content Manager</h1><p>Extract, review, approve, and publish source-traceable handbook material.</p></div>
+    <div><p class="tqs-eyebrow">MASTER ACCOUNT TOOL</p><h1>Training Content Manager</h1><p>Extract and publish source-traceable handbook material.</p></div>
     <div class="ai-manager-heading-actions"><button id="previewCourseDraftButton" class="btn btn-secondary" type="button">Preview draft</button><button id="exportPackageButton" class="btn btn-secondary" type="button">Export source package</button></div>
   </section>
 
   <aside class="manager-prototype-notice" aria-label="Prototype processing and storage notice">
     <strong>Local prototype — no AI service is connected.</strong>
-    <span>PDF/DOCX text extraction and rule-based classification run in this browser. Original files and workflow data stay in this browser. Publishing updates this browser's training catalog only; export and source-control the JSON package and original handbooks separately for shared deployment. Master-only approval checks run in this browser; this static prototype has no server-side authorization.</span>
+    <span>PDF/DOCX text extraction and rule-based classification run in this browser. Original files and workflow data stay in this browser. Publishing updates this browser's training catalog only; export and source-control the JSON package and original handbooks separately for shared deployment. Master-only publishing checks run in this browser; this static prototype has no server-side authorization.</span>
     <span>Bundled parser notices: <a href="assets/pages/ai-training-content-manager/vendor/PDFJS-LICENSE.txt" target="_blank" rel="noopener">PDF.js license</a> and <a href="assets/pages/ai-training-content-manager/vendor/MAMMOTH-LICENSE.txt" target="_blank" rel="noopener">Mammoth.js license</a>.</span>
   </aside>
   <p id="managerNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
@@ -30,7 +30,7 @@
     <form id="handbookUploadForm" class="handbook-upload-form">
       <label for="handbookFiles">Standardized training documents</label>
       <input id="handbookFiles" class="form-control" type="file" accept=".docx,.txt,.md,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple required>
-      <p>Choose a DOCX, TXT, or Markdown course document using the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a>, then create a structured draft. Choose a valid organization assignment and send the draft to Course Builder for review. Move approved courses to Published Courses to publish them. PDF is supported for source extraction only.</p>
+      <p>Choose a DOCX, TXT, or Markdown course document using the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a>, then create a structured draft. Send the draft to Course Builder, then move it to Published Courses and publish it. PDF is supported for source extraction only.</p>
       <button id="uploadHandbooksButton" class="btn btn-primary" type="submit">Upload and extract</button>
       <button id="createCourseDraftButton" class="btn btn-secondary" type="button">Create structured course draft</button>
     </form>
@@ -51,23 +51,20 @@
     <div class="handbook-toolbar">
       <input id="contentSearch" type="search" class="form-control" placeholder="Search exact source text, section, or document">
       <select id="categoryFilter" class="form-control" aria-label="Filter by content category"><option value="All">All categories</option></select>
-      <select id="reviewFilter" class="form-control" aria-label="Filter by approval status"><option value="All">All approval statuses</option><option>Pending Review</option><option>Approved</option><option>Rejected</option></select>
     </div>
     <div class="handbook-selection-toolbar">
       <span id="selectionCount">0 selected</span>
       <button id="selectAllVisibleButton" class="ai-text-button" type="button">Select all visible</button>
-      <button id="approveSelectedButton" class="btn btn-secondary" type="button" disabled>Approve all selected</button>
-      <button id="rejectSelectedButton" class="btn btn-secondary" type="button" disabled>Reject selected</button>
       <button id="deleteSelectedContentButton" class="btn btn-secondary" type="button" disabled>Delete selected</button>
-      <button id="addSelectedExamCoursesButton" class="btn btn-primary" type="button" disabled>Add approved courses to Exam Builder</button>
-      <button id="addSelectedPublishedCoursesButton" class="btn btn-secondary" type="button" disabled>Move approved courses to Published Courses</button>
+      <button id="addSelectedExamCoursesButton" class="btn btn-primary" type="button" disabled>Add courses to Exam Builder</button>
+      <button id="addSelectedPublishedCoursesButton" class="btn btn-secondary" type="button" disabled>Move courses to Published Courses</button>
     </div>
     <div id="contentExplorer" class="handbook-content-explorer"></div>
   </section>
 
   <section class="ai-manager-panel exam-builder-panel" aria-labelledby="examBuilderTitle">
     <div class="manager-section-heading"><div><span class="tqs-label">COURSE ASSESSMENTS</span><h2 id="examBuilderTitle">Exam Builder</h2></div><span id="examBuilderCount" class="ai-content-count">0 courses</span></div>
-    <p class="exam-builder-description">Add approved courses from Course Builder, choose the module after which each exam appears, and write the questions. Exams are manual for now; no AI-generated questions are used. Returning a course removes it from this list but keeps any saved exam in the course.</p>
+    <p class="exam-builder-description">Add courses from Course Builder, choose the module after which each exam appears, and write the questions. Exams are manual for now; no AI-generated questions are used. Returning a course removes it from this list but keeps any saved exam in the course.</p>
     <div class="handbook-selection-toolbar">
       <span id="examBuilderSelectionCount">0 selected</span>
       <button id="selectAllExamCoursesButton" class="ai-text-button" type="button">Select all</button>
@@ -79,7 +76,7 @@
 
   <section class="ai-manager-panel published-courses-panel" aria-labelledby="publishedCoursesTitle">
     <div class="manager-section-heading"><div><span class="tqs-label">PUBLICATION CONTROL</span><h2 id="publishedCoursesTitle">Published Courses</h2></div><span id="publishedCoursesCount" class="ai-content-count">0 courses</span></div>
-    <p class="exam-builder-description">Publish approved courses here. Unpublish a course before returning it to Course Builder or moving it to Exam Builder.</p>
+    <p class="exam-builder-description">Publish courses here. Unpublish a course before returning it to Course Builder or moving it to Exam Builder.</p>
     <div class="handbook-selection-toolbar">
       <span id="publishedCoursesSelectionCount">0 selected</span>
       <button id="selectAllPublishedCoursesButton" class="ai-text-button" type="button">Select all</button>
@@ -136,13 +133,13 @@ Every user contributes to organizational security.</pre>
     <div class="course-draft-toolbar">
       <label for="courseDraftStatus">Course status</label>
       <select id="courseDraftStatus" class="form-control" disabled>
-        <option value="uploaded">uploaded</option><option value="processing">processing</option><option value="draft" selected>draft</option><option value="needs-review">needs-review</option><option value="rejected">rejected</option><option value="approved">approved</option><option value="published">published</option><option value="archived">archived</option>
+        <option value="uploaded">uploaded</option><option value="processing">processing</option><option value="draft" selected>draft</option><option value="ready">ready</option><option value="published">published</option><option value="archived">archived</option>
       </select>
       <button id="saveCourseDraftButton" class="btn btn-secondary" type="button">Save draft</button>
       <button id="previewEditingCourseButton" class="btn btn-secondary" type="button">Preview course</button>
-      <button id="reviewCourseDraftButton" class="btn btn-primary" type="button">Submit to Course Builder for review</button>
+      <button id="reviewCourseDraftButton" class="btn btn-primary" type="button">Send to Course Builder</button>
       <button id="archiveCourseDraftButton" class="btn btn-secondary" type="button">Archive</button>
-      <button id="exportCourseDraftButton" class="btn btn-primary" type="button" disabled>Export approved JSON</button>
+      <button id="exportCourseDraftButton" class="btn btn-primary" type="button" disabled>Export course JSON</button>
     </div>
     <p id="courseDraftNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
     <div id="courseValidationSummary" class="course-validation-summary" aria-live="polite"></div>
@@ -193,7 +190,7 @@ Every user contributes to organizational security.</pre>
   </dialog>
 </main></div></div>
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
-<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=4"></script><script src="assets/shared/js/course-workflow.js?v=1"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261119-1"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261119-1"></script>
-<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261119-1"></script>
+<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=4"></script><script src="assets/shared/js/course-workflow.js?v=2"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261119-1"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261119-3"></script>
+<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261119-2"></script>
 </body>
 </html>

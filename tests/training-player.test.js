@@ -58,7 +58,7 @@ async function player(preview = false, savedStorage = null, fixture = null) {
     );
     if (!fixture) {
         course.roleAssignments = [{divisionId:"division", branchId:"branch", roleId:"role", required:true}];
-        course.status = "needs-review";
+        course.status = "ready";
     }
 
     const html = source("training.html");
@@ -161,9 +161,11 @@ test("course player shows module states, renders structured material, and comple
     assert.ok(!JSON.parse(p.localStorage.getItem("portal.inProgressCourses")).includes(p.course.id));
 });
 
-test("review preview has learner navigation without changing learner progress and can approve", async () => {
+test("preview has learner navigation without changing learner progress and no approval controls", async () => {
     const p = await player(true);
     assert.equal(p.elements.courseReviewControls.hidden, false);
+    assert.equal(p.elements.approvePreviewCourse, undefined);
+    assert.equal(p.elements.rejectPreviewCourse, undefined);
     for (let index = 0; index < 4; index += 1) p.button("Continue").click();
     p.button("Mark Complete").click();
     assert.equal(p.elements.courseCompletionReturn.href, "ai-training-content-manager.html");
@@ -171,55 +173,7 @@ test("review preview has learner navigation without changing learner progress an
     assert.equal(p.localStorage.getItem("portal.completedCourses"), null);
     assert.equal(p.localStorage.getItem("portal.inProgressCourses"), null);
     assert.equal(JSON.parse(p.sessionStorage.getItem("trainingPreviewProgress"))[p.course.id].courseCompleted, true);
-    p.elements.approvePreviewCourse.click();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.equal(JSON.parse(p.localStorage.getItem("trainingManagerCourses"))[p.course.id].status, "approved");
     assert.match(p.elements.courseReviewNotice.textContent, /Published Courses/);
-});
-
-test("reviewers can reject a course from its preview", async () => {
-    const p = await player(true);
-    p.elements.rejectPreviewCourse.click();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.equal(JSON.parse(p.localStorage.getItem("trainingManagerCourses"))[p.course.id].status, "rejected");
-});
-
-test("rejection requires unpublishing and returning the course to Course Builder", async () => {
-    const initial = await player(true);
-    const course = JSON.parse(initial.localStorage.getItem("trainingManagerCourses"))[initial.course.id];
-    course.status = "published";
-    initial.localStorage.setItem("trainingManagerCourses", JSON.stringify({[course.id]:course}));
-    let preview = await player(true, initial.localStorage, course);
-    assert.equal(preview.elements.rejectPreviewCourse.hidden, true);
-    preview.elements.rejectPreviewCourse.click();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.equal(JSON.parse(initial.localStorage.getItem("trainingManagerCourses"))[course.id].status, "published");
-
-    course.status = "approved";
-    course.managerZone = "published";
-    initial.localStorage.setItem("trainingManagerCourses", JSON.stringify({[course.id]:course}));
-    preview = await player(true, initial.localStorage, course);
-    assert.equal(preview.elements.rejectPreviewCourse.hidden, true);
-    course.managerZone = "course";
-    initial.localStorage.setItem("trainingManagerCourses", JSON.stringify({[course.id]:course}));
-    preview = await player(true, initial.localStorage, course);
-    assert.equal(preview.elements.rejectPreviewCourse.hidden, false);
-    preview.elements.rejectPreviewCourse.click();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.equal(JSON.parse(initial.localStorage.getItem("trainingManagerCourses"))[course.id].status, "rejected");
-});
-
-test("a stale preview cannot reject a course moved to Exam Builder", async () => {
-    const p = await player(true);
-    const records = JSON.parse(p.localStorage.getItem("trainingManagerCourses"));
-    records[p.course.id].status = "approved";
-    p.localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
-    const preview = await player(true, p.localStorage, records[p.course.id]);
-    p.localStorage.setItem("trainingExamBuilderCourseIds", JSON.stringify([p.course.id]));
-    preview.elements.rejectPreviewCourse.click();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.equal(JSON.parse(p.localStorage.getItem("trainingManagerCourses"))[p.course.id].status, "approved");
-    assert.match(preview.elements.courseReviewNotice.textContent, /Course Builder/);
 });
 
 async function overviewPage(page, localStorage) {

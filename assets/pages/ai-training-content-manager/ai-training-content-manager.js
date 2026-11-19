@@ -27,10 +27,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const contentCount = document.getElementById("contentCount");
     const contentSearch = document.getElementById("contentSearch");
     const categoryFilter = document.getElementById("categoryFilter");
-    const reviewFilter = document.getElementById("reviewFilter");
     const selectionCount = document.getElementById("selectionCount");
-    const approveSelectedButton = document.getElementById("approveSelectedButton");
-    const rejectSelectedButton = document.getElementById("rejectSelectedButton");
     const deleteSelectedContentButton = document.getElementById("deleteSelectedContentButton");
     const addSelectedExamCoursesButton = document.getElementById("addSelectedExamCoursesButton");
     const addSelectedPublishedCoursesButton = document.getElementById("addSelectedPublishedCoursesButton");
@@ -112,7 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         && profile.email.toLowerCase() === "elias@navy.mil";
     const requireMaster = target => {
         if (isMasterUser()) return true;
-        showNotice("Only the master account can approve or publish training courses.", true, target);
+        showNotice("Only the master account can publish training courses.", true, target);
         return false;
     };
     const getStructuredCourse = courseId => {
@@ -125,7 +122,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             return null;
         }
     };
-    const isEligibleExamCourse = courseId => getStructuredCourse(courseId)?.status === "approved";
+    const isEligibleCourse = courseId => {
+        const course = getStructuredCourse(courseId);
+        return course && ["draft","ready","approved","needs-review"].includes(course.status);
+    };
     const moveCourses = (courseIds, source, destination) => {
         if (!examBuilderStorageAvailable) {
             showNotice("The Exam Builder queue is unavailable until its saved data is repaired.", true);
@@ -173,14 +173,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
     const findReview = contentId => {
         const review = state.reviews.find(item => item.contentId === contentId)
-            || {contentId, status: "Pending Review", reviewedAt: null, reviewer: ""};
+            || {contentId, status: "Ready", reviewedAt: null, reviewer: ""};
         const item = state.sourceContent.find(source => source.id === contentId);
         const courseId = item?.structuredCourseId || (contentId.startsWith("structured-course-")
             ? contentId.slice("structured-course-".length) : "");
         if (!courseId) return review;
         try {
             const course = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}")[courseId];
-            const status = ["approved", "published"].includes(course?.status) ? "Approved" : course?.status === "rejected" ? "Rejected" : "Pending Review";
+            const status = ["published"].includes(course?.status) ? "Published" : "Ready";
             return {...review, status};
         } catch (error) {
             console.error("Unable to read the structured course review status.", error);
@@ -216,18 +216,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
     const findDocument = documentId => state.documents.find(item => item.id === documentId);
-    const selectedAreApproved = () => {
-        const selected = [...selectedContentIds];
-        return selected.length > 0 && selected.every(id =>
-            state.sourceContent.some(item => item.id === id) && findReview(id).status === "Approved"
-        );
-    };
     const updateSelectionControls = () => {
         selectionCount.textContent = `${selectedContentIds.size + selectedStructuredCourseIds.size} selected`;
-        approveSelectedButton.disabled = selectedContentIds.size === 0;
-        rejectSelectedButton.disabled = selectedContentIds.size === 0;
         deleteSelectedContentButton.disabled = selectedContentIds.size === 0;
-        const selectedExamCourseIds = [...selectedStructuredCourseIds].filter(isEligibleExamCourse);
+        const selectedExamCourseIds = [...selectedStructuredCourseIds].filter(isEligibleCourse);
         addSelectedExamCoursesButton.disabled = selectedExamCourseIds.length === 0 || !examBuilderStorageAvailable;
         addSelectedPublishedCoursesButton.disabled = selectedExamCourseIds.length === 0 || !examBuilderStorageAvailable;
         const visibleCheckboxes = [...contentExplorer.querySelectorAll("[data-select-content], [data-select-structured-course]")];
@@ -268,7 +260,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const renderDocuments = () => {
         documentCount.textContent = `${state.documents.length} ${state.documents.length === 1 ? "document" : "documents"}`;
         if (!state.documents.length) {
-            handbookList.innerHTML = '<div class="handbook-empty">Uploaded handbooks will remain available here for review.</div>';
+            handbookList.innerHTML = '<div class="handbook-empty">Uploaded handbooks will remain available here.</div>';
             updateDocumentSelectionControls();
             return;
         }
@@ -332,14 +324,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 console.error("Unable to read the structured course.", error);
             }
             const courseStatus = course?.status === "published" ? "Published"
-                : course?.status === "approved" ? "Approved"
-                : course?.status === "rejected" ? "Rejected"
-                : course?.status === "needs-review" ? "Pending Review" : "Unpublished";
-            const canSelectForExam = course?.status === "approved";
+                : isEligibleCourse(item.structuredCourseId) ? "Ready" : "Unpublished";
+            const canSelectForExam = isEligibleCourse(item.structuredCourseId);
             return `
                 <article class="source-content-item">
                     ${canSelectForExam
-                        ? `<input type="checkbox" data-select-structured-course="${escapeHtml(item.structuredCourseId)}" aria-label="Select approved course ${escapeHtml(course.title || item.structuredCourseId)}" ${selectedStructuredCourseIds.has(item.structuredCourseId) ? "checked" : ""}>`
+                        ? `<input type="checkbox" data-select-structured-course="${escapeHtml(item.structuredCourseId)}"                         aria-label="Select course ${escapeHtml(course.title || item.structuredCourseId)}" ${selectedStructuredCourseIds.has(item.structuredCourseId) ? "checked" : ""}>`
                         : `<span></span>`}
                     <div class="source-content-copy">
                         <button class="source-item-preview" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">${escapeHtml(heading || item.structuredCourseId)}</button>
@@ -364,21 +354,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                         ${item.sectionNumber ? `<span>Section ${escapeHtml(item.sectionNumber)}</span>` : ""}
                         <span>${escapeHtml(metadata.contentType || "Text")}</span>
                         <span>${escapeHtml(metadata.confidence || "Needs review")}</span>
-                        ${statusBadge(review.status)}
                         ${statusBadge(publicationStatus)}
                     </div>
                 </div>
-                <div class="source-item-actions">
-                    <button class="manager-small-button" type="button" data-review-content="${escapeHtml(item.id)}" data-review-status="Approved" ${review.status === "Approved" ? "disabled" : ""}>Approve</button>
-                    <button class="manager-small-button" type="button" data-review-content="${escapeHtml(item.id)}" data-review-status="Rejected" ${review.status === "Rejected" ? "disabled" : ""}>Reject</button>
-                </div>
+                <div class="source-item-actions"></div>
             </article>`;
     };
 
     const renderContent = () => {
         const query = contentSearch.value.trim().toLocaleLowerCase();
         const selectedCategory = categoryFilter.value;
-        const selectedReview = reviewFilter.value;
         const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
         const existingCourseIds = new Set(state.sourceContent.map(item => item.structuredCourseId).filter(Boolean));
         const recoveredCourses = Object.values(records).filter(course => course?.managerZone === "course"
@@ -395,7 +380,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (course && window.CourseWorkflow.zone(course) !== "course") return false;
             }
             const metadata = findMetadata(item.id) || {};
-            const review = findReview(item.id);
             const documentRecord = findDocument(item.documentId);
             const searchable = [
                 item.sourceText,
@@ -404,8 +388,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ...(metadata.headingPath || [])
             ].join(" ").toLocaleLowerCase();
             return (!query || searchable.includes(query))
-                && (selectedCategory === "All" || metadata.category === selectedCategory)
-                && (selectedReview === "All" || review.status === selectedReview);
+                && (selectedCategory === "All" || metadata.category === selectedCategory);
         });
         contentCount.textContent = `${visibleItems.length} ${visibleItems.length === 1 ? "item" : "items"}`;
         if (!visibleItems.length) {
@@ -479,7 +462,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const renderModules = () => {
         moduleCount.textContent = `${state.modules.length} ${state.modules.length === 1 ? "module" : "modules"}`;
         if (!state.modules.length) {
-            moduleList.innerHTML = '<div class="handbook-empty">No modules have been assembled. Approve extracted source items before creating a module.</div>';
+            moduleList.innerHTML = '<div class="handbook-empty">No modules have been assembled. Select extracted source items before creating a module.</div>';
             updateModuleSelectionControls();
             return;
         }
@@ -489,23 +472,21 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const sourceContentIds = Array.isArray(module.sourceContentIds) ? module.sourceContentIds : [];
                 const roleIds = Array.isArray(module.roleIds) ? module.roleIds : [];
                 const validSourceCount = sourceContentIds.filter(id =>
-                    state.sourceContent.some(item => item.id === id) && findReview(id).status === "Approved"
+                    state.sourceContent.some(item => item.id === id)
                 ).length;
                 const isPublished = module.publicationStatus === "Published" && validSourceCount === sourceContentIds.length;
                 const assignment = module.assignment || {};
                 const assignmentLabel = [assignment.division || module.division, assignment.branch || module.branch, assignment.role || roleIds.join(", ")]
                     .filter(Boolean).join(" / ");
-                const approvalStatus = module.approvalStatus
-                    || (isPublished ? "Approved" : module.publicationStatus === "Pending Approval" ? "Pending Approval" : "Unpublished");
+                const publicationLabel = isPublished ? "Published" : "Unpublished";
                 return `
                     <article class="module-card">
                         <div class="module-card-copy">
                             <label class="module-select"><input type="checkbox" data-select-module="${escapeHtml(module.id)}" aria-label="Select ${escapeHtml(module.title)}" ${selectedModuleIds.has(module.id) ? "checked" : ""}>Select module</label>
                             <h3>${escapeHtml(module.title)}</h3>
                             <p>${escapeHtml(module.category)} · Created ${escapeHtml(dateTime(module.createdAt))}</p>
-                            <p class="module-source-count">${validSourceCount} of ${sourceContentIds.length} source items remain approved${assignmentLabel ? ` · Assignment: ${escapeHtml(assignmentLabel)}` : ""}</p>
-                            <div class="module-card-meta">${statusBadge(isPublished ? "Published" : "Unpublished")}
-                                ${!isPublished ? statusBadge(approvalStatus) : ""}
+                            <p class="module-source-count">${validSourceCount} of ${sourceContentIds.length} source items are available${assignmentLabel ? ` · Assignment: ${escapeHtml(assignmentLabel)}` : ""}</p>
+                            <div class="module-card-meta">${statusBadge(publicationLabel)}
                                 <span>${(module.tqsRequirementIds || []).length} linked TQS ${(module.tqsRequirementIds || []).length === 1 ? "requirement" : "requirements"}</span>
                             </div>
                         </div>
@@ -513,7 +494,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             <button class="manager-small-button" type="button" data-preview-module="${escapeHtml(module.id)}">Preview sources</button>
                             ${isPublished
                                 ? `<button class="manager-small-button" type="button" data-unpublish-module="${escapeHtml(module.id)}">Unpublish</button>`
-                                : `<button class="manager-small-button" type="button" data-publish-module="${escapeHtml(module.id)}" ${validSourceCount !== sourceContentIds.length || !sourceContentIds.length ? "disabled" : ""}>Approve &amp; assign</button>`}
+                                : `<button class="manager-small-button" type="button" data-publish-module="${escapeHtml(module.id)}" ${validSourceCount !== sourceContentIds.length || !sourceContentIds.length ? "disabled" : ""}>Publish &amp; assign</button>`}
                         </div>
                     </article>`;
             }).join("");
@@ -577,12 +558,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             .map(id => getStructuredCourse(id))
             .filter(Boolean);
         publishedCoursesSelectionCount.textContent = `${selectedPublishedCourseIds.size} selected`;
-        publishSelectedPublishedCoursesButton.disabled = !selectedCourses.some(course => course.status === "approved");
+        publishSelectedPublishedCoursesButton.disabled = !selectedCourses.some(course => ["draft","ready","approved","needs-review"].includes(course.status));
         unpublishSelectedPublishedCoursesButton.disabled = !selectedCourses.some(course => course.status === "published");
         moveSelectedPublishedCoursesToCourseBuilderButton.disabled = !selectedCourses.length
-            || selectedCourses.some(course => course.status !== "approved");
+            || selectedCourses.some(course => course.status === "published");
         moveSelectedPublishedCoursesToExamBuilderButton.disabled = !selectedCourses.length
-            || selectedCourses.some(course => course.status !== "approved")
+            || selectedCourses.some(course => course.status === "published")
             || !examBuilderStorageAvailable;
         selectAllPublishedCoursesButton.textContent = publishedCourseIds.size > 0
             && [...publishedCourseIds].every(id => selectedPublishedCourseIds.has(id))
@@ -593,7 +574,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const renderExamBuilder = () => {
         examBuilderCount.textContent = `${examBuilderCourseIds.size} ${examBuilderCourseIds.size === 1 ? "course" : "courses"}`;
         if (!examBuilderCourseIds.size) {
-            examBuilderList.innerHTML = '<div class="handbook-empty">No courses are in the Exam Builder. Select approved courses in Course Builder and add them here.</div>';
+            examBuilderList.innerHTML = '<div class="handbook-empty">No courses are in the Exam Builder. Select courses in Course Builder and add them here.</div>';
             updateExamBuilderSelectionControls();
             return;
         }
@@ -617,7 +598,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <div class="exam-builder-course-actions"><button class="manager-small-button" type="button" data-return-exam-course="${escapeHtml(courseId)}">Return to Course Builder</button></div>
                 </article>`;
             }
-            const eligible = course.status === "approved";
+            const eligible = ["draft","ready","approved","needs-review"].includes(course.status);
             const exams = (Array.isArray(course.modules) ? course.modules : []).flatMap((module, moduleIndex) =>
                 getModuleAssessments(module).map(exam => ({...exam, moduleId:module.id, moduleTitle:module.title || `Module ${moduleIndex + 1}`}))
             );
@@ -741,8 +722,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const openExamEditor = (courseId, moduleId = null, examId = null) => {
         if (!requireMaster(examEditorNotice)) return;
         const course = getStructuredCourse(courseId);
-        if (!course || course.status !== "approved" || window.CourseWorkflow.zone(course) !== "exam") {
-            showNotice("Only an approved course can be edited in the Exam Builder.", true, examEditorNotice);
+        if (!course || !["draft","ready","approved","needs-review"].includes(course.status) || window.CourseWorkflow.zone(course) !== "exam") {
+            showNotice("Only a ready course can be edited in the Exam Builder.", true, examEditorNotice);
             return;
         }
         if (!Array.isArray(course.modules) || !course.modules.length) {
@@ -827,8 +808,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!current || JSON.stringify(current) !== JSON.stringify(editingExamOriginalCourse)) {
                 throw new Error("The course changed while the exam was being edited. Close this dialog and reopen the course.");
             }
-            if (current.status !== "approved" || window.CourseWorkflow.zone(current) !== "exam") {
-                throw new Error("Only an approved course can be updated in the Exam Builder.");
+            if (!["draft","ready","approved","needs-review"].includes(current.status) || window.CourseWorkflow.zone(current) !== "exam") {
+                throw new Error("Only a ready course can be updated in the Exam Builder.");
             }
             if (!editingExamCourse.modules.some(module => module.id === examModuleSelect.value)) {
                 throw new Error("Choose a module for this exam.");
@@ -875,8 +856,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const removeCourseExam = (courseId, moduleId, examId) => {
         if (!requireMaster()) return;
         const course = getStructuredCourse(courseId);
-        if (!course || course.status !== "approved" || window.CourseWorkflow.zone(course) !== "exam") {
-            showNotice("Only an approved course in Exam Builder can be edited.", true);
+        if (!course || !["draft","ready","approved","needs-review"].includes(course.status) || window.CourseWorkflow.zone(course) !== "exam") {
+            showNotice("Only a course in Exam Builder can be edited.", true);
             return;
         }
         if (!window.confirm("Remove this exam from the course? This cannot be undone.")) return;
@@ -918,9 +899,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const addSelectedCoursesToExamBuilder = () => {
         if (!requireMaster()) return;
-        const eligibleIds = [...selectedStructuredCourseIds].filter(isEligibleExamCourse);
+        const eligibleIds = [...selectedStructuredCourseIds].filter(isEligibleCourse);
         if (!eligibleIds.length) {
-            showNotice("Select one or more approved courses in Course Builder first.", true);
+            showNotice("Select one or more courses in Course Builder first.", true);
             return;
         }
         if (!moveCourses(eligibleIds, "course", "exam")) return;
@@ -941,8 +922,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const previewExamCourse = courseId => {
         const course = getStructuredCourse(courseId);
-        if (!course || !["approved", "published"].includes(course.status)) {
-            showNotice("Only an approved course can be previewed for publishing.", true);
+        if (!course || !["draft","ready","approved","needs-review","published"].includes(course.status)) {
+            showNotice("Only a ready course can be previewed for publishing.", true);
             return;
         }
         const preview = window.open(`training.html?preview=1&course=${encodeURIComponent(courseId)}`, "_blank");
@@ -959,7 +940,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <input type="checkbox" data-select-published-course="${escapeHtml(course.id)}" aria-label="Select ${escapeHtml(course.title || course.id)} in Published Courses" ${selectedPublishedCourseIds.has(course.id) ? "checked" : ""}>
                 <div class="exam-builder-course-copy"><h3>${escapeHtml(course.title || course.id)}</h3>
                     <p>${course.status === "published" ? "Published in this browser's Training Courses catalog." : "Unpublished and ready to publish or move."}</p>
-                    <div class="exam-builder-course-meta">${statusBadge(course.status === "published" ? "Published" : "Approved")}</div>
+                    <div class="exam-builder-course-meta">${statusBadge(course.status === "published" ? "Published" : "Ready")}</div>
                 </div>
                 <div class="exam-builder-course-actions">
                     <button class="manager-small-button" type="button" data-preview-published="${escapeHtml(course.id)}">Preview course</button>
@@ -969,7 +950,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                            <button class="manager-small-button" type="button" data-move-published-course="${escapeHtml(course.id)}" data-destination="course">Move to Course Builder</button>
                            <button class="manager-small-button" type="button" data-move-published-course="${escapeHtml(course.id)}" data-destination="exam">Move to Exam Builder</button>`}
                 </div>
-            </article>`).join("") : '<div class="handbook-empty">No courses are in Published Courses. Move an approved course here to publish it.</div>';
+            </article>`).join("") : '<div class="handbook-empty">No courses are in Published Courses. Move a course here to publish it.</div>';
         updatePublishedCourseSelectionControls();
     };
 
@@ -996,7 +977,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!requireMaster()) return;
         const ids = [...selectedPublishedCourseIds].filter(id => {
             const course = getStructuredCourse(id);
-            return course?.status === "approved" && window.CourseWorkflow.zone(course) === "published";
+            return ["draft","ready","approved","needs-review"].includes(course?.status) && window.CourseWorkflow.zone(course) === "published";
         });
         if (!ids.length) {
             showNotice("Select at least one unpublished course in Published Courses.", true);
@@ -1029,7 +1010,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!requireMaster()) return;
         const ids = [...selectedPublishedCourseIds].filter(id => {
             const course = getStructuredCourse(id);
-            return course?.status === "approved" && window.CourseWorkflow.zone(course) === "published";
+            return ["draft","ready","approved","needs-review"].includes(course?.status) && window.CourseWorkflow.zone(course) === "published";
         });
         if (!ids.length) {
             showNotice("Select at least one unpublished course before moving.", true);
@@ -1089,9 +1070,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         mergeBy(state.reviews, reviews, "contentId");
         contentSearch.value = "";
         categoryFilter.value = "All";
-        reviewFilter.value = "All";
         render();
-        showNotice("Course added to Course Builder for review.");
+        showNotice("Course added to Course Builder.");
     });
     window.addEventListener("training-content-removed", event => {
         const ids = new Set(event.detail.contentIds);
@@ -1153,7 +1133,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             ["Category", metadata.category || "Not classified"],
             ["Content type", metadata.contentType || "Text"],
             ["Processing confidence", metadata.confidence || "Needs review"],
-            ["Approval status", review.status],
             ["Publication status", relatedModules.some(module => module.publicationStatus === "Published") ? "Published" : "Unpublished"]
         ];
         document.getElementById("previewTitle").textContent = metadata.headingPath?.join(" / ")
@@ -1355,7 +1334,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }));
             const reviewRecords = sourceRecords.map(item => ({
                 contentId: item.id,
-                status: "Pending Review",
+                status: "Ready",
                 reviewedAt: null,
                 reviewer: ""
             }));
@@ -1439,15 +1418,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const openModuleDialog = () => {
         const sourceIds = [...selectedContentIds];
         if (!requireMaster()) return;
-        if (!selectedAreApproved()) {
-            showNotice("Select one or more approved source items before creating a module.", true);
+        if (!sourceIds.length) {
+            showNotice("Select one or more source items before creating a module.", true);
             return;
         }
         const tqsRequirements = window.PortalData.courses.filter(course =>
             course.requirement === "Required" && !course.id.startsWith("HANDBOOK-")
         );
         document.getElementById("moduleSourceSummary").textContent =
-            `${sourceIds.length} approved item(s) will be included as extracted. Their source text cannot be edited in this manager.`;
+            `${sourceIds.length} source item(s) will be included as extracted. Their source text cannot be edited in this manager.`;
         document.getElementById("moduleTitle").value = "";
         document.getElementById("moduleTqsOptions").innerHTML = tqsRequirements.map(course => `
             <label class="module-option"><input type="checkbox" name="moduleTqs" value="${escapeHtml(course.id)}"><span>${escapeHtml(course.id)} — ${escapeHtml(course.title)}</span></label>
@@ -1461,9 +1440,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!requireMaster(moduleDialogNotice)) return;
         const title = document.getElementById("moduleTitle").value.trim();
         const tqsRequirementIds = [...moduleForm.querySelectorAll('input[name="moduleTqs"]:checked')].map(input => input.value);
-        const sourceContentIds = [...selectedContentIds].filter(id => findReview(id).status === "Approved");
+        const sourceContentIds = [...selectedContentIds];
         if (!title || !sourceContentIds.length) {
-            showNotice("Enter a module title and keep at least one approved source item selected.", true, moduleDialogNotice);
+            showNotice("Enter a module title and keep at least one source item selected.", true, moduleDialogNotice);
             return;
         }
         const categories = [...new Set(sourceContentIds.map(id => findMetadata(id)?.category).filter(Boolean))];
@@ -1476,11 +1455,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             tqsRequirementIds,
             createdAt: new Date().toISOString(),
             createdBy: profile.email,
-            approvalStatus: "Pending Approval",
-            approvedAt: null,
-            approvedBy: null,
             assignment: null,
-            publicationStatus: "Pending Approval",
+            publicationStatus: "Unpublished",
             publishedAt: null
         };
         try {
@@ -1489,7 +1465,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             sourceContentIds.forEach(id => selectedContentIds.delete(id));
             moduleDialog.close();
             render();
-            showNotice(`Draft "${module.title}" is pending master approval.`);
+            showNotice(`Draft "${module.title}" was created.`);
         } catch (error) {
             console.error("Unable to save the training module.", error);
             showNotice(error instanceof Error ? error.message : String(error), true, moduleDialogNotice);
@@ -1501,11 +1477,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const module = state.modules.find(item => item.id === moduleId);
         if (!module) return;
         const sourceContentIds = Array.isArray(module.sourceContentIds) ? module.sourceContentIds : [];
-        const allApproved = sourceContentIds.length > 0 && sourceContentIds.every(id =>
-            state.sourceContent.some(item => item.id === id) && findReview(id).status === "Approved"
-        );
-        if (!allApproved) {
-            showNotice("This course cannot be approved until every source item is available and approved.", true);
+        if (!sourceContentIds.length) {
+            showNotice("This module has no source items to publish.", true);
             return;
         }
         pendingApprovalModuleId = moduleId;
@@ -1541,7 +1514,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         assignmentRole.disabled = !assignmentBranch.value;
     };
 
-    const approveAndPublishModule = async event => {
+    const publishAndAssignModule = async event => {
         event.preventDefault();
         if (!requireMaster(assignmentDialogNotice)) return;
         const module = state.modules.find(item => item.id === pendingApprovalModuleId);
@@ -1550,23 +1523,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         const {value: role} = assignmentRole;
         const hierarchy = window.PortalData.organizationHierarchy;
         if (!module || !division || !branch || !role || !hierarchy[division]?.[branch]?.includes(role)) {
-            showNotice("Select a valid Division, Branch, and Role before approving this course.", true, assignmentDialogNotice);
+            showNotice("Select a valid Division, Branch, and Role before publishing this course.", true, assignmentDialogNotice);
             return;
         }
         const sourceContentIds = Array.isArray(module.sourceContentIds) ? module.sourceContentIds : [];
-        const allApproved = sourceContentIds.length > 0 && sourceContentIds.every(id =>
-            state.sourceContent.some(item => item.id === id) && findReview(id).status === "Approved"
-        );
-        if (!allApproved) {
-            showNotice("This course cannot be approved until every source item is available and approved.", true, assignmentDialogNotice);
+        if (!sourceContentIds.length) {
+            showNotice("This module has no source items to publish.", true, assignmentDialogNotice);
             return;
         }
         const changedAt = new Date().toISOString();
         const updated = {
             ...module,
-            approvalStatus: "Approved",
-            approvedAt: changedAt,
-            approvedBy: profile.email,
             assignment: {division, branch, role},
             division,
             branch,
@@ -1580,9 +1547,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             await syncPublishedState([updated]);
             assignmentDialog.close();
             pendingApprovalModuleId = null;
-            showNotice(`Approved and published "${updated.title}" for ${division} / ${branch} / ${role} in this browser's training catalog.`);
+            showNotice(`Published "${updated.title}" for ${division} / ${branch} / ${role} in this browser's training catalog.`);
         } catch (error) {
-            console.error("Unable to approve and publish the training course.", error);
+            console.error("Unable to publish the training course.", error);
             showNotice(error instanceof Error ? error.message : String(error), true, assignmentDialogNotice);
         }
     };
@@ -1623,7 +1590,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             ["Assignment", module.assignment
                 ? `${module.assignment.division} / ${module.assignment.branch} / ${module.assignment.role}`
                 : "Not assigned"],
-            ["Approval", module.approvalStatus || "Pending Approval"],
             ["TQS links", (module.tqsRequirementIds || []).join(", ") || "None"],
             ["Source items", `${sources.length} of ${module.sourceContentIds.length}`],
             ["Publication", module.publicationStatus]
@@ -1644,7 +1610,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const packageData = {
                 schemaVersion: 1,
                 exportedAt: new Date().toISOString(),
-                prototypeNotice: "Original binary handbooks are stored separately in this browser. Download each original from the handbook library. This JSON preserves extracted text, organizational metadata, approvals, and modules.",
+                prototypeNotice: "Original binary handbooks are stored separately in this browser. Download each original from the handbook library. This JSON preserves extracted text, organizational metadata, and modules.",
                 originalHandbooks: records.documents,
                 extractedSourceContent: records.sourceContent,
                 organizationalMetadata: records.organizationMetadata,
@@ -1658,7 +1624,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             anchor.download = `training-content-source-${new Date().toISOString().slice(0, 10)}.json`;
             anchor.click();
             window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-            showNotice("Source package exported. Download and commit the JSON and original handbooks through your approved source-control workflow.");
+            showNotice("Source package exported. Download and commit the JSON and original handbooks through your source-control workflow.");
         } catch (error) {
             console.error("Unable to export the handbook source package.", error);
             showNotice(error instanceof Error ? error.message : String(error), true);
@@ -1762,14 +1728,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             previewContent(previewButton.dataset.previewContent);
             return;
         }
-        const reviewButton = event.target.closest("[data-review-content]");
-        if (reviewButton) {
-            updateReviewStatus([reviewButton.dataset.reviewContent], reviewButton.dataset.reviewStatus)
-                .catch(error => {
-                    console.error("Unable to update source approval.", error);
-                    showNotice(error instanceof Error ? error.message : String(error), true);
-                });
-        }
     });
     examBuilderList.addEventListener("click", event => {
         const addButton = event.target.closest("[data-add-exam-course]");
@@ -1819,7 +1777,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     contentSearch.addEventListener("input", renderContent);
     categoryFilter.addEventListener("change", renderContent);
-    reviewFilter.addEventListener("change", renderContent);
     document.querySelector("[data-handbook-search]").addEventListener("input", event => {
         contentSearch.value = event.target.value;
         renderContent();
@@ -1847,7 +1804,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }));
     addSelectedExamCoursesButton.addEventListener("click", addSelectedCoursesToExamBuilder);
     addSelectedPublishedCoursesButton.addEventListener("click", () => {
-        const ids = [...selectedStructuredCourseIds].filter(isEligibleExamCourse);
+        const ids = [...selectedStructuredCourseIds].filter(isEligibleCourse);
         if (moveCourses(ids, "course", "published")) {
             selectedStructuredCourseIds.clear();
             render();
@@ -1900,16 +1857,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     examEditorDialog.addEventListener("click", event => {
         if (event.target === examEditorDialog) examEditorDialog.close();
     });
-    approveSelectedButton.addEventListener("click", () => updateReviewStatus([...selectedContentIds], "Approved")
-        .catch(error => {
-            console.error("Unable to approve selected source content.", error);
-            showNotice(error instanceof Error ? error.message : String(error), true);
-        }));
-    rejectSelectedButton.addEventListener("click", () => updateReviewStatus([...selectedContentIds], "Rejected")
-        .catch(error => {
-            console.error("Unable to reject selected source content.", error);
-            showNotice(error instanceof Error ? error.message : String(error), true);
-        }));
     viewOriginalButton.addEventListener("click", () => {
         const item = state.sourceContent.find(candidate => candidate.id === state.activePreviewId);
         if (item) openOriginal(item.documentId, item.pageNumber);
