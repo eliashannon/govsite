@@ -17,9 +17,10 @@ class Element {
     addEventListener(name, callback) { this.events[name] = callback; }
     querySelectorAll() { return []; }
     querySelector() { return new Element(); }
+    scrollIntoView() {}
 }
 
-async function manager(courses, legacyQueue = [], includeSource = true) {
+async function manager(courses, legacyQueue = [], includeSource = true, existing = {}) {
     const records = Object.fromEntries(courses.map(course => [course.id, course]));
     const values = {
         trainingManagerCourses:JSON.stringify(records),
@@ -49,7 +50,7 @@ async function manager(courses, legacyQueue = [], includeSource = true) {
         PortalDataReady:Promise.resolve(),
         PortalData:{},
         TrainingContentStore:{
-            readAll:async () => ({documents:[], sourceContent, organizationMetadata:[], reviews:[], modules:[]}),
+            readAll:async () => ({documents:existing.documents || [], sourceContent:[...sourceContent, ...(existing.sourceContent || [])], organizationMetadata:[], reviews:[], modules:[]}),
             saveMany:async (records, deletes) => { savedOperations.push({records, deletes}); }
         },
         addEventListener:(name, callback) => { (callbacks[name] ||= []).push(callback); },
@@ -88,6 +89,46 @@ function fixture(id, status = "approved") {
     course.roleAssignments = [{divisionId:"division", branchId:"branch", roleId:"role", required:true}];
     return course;
 }
+
+test("manager keeps existing source content and uploads working without the handbook library", async () => {
+    const m = await manager([], [], true, {
+        documents:[{id:"old-document", fileName:"old.txt", fileType:"txt"}],
+        sourceContent:[{id:"old-source", documentId:"old-document", originalDocumentName:"old.txt", sourceText:"Previously extracted text"}]
+    });
+    assert.equal(m.elements.handbookLibraryTitle, undefined);
+    assert.match(m.elements.contentExplorer.innerHTML, /Previously extracted text/);
+    assert.equal(m.savedOperations.length, 0);
+
+    const file = {name:"new.txt", size:20};
+    let storedOriginal;
+    m.window.TrainingContentStore.saveMany = async (records, deletes) => {
+        m.savedOperations.push({records, deletes});
+        if (records.originalFiles) storedOriginal = records.originalFiles[0];
+    };
+    m.window.TrainingContentStore.getOriginal = async id => id === storedOriginal.id ? storedOriginal : null;
+    m.window.HandbookProcessor = {
+        extract:async blob => {
+            assert.equal(blob, file);
+            return {warnings:[], pageCount:1, blocks:[{
+                sourceText:"New extracted text", category:"Safety", contentType:"Text",
+                headingPath:["Safety"], confidence:"High", warnings:[]
+            }]};
+        }
+    };
+    m.elements.handbookFiles.files = [file];
+    await m.elements.handbookUploadForm.events.submit({preventDefault() {}});
+    assert.equal(storedOriginal.blob, file);
+    assert.match(m.elements.contentExplorer.innerHTML, /Previously extracted text/);
+    assert.match(m.elements.contentExplorer.innerHTML, /New extracted text/);
+    assert.match(m.elements.managerNotice.textContent, /extracted 1 source item/);
+    assert.ok(m.savedOperations.every(operation => !operation.deletes));
+    const sourceId = m.savedOperations.at(-1).records.sourceContent[0].id;
+    m.elements.contentExplorer.events.click({
+        target:{closest:selector => selector === "[data-preview-content]" ? {dataset:{previewContent:sourceId}} : null}
+    });
+    assert.equal(m.elements.previewText.textContent, "New extracted text");
+    assert.equal(m.elements.viewOriginalButton.hidden, false);
+});
 
 test("deleting selected courses removes their saved records and source entries", async () => {
     const m = await manager([fixture("alpha"), fixture("beta")]);

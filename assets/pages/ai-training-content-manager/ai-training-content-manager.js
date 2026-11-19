@@ -18,11 +18,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const notice = document.getElementById("managerNotice");
     const uploadForm = document.getElementById("handbookUploadForm");
     const fileInput = document.getElementById("handbookFiles");
-    const handbookList = document.getElementById("handbookList");
-    const documentCount = document.getElementById("documentCount");
-    const documentSelectionCount = document.getElementById("documentSelectionCount");
-    const selectAllDocumentsButton = document.getElementById("selectAllDocumentsButton");
-    const deleteSelectedDocumentsButton = document.getElementById("deleteSelectedDocumentsButton");
     const contentExplorer = document.getElementById("contentExplorer");
     const contentCount = document.getElementById("contentCount");
     const contentSearch = document.getElementById("contentSearch");
@@ -54,7 +49,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const previewPanel = document.getElementById("sourcePreview");
     const viewOriginalButton = document.getElementById("viewOriginalButton");
     let pendingApprovalModuleId = null;
-    const selectedDocumentIds = new Set();
     const selectedContentIds = new Set();
     const selectedStructuredCourseIds = new Set();
     const selectedExamBuilderCourseIds = new Set();
@@ -242,56 +236,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? "Deselect all"
             : "Select all";
     };
-    const updateDocumentSelectionControls = () => {
-        const eligibleIds = new Set(state.documents
-            .filter(documentRecord => documentRecord.status !== "processing")
-            .map(documentRecord => documentRecord.id));
-        selectedDocumentIds.forEach(id => {
-            if (!eligibleIds.has(id)) selectedDocumentIds.delete(id);
-        });
-        documentSelectionCount.textContent = `${selectedDocumentIds.size} selected`;
-        deleteSelectedDocumentsButton.disabled = selectedDocumentIds.size === 0;
-        selectAllDocumentsButton.textContent = eligibleIds.size > 0
-            && [...eligibleIds].every(id => selectedDocumentIds.has(id))
-            ? "Deselect all"
-            : "Select all";
-    };
-
-    const renderDocuments = () => {
-        documentCount.textContent = `${state.documents.length} ${state.documents.length === 1 ? "document" : "documents"}`;
-        if (!state.documents.length) {
-            handbookList.innerHTML = '<div class="handbook-empty">Uploaded handbooks will remain available here.</div>';
-            updateDocumentSelectionControls();
-            return;
-        }
-        handbookList.innerHTML = state.documents.map(documentRecord => {
-            const processingStatus = documentRecord.status === "processed"
-                ? "Processed"
-                : documentRecord.status === "needs-review"
-                    ? "Needs review"
-                    : documentRecord.status === "processing"
-                        ? "Processing"
-                        : documentRecord.status === "error" ? "Extraction error" : "Stored";
-            const warningText = documentRecord.processingMessage
-                ? `<p>${escapeHtml(documentRecord.processingMessage)}</p>`
-                : "";
-            return `
-                <article class="handbook-document">
-                    <label class="handbook-document-select"><input type="checkbox" data-select-document="${escapeHtml(documentRecord.id)}" aria-label="Select ${escapeHtml(documentRecord.fileName)}" ${selectedDocumentIds.has(documentRecord.id) ? "checked" : ""} ${documentRecord.status === "processing" ? "disabled" : ""}>Select</label>
-                    <div><h3>${escapeHtml(documentRecord.fileName)}</h3>
-                        <p>${escapeHtml(documentRecord.fileType.toUpperCase())} · Uploaded ${escapeHtml(dateTime(documentRecord.uploadedAt))} · ${statusBadge(processingStatus)}</p>
-                        ${warningText}
-                    </div>
-                    <div class="handbook-document-actions">
-                        <button class="manager-small-button" type="button" data-view-document="${escapeHtml(documentRecord.id)}">View original</button>
-                        <button class="manager-small-button" type="button" data-download-document="${escapeHtml(documentRecord.id)}">Download original</button>
-                        ${documentRecord.status === "error" ? `<button class="manager-small-button" type="button" data-reprocess-document="${escapeHtml(documentRecord.id)}">Retry extraction</button>` : ""}
-                    </div>
-                </article>`;
-        }).join("");
-        updateDocumentSelectionControls();
-    };
-
     const updateCategoryOptions = () => {
         const currentCategory = categoryFilter.value || "All";
         const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
@@ -1050,7 +994,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             showNotice(error instanceof Error ? error.message : "Unable to load course locations.", true);
             return;
         }
-        renderDocuments();
         updateCategoryOptions();
         renderContent();
         renderExamBuilder();
@@ -1263,54 +1206,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         showNotice(`Deleted ${courseIds.length} course(s) and ${sourceIds.length} source item(s).${affectedModules.length ? ` Unpublished ${affectedModules.length} dependent module(s).` : ""}`);
     };
 
-    const deleteSelectedDocuments = async () => {
-        if (!requireMaster()) return;
-        const documentIds = [...selectedDocumentIds].filter(id =>
-            state.documents.some(documentRecord => documentRecord.id === id && documentRecord.status !== "processing")
-        );
-        if (!documentIds.length) return;
-        const deletedDocumentIds = new Set(documentIds);
-        const sourceItems = state.sourceContent.filter(item => deletedDocumentIds.has(item.documentId));
-        const contentIds = sourceItems.map(item => item.id);
-        const affectedModules = state.modules
-            .filter(module => module.publicationStatus === "Published"
-                && Array.isArray(module.sourceContentIds)
-                && module.sourceContentIds.some(id => contentIds.includes(id)))
-            .map(module => ({...module, publicationStatus: "Unpublished", unpublishedAt: new Date().toISOString()}));
-        const confirmation = `Permanently delete ${documentIds.length} handbook(s), their original files, and ${contentIds.length} extracted item(s)?`
-            + (affectedModules.length
-                ? ` ${affectedModules.length} published module(s) that use this content will be unpublished.`
-                : "");
-        if (!window.confirm(confirmation)) return;
-
-        await store.saveMany(
-            {modules: affectedModules},
-            {
-                documents: documentIds,
-                originalFiles: documentIds,
-                sourceContent: contentIds,
-                organizationMetadata: contentIds,
-                reviews: contentIds
-            }
-        );
-        state.documents = state.documents.filter(documentRecord => !deletedDocumentIds.has(documentRecord.id));
-        state.sourceContent = state.sourceContent.filter(item => !deletedDocumentIds.has(item.documentId));
-        state.organizationMetadata = state.organizationMetadata.filter(item => !contentIds.includes(item.contentId));
-        state.reviews = state.reviews.filter(item => !contentIds.includes(item.contentId));
-        affectedModules.forEach(updated => {
-            const index = state.modules.findIndex(module => module.id === updated.id);
-            if (index !== -1) state.modules[index] = updated;
-        });
-        documentIds.forEach(id => selectedDocumentIds.delete(id));
-        contentIds.forEach(id => selectedContentIds.delete(id));
-        if (sourceItems.some(item => item.id === state.activePreviewId)) {
-            state.activePreviewId = null;
-            previewPanel.hidden = true;
-        }
-        render();
-        showNotice(`Deleted ${documentIds.length} handbook(s) and ${contentIds.length} extracted item(s).${affectedModules.length ? ` Unpublished ${affectedModules.length} dependent module(s).` : ""}`);
-    };
-
     const deleteSelectedModules = async () => {
         if (!requireMaster()) return;
         const moduleIds = [...selectedModuleIds].filter(id => state.modules.some(module => module.id === id));
@@ -1335,7 +1230,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const documentIndex = state.documents.findIndex(item => item.id === processingRecord.id);
         if (documentIndex === -1) state.documents.unshift(processingRecord);
         else state.documents[documentIndex] = processingRecord;
-        renderDocuments();
         showNotice(`Extracting text from ${documentRecord.fileName} locally. No AI or remote processing service is used.`);
 
         try {
@@ -1432,7 +1326,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                     originalFiles: [{id, blob: file}]
                 });
                 state.documents.unshift(documentRecord);
-                renderDocuments();
                 await beginProcessing(documentRecord);
             } catch (error) {
                 console.error(`Unable to store or process ${file.name}.`, error);
@@ -1637,7 +1530,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const packageData = {
                 schemaVersion: 1,
                 exportedAt: new Date().toISOString(),
-                prototypeNotice: "Original binary handbooks are stored separately in this browser. Download each original from the handbook library. This JSON preserves extracted text, organizational metadata, and modules.",
+                prototypeNotice: "Original binary handbooks are stored separately in this browser and are not included in this JSON. This JSON preserves extracted text, organizational metadata, and modules.",
                 originalHandbooks: records.documents,
                 extractedSourceContent: records.sourceContent,
                 organizationalMetadata: records.organizationMetadata,
@@ -1651,7 +1544,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             anchor.download = `training-content-source-${new Date().toISOString().slice(0, 10)}.json`;
             anchor.click();
             window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-            showNotice("Source package exported. Download and commit the JSON and original handbooks through your source-control workflow.");
+            showNotice("Source package exported. The JSON does not include original handbook files.");
         } catch (error) {
             console.error("Unable to export the handbook source package.", error);
             showNotice(error instanceof Error ? error.message : String(error), true);
@@ -1671,42 +1564,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById("uploadHandbooksButton").disabled = false;
         }
     });
-    handbookList.addEventListener("click", event => {
-        const button = event.target.closest("[data-view-document], [data-download-document], [data-reprocess-document]");
-        if (!button) return;
-        const documentId = button.dataset.viewDocument || button.dataset.downloadDocument || button.dataset.reprocessDocument;
-        if (button.dataset.viewDocument) openOriginal(documentId);
-        else if (button.dataset.downloadDocument) openOriginal(documentId, null, true);
-        else {
-            const documentRecord = findDocument(documentId);
-            if (documentRecord) beginProcessing(documentRecord).catch(error => {
-                console.error("Unable to retry handbook extraction.", error);
-                showNotice(error instanceof Error ? error.message : String(error), true);
-            });
-        }
-    });
-    handbookList.addEventListener("change", event => {
-        const checkbox = event.target.closest("[data-select-document]");
-        if (!checkbox) return;
-        if (checkbox.checked) selectedDocumentIds.add(checkbox.dataset.selectDocument);
-        else selectedDocumentIds.delete(checkbox.dataset.selectDocument);
-        updateDocumentSelectionControls();
-    });
-    selectAllDocumentsButton.addEventListener("click", () => {
-        const checkboxes = [...handbookList.querySelectorAll("[data-select-document]:not(:disabled)")];
-        const allSelected = checkboxes.length > 0
-            && checkboxes.every(checkbox => selectedDocumentIds.has(checkbox.dataset.selectDocument));
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = !allSelected;
-            if (allSelected) selectedDocumentIds.delete(checkbox.dataset.selectDocument);
-            else selectedDocumentIds.add(checkbox.dataset.selectDocument);
-        });
-        updateDocumentSelectionControls();
-    });
-    deleteSelectedDocumentsButton.addEventListener("click", () => deleteSelectedDocuments().catch(error => {
-        console.error("Unable to delete selected handbooks.", error);
-        showNotice(error instanceof Error ? error.message : String(error), true);
-    }));
     contentExplorer.addEventListener("change", event => {
         const courseCheckbox = event.target.closest("[data-select-structured-course]");
         if (courseCheckbox) {
