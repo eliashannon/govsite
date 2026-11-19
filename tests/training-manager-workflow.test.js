@@ -91,6 +91,7 @@ function fixture(id, status = "approved") {
 }
 
 test("manager keeps existing source content and uploads working without the handbook library", async () => {
+    assert.doesNotMatch(source("ai-training-content-manager.html"), /Synthetic course template|standardized-template-panel/);
     const m = await manager([], [], true, {
         documents:[{id:"old-document", fileName:"old.txt", fileType:"txt"}],
         sourceContent:[{id:"old-source", documentId:"old-document", originalDocumentName:"old.txt", sourceText:"Previously extracted text"}]
