@@ -61,7 +61,6 @@
       <button id="deleteSelectedContentButton" class="btn btn-secondary" type="button" disabled>Delete selected</button>
       <button id="unpublishSelectedCoursesButton" class="btn btn-secondary" type="button" disabled>Unpublish selected courses</button>
       <button id="addSelectedExamCoursesButton" class="btn btn-primary" type="button" disabled>Add approved courses to Exam Builder</button>
-      <button id="createModuleButton" class="btn btn-primary" type="button" disabled>Create module from approved</button>
     </div>
     <div id="contentExplorer" class="handbook-content-explorer"></div>
   </section>
@@ -82,16 +81,6 @@
     <dl id="previewMetadata" class="source-preview-metadata"></dl>
     <p id="previewWarnings" class="source-preview-warnings" hidden></p>
     <pre id="previewText" class="source-preview-text"></pre>
-  </section>
-
-  <section class="ai-manager-panel module-library-panel" aria-labelledby="moduleLibraryTitle">
-    <div class="manager-section-heading"><div><span class="tqs-label">ADMIN-APPROVED MATERIAL</span><h2 id="moduleLibraryTitle">Training modules</h2></div><span id="moduleCount" class="ai-content-count">0 modules</span></div>
-    <div class="handbook-selection-toolbar">
-      <span id="moduleSelectionCount">0 selected</span>
-      <button id="selectAllModulesButton" class="ai-text-button" type="button">Select all</button>
-      <button id="deleteSelectedModulesButton" class="btn btn-secondary" type="button" disabled>Delete selected</button>
-    </div>
-    <div id="moduleList" class="module-list"></div>
   </section>
 
   <section class="ai-manager-panel prototype-course-storage-panel" aria-labelledby="prototypeStorageTitle">
@@ -205,31 +194,6 @@ Every user contributes to organizational security.</pre>
       <p id="examEditorNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
       <div class="ai-dialog-actions"><span></span><button id="cancelExamEditorButton" class="btn btn-secondary" type="button">Cancel</button><button id="addAnotherExamButton" class="btn btn-secondary" type="button">Add Another Exam</button><button id="saveExamButton" class="btn btn-primary" type="button">Save Exam</button></div>
     </div>
-  </dialog>
-  <dialog id="moduleDialog" class="ai-content-dialog module-dialog" aria-labelledby="moduleDialogTitle">
-    <form id="moduleForm">
-      <div class="ai-dialog-header"><div><span class="tqs-label">SOURCE-BASED MODULE</span><h2 id="moduleDialogTitle">Create training module</h2></div><button id="closeModuleDialog" type="button" aria-label="Close">×</button></div>
-      <p class="module-source-summary" id="moduleSourceSummary"></p>
-      <label for="moduleTitle">Module title <span>(administrative label only)</span></label>
-      <input id="moduleTitle" class="form-control" type="text" maxlength="160" required>
-      <fieldset class="module-fieldset"><legend>Link to existing TQS requirements</legend><p>These links do not create or change qualification requirements.</p><div id="moduleTqsOptions" class="module-options"></div></fieldset>
-      <p id="moduleDialogNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
-      <div class="ai-dialog-actions"><span></span><button id="cancelModuleButton" class="btn btn-secondary" type="button">Cancel</button><button class="btn btn-primary" type="submit">Save draft for approval</button></div>
-    </form>
-  </dialog>
-  <dialog id="assignmentDialog" class="ai-content-dialog module-dialog" aria-labelledby="assignmentDialogTitle">
-    <form id="assignmentForm">
-      <div class="ai-dialog-header"><div><span class="tqs-label">COURSE APPROVAL</span><h2 id="assignmentDialogTitle">Approve and assign course</h2></div><button id="closeAssignmentDialog" type="button" aria-label="Close">×</button></div>
-      <p class="module-source-summary">Choose the required organization path. The course will be published to Training Courses after this approval is saved.</p>
-      <label for="assignmentDivision">Division</label>
-      <select id="assignmentDivision" class="form-control" required><option value="">Select Division</option></select>
-      <label for="assignmentBranch">Branch</label>
-      <select id="assignmentBranch" class="form-control" required disabled><option value="">Select Branch</option></select>
-      <label for="assignmentRole">Role</label>
-      <select id="assignmentRole" class="form-control" required disabled><option value="">Select Role</option></select>
-      <p id="assignmentDialogNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
-      <div class="ai-dialog-actions"><span></span><button id="cancelAssignmentButton" class="btn btn-secondary" type="button">Cancel</button><button class="btn btn-primary" type="submit">Approve and publish</button></div>
-    </form>
   </dialog>
 </main></div></div>
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>

@@ -35,7 +35,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const unpublishSelectedCoursesButton = document.getElementById("unpublishSelectedCoursesButton");
     const addSelectedExamCoursesButton = document.getElementById("addSelectedExamCoursesButton");
     const selectAllVisibleButton = document.getElementById("selectAllVisibleButton");
-    const createModuleButton = document.getElementById("createModuleButton");
     const examBuilderList = document.getElementById("examBuilderList");
     const examBuilderCount = document.getElementById("examBuilderCount");
     const examBuilderSelectionCount = document.getElementById("examBuilderSelectionCount");
@@ -46,22 +45,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const examTitleInput = document.getElementById("examTitleInput");
     const examQuestionEditor = document.getElementById("examQuestionEditor");
     const examEditorNotice = document.getElementById("examEditorNotice");
-    const moduleList = document.getElementById("moduleList");
-    const moduleCount = document.getElementById("moduleCount");
-    const moduleSelectionCount = document.getElementById("moduleSelectionCount");
-    const selectAllModulesButton = document.getElementById("selectAllModulesButton");
-    const deleteSelectedModulesButton = document.getElementById("deleteSelectedModulesButton");
     const previewPanel = document.getElementById("sourcePreview");
     const viewOriginalButton = document.getElementById("viewOriginalButton");
-    const moduleDialog = document.getElementById("moduleDialog");
-    const moduleForm = document.getElementById("moduleForm");
-    const moduleDialogNotice = document.getElementById("moduleDialogNotice");
-    const assignmentDialog = document.getElementById("assignmentDialog");
-    const assignmentForm = document.getElementById("assignmentForm");
-    const assignmentDialogNotice = document.getElementById("assignmentDialogNotice");
-    const assignmentDivision = document.getElementById("assignmentDivision");
-    const assignmentBranch = document.getElementById("assignmentBranch");
-    const assignmentRole = document.getElementById("assignmentRole");
     let pendingApprovalModuleId = null;
     const selectedDocumentIds = new Set();
     const selectedContentIds = new Set();
@@ -224,7 +209,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const selectedExamCourseIds = [...selectedStructuredCourseIds].filter(isEligibleExamCourse);
         unpublishSelectedCoursesButton.disabled = selectedPublishedCourseIds.length === 0;
         addSelectedExamCoursesButton.disabled = selectedExamCourseIds.length === 0 || !examBuilderStorageAvailable;
-        createModuleButton.disabled = !selectedAreApproved();
         const visibleCheckboxes = [...contentExplorer.querySelectorAll("[data-select-content]")];
         selectAllVisibleButton.textContent = visibleCheckboxes.length > 0
             && visibleCheckboxes.every(checkbox => selectedContentIds.has(checkbox.dataset.selectContent))
@@ -908,7 +892,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderDocuments();
         updateCategoryOptions();
         renderContent();
-        renderModules();
         renderExamBuilder();
     };
 
@@ -1572,13 +1555,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         else selectedExamBuilderCourseIds.delete(checkbox.dataset.selectExamCourse);
         updateExamBuilderSelectionControls();
     });
-    moduleList.addEventListener("change", event => {
-        const checkbox = event.target.closest("[data-select-module]");
-        if (!checkbox) return;
-        if (checkbox.checked) selectedModuleIds.add(checkbox.dataset.selectModule);
-        else selectedModuleIds.delete(checkbox.dataset.selectModule);
-        updateModuleSelectionControls();
-    });
     contentExplorer.addEventListener("click", event => {
         const unpublishCourseButton = event.target.closest("[data-unpublish-course]");
         if (unpublishCourseButton) {
@@ -1707,62 +1683,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.error("Unable to reject selected source content.", error);
             showNotice(error instanceof Error ? error.message : String(error), true);
         }));
-    createModuleButton.addEventListener("click", openModuleDialog);
-    selectAllModulesButton.addEventListener("click", () => {
-        const allSelected = state.modules.length > 0
-            && state.modules.every(module => selectedModuleIds.has(module.id));
-        if (allSelected) state.modules.forEach(module => selectedModuleIds.delete(module.id));
-        else state.modules.forEach(module => selectedModuleIds.add(module.id));
-        renderModules();
-    });
-    deleteSelectedModulesButton.addEventListener("click", () => deleteSelectedModules().catch(error => {
-        console.error("Unable to delete selected training modules.", error);
-        showNotice(error instanceof Error ? error.message : String(error), true);
-    }));
     viewOriginalButton.addEventListener("click", () => {
         const item = state.sourceContent.find(candidate => candidate.id === state.activePreviewId);
         if (item) openOriginal(item.documentId, item.pageNumber);
     });
-    moduleList.addEventListener("click", event => {
-        const previewButton = event.target.closest("[data-preview-module]");
-        if (previewButton) {
-            previewModule(previewButton.dataset.previewModule);
-            return;
-        }
-        const publishButton = event.target.closest("[data-publish-module]");
-        if (publishButton) {
-            openAssignmentDialog(publishButton.dataset.publishModule);
-            return;
-        }
-        const unpublishButton = event.target.closest("[data-unpublish-module]");
-        if (unpublishButton) unpublishModule(unpublishButton.dataset.unpublishModule);
-    });
     document.getElementById("exportPackageButton").addEventListener("click", exportPackage);
-    document.getElementById("closeModuleDialog").addEventListener("click", () => moduleDialog.close());
-    document.getElementById("cancelModuleButton").addEventListener("click", () => moduleDialog.close());
-    moduleDialog.addEventListener("click", event => {
-        if (event.target === moduleDialog) moduleDialog.close();
-    });
-    moduleForm.addEventListener("submit", event => {
-        createModule(event).catch(error => {
-            console.error("Unable to create the training module.", error);
-            showNotice(error instanceof Error ? error.message : String(error), true, moduleDialogNotice);
-        });
-    });
-    assignmentDivision.addEventListener("change", populateAssignmentBranches);
-    assignmentBranch.addEventListener("change", populateAssignmentRoles);
-    document.getElementById("closeAssignmentDialog").addEventListener("click", () => assignmentDialog.close());
-    document.getElementById("cancelAssignmentButton").addEventListener("click", () => assignmentDialog.close());
-    assignmentDialog.addEventListener("click", event => {
-        if (event.target === assignmentDialog) assignmentDialog.close();
-    });
-    assignmentForm.addEventListener("submit", event => {
-        approveAndPublishModule(event).catch(error => {
-            console.error("Unable to approve and publish the training course.", error);
-            showNotice(error instanceof Error ? error.message : String(error), true, assignmentDialogNotice);
-        });
-    });
-
     try {
         const records = await store.readAll();
         state.documents = records.documents;
