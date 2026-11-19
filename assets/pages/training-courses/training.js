@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedCourse = null;
     let progress = null;
     let currentModuleIndex = 0;
+    let examState = null;
 
     const app = document.getElementById("trainingApp");
     const errorBox = document.getElementById("trainingError");
@@ -367,9 +368,50 @@ document.addEventListener("DOMContentLoaded", () => {
         return null;
     }
 
+    function hasExam(module) {
+        return Array.isArray(module?.assessment?.questions) && module.assessment.questions.length > 0;
+    }
+
+    function getExamState(module) {
+        if (!examState || examState.moduleId !== module.id) {
+            examState = {moduleId:module.id, answers:[], submitted:false, passed:false, correct:0, score:0};
+        }
+        return examState;
+    }
+
+    function isModulePassed(module) {
+        if (!hasExam(module)) return true;
+        return progress.continuedModuleIds.includes(module.id)
+            || (examState?.moduleId === module.id && examState.passed === true);
+    }
+
+    function submitExam(module) {
+        const exam = getExamState(module);
+        const questions = module.assessment.questions;
+        if (questions.some((_, index) => !Number.isInteger(exam.answers[index]))) return;
+        exam.correct = questions.filter((question, index) => exam.answers[index] === question.answerIndex).length;
+        exam.score = Math.round((exam.correct / questions.length) * 100);
+        exam.passed = exam.correct === questions.length;
+        exam.submitted = true;
+        renderModuleContent();
+        document.getElementById("examResult")?.focus({preventScroll:true});
+    }
+
+    function retryExam(module) {
+        const exam = getExamState(module);
+        exam.answers = [];
+        exam.submitted = false;
+        exam.passed = false;
+        renderModuleContent();
+        const heading = document.getElementById("examHeading");
+        if (typeof heading?.scrollIntoView === "function") heading.scrollIntoView({block:"start"});
+        heading?.focus({preventScroll:true});
+    }
+
     function handleContinue() {
         const module = selectedCourse.modules[currentModuleIndex];
         if (currentModuleIndex === selectedCourse.modules.length - 1) return;
+        if (!isModulePassed(module)) return;
         if (!progress.continuedModuleIds.includes(module.id)) {
             progress.continuedModuleIds.push(module.id);
             progress.completedModuleIds = [...new Set([...progress.completedModuleIds, module.id])];
@@ -382,6 +424,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function handleMarkComplete() {
         if (currentModuleIndex !== selectedCourse.modules.length - 1) return;
         const finalModule = selectedCourse.modules[currentModuleIndex];
+        if (!isModulePassed(finalModule)) return;
         if (!progress.continuedModuleIds.includes(finalModule.id)) {
             progress.continuedModuleIds.push(finalModule.id);
         }
@@ -460,6 +503,67 @@ document.addEventListener("DOMContentLoaded", () => {
             content.append(reminder);
         }
 
+        const exam = hasExam(module) && !progress.continuedModuleIds.includes(module.id) ? getExamState(module) : null;
+        const gated = exam !== null && !exam.passed;
+        let submitButton = null;
+        const updateSubmitState = () => {
+            if (!exam || !submitButton) return;
+            submitButton.disabled = module.assessment.questions.some((_, index) => !Number.isInteger(exam.answers[index]));
+        };
+        if (exam) {
+            const questions = module.assessment.questions;
+            const examSection = document.createElement("section");
+            examSection.className = "training-exam";
+            const examHeading = document.createElement("h3");
+            examHeading.id = "examHeading";
+            examHeading.tabIndex = -1;
+            examHeading.textContent = "Knowledge Check";
+            const instructions = document.createElement("p");
+            instructions.textContent = "Answer every question. You must score 100% to continue.";
+            examSection.append(examHeading, instructions);
+            questions.forEach((question, questionIndex) => {
+                const fieldset = document.createElement("fieldset");
+                fieldset.className = "training-exam-question";
+                const legend = document.createElement("legend");
+                legend.textContent = `${questionIndex + 1}. ${question.prompt}`;
+                fieldset.append(legend);
+                question.choices.forEach((choice, choiceIndex) => {
+                    const label = document.createElement("label");
+                    label.className = "training-exam-choice";
+                    const input = document.createElement("input");
+                    input.type = "radio";
+                    input.name = `exam-question-${questionIndex}`;
+                    input.value = String(choiceIndex);
+                    input.checked = exam.answers[questionIndex] === choiceIndex;
+                    input.disabled = exam.submitted;
+                    input.addEventListener("change", () => {
+                        exam.answers[questionIndex] = choiceIndex;
+                        updateSubmitState();
+                    });
+                    const text = document.createElement("span");
+                    text.textContent = choice;
+                    label.append(input, text);
+                    fieldset.append(label);
+                });
+                examSection.append(fieldset);
+            });
+            if (exam.submitted) {
+                const result = document.createElement("p");
+                result.id = "examResult";
+                result.tabIndex = -1;
+                result.setAttribute("role", "status");
+                if (exam.passed) {
+                    result.className = "training-success";
+                    result.textContent = "Success: you passed the knowledge check.";
+                } else {
+                    result.className = "training-exam-fail";
+                    result.textContent = `You scored ${exam.score}% (${exam.correct} of ${questions.length} correct). You need 100% to continue.`;
+                }
+                examSection.append(result);
+            }
+            content.append(examSection);
+        }
+
         // Future test/SQL database integration can be inserted here before handleContinue advances.
         const controls = document.createElement("div");
         controls.className = "training-module-controls";
@@ -472,7 +576,24 @@ document.addEventListener("DOMContentLoaded", () => {
             controls.append(back);
         }
 
-        if (currentModuleIndex < selectedCourse.modules.length - 1) {
+        if (gated) {
+            if (exam.submitted) {
+                const retry = document.createElement("button");
+                retry.type = "button";
+                retry.className = "btn btn-primary";
+                retry.textContent = "Retry";
+                retry.addEventListener("click", () => retryExam(module));
+                controls.append(retry);
+            } else {
+                submitButton = document.createElement("button");
+                submitButton.type = "button";
+                submitButton.className = "btn btn-primary";
+                submitButton.textContent = "Submit";
+                submitButton.addEventListener("click", () => submitExam(module));
+                controls.append(submitButton);
+                updateSubmitState();
+            }
+        } else if (currentModuleIndex < selectedCourse.modules.length - 1) {
             const next = document.createElement("button");
             next.type = "button";
             next.className = "btn btn-primary";

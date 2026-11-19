@@ -336,3 +336,56 @@ test("protected pages share the account control styles", () => {
     assert.match(sharedComponents, /\.account-avatar\{width:36px;height:36px;[^}]*color:var\(--blue-700\)/);
     assert.doesNotMatch(dashboardCss, /\.dashboard-account\s+\.account-(button|avatar)/);
 });
+
+test("knowledge checks gate Continue and Mark Complete until every answer is correct", async () => {
+    const base = JSON.parse(source("data/courses.json")).courses[0];
+    const quiz = {questions:[
+        {prompt:"First question?", choices:["A","B","C","D"], answerIndex:2},
+        {prompt:"Second question?", choices:["A","B","C","D"], answerIndex:1}
+    ]};
+    const fixture = {...base, modules:Array.from({length:5}, () => structuredClone(base.modules[0]))};
+    fixture.modules[0].assessment = quiz;
+    fixture.modules[4].assessment = quiz;
+    const p = await player(false, null, fixture);
+    const inputs = () => descendants(p.elements.moduleContent).filter(element => element.tagName === "INPUT");
+    const choose = (question, choice) => {
+        const input = inputs()[question * 4 + choice];
+        input.checked = true;
+        input.events.change();
+    };
+
+    assert.equal(p.button("Continue"), undefined);
+    assert.equal(p.button("Submit").disabled, true);
+    choose(0, 2);
+    assert.equal(p.button("Submit").disabled, true);
+    choose(1, 0);
+    assert.equal(p.button("Submit").disabled, false);
+    p.button("Submit").click();
+    assert.match(p.elements.moduleContent.textContent, /You scored 50% \(1 of 2 correct\)\. You need 100% to continue\./);
+    assert.equal(p.button("Submit"), undefined);
+    assert.equal(p.button("Continue"), undefined);
+    assert.ok(inputs().every(input => input.disabled));
+
+    p.button("Retry").click();
+    assert.ok(inputs().every(input => input.checked !== true));
+    assert.equal(p.button("Submit").disabled, true);
+    assert.equal(p.button("Retry"), undefined);
+
+    choose(0, 2);
+    choose(1, 1);
+    p.button("Submit").click();
+    assert.match(p.elements.moduleContent.textContent, /Success: you passed the knowledge check\./);
+    assert.equal(p.elements.courseProgressLabel.textContent, "0%");
+    p.button("Continue").click();
+    assert.equal(p.elements.courseProgressLabel.textContent, "20%");
+
+    for (let index = 1; index < 4; index += 1) p.button("Continue").click();
+    assert.match(p.elements.moduleContent.textContent, /Final module/);
+    assert.equal(p.button("Mark Complete"), undefined);
+    assert.equal(p.button("Submit").disabled, true);
+    choose(0, 2);
+    choose(1, 1);
+    p.button("Submit").click();
+    p.button("Mark Complete").click();
+    assert.equal(p.elements.courseProgressLabel.textContent, "100%");
+});
