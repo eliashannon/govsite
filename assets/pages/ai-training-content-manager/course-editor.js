@@ -15,6 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const slug = value => String(value || "").toLowerCase().trim()
         .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+    const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
+
     const makeId = prefix => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
     const readDraftStore = () => {
@@ -78,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function sendCourseToContentExplorer(course, reviewStatus, previousCourseId = "") {
         if (!window.TrainingContentStore || !Array.isArray(course.modules) || !course.modules.length) {
-            throw new Error("Content Explorer storage is unavailable or the course has no modules.");
+            throw new Error("Course Builder storage is unavailable or the course has no modules.");
         }
         await window.PortalDataReady;
         const contentId = `structured-course-${course.id}`;
@@ -170,6 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
             estimatedMinutes: Number.isFinite(Number(module.estimatedMinutes)) ? Number(module.estimatedMinutes) : 10,
             learningObjectives: Array.isArray(module.learningObjectives) ? module.learningObjectives : [],
             content: Array.isArray(module.content) ? module.content : [],
+            ...(isObject(module.assessment) ? {assessment:JSON.parse(JSON.stringify(module.assessment))} : {}),
             source: module.source || {fileName: parsed.source?.fileName || ""}
         }));
         normalized.roleAssignments = (Array.isArray(parsed.roleAssignments) ? parsed.roleAssignments : []).map(item => ({
@@ -407,6 +410,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     content: secondContent,
                     source: {...module.source, section: `${module.sourceModuleNumber || ""} split`}
                 };
+                delete module.assessment;
                 draft.modules.splice(moduleIndex + 1, 0, split);
                 draft.modules.forEach((item, index) => { item.order = index + 1; });
                 draft.warnings.push("A module split may have ambiguous source attribution; verify source traceability.");
@@ -419,6 +423,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 const next = draft.modules[moduleIndex + 1];
                 module.content.push(...next.content);
                 module.learningObjectives = [...new Set([...module.learningObjectives, ...next.learningObjectives])];
+                const assessmentQuestions = [
+                    ...(Array.isArray(module.assessment?.questions) ? module.assessment.questions : []),
+                    ...(Array.isArray(next.assessment?.questions) ? next.assessment.questions : [])
+                ];
+                if (assessmentQuestions.length) {
+                    module.assessment = {
+                        ...(module.assessment || next.assessment),
+                        questions:assessmentQuestions
+                    };
+                }
                 draft.modules.splice(moduleIndex + 1, 1);
                 draft.modules.forEach((item, index) => { item.order = index + 1; });
                 draft.warnings.push("Merged modules may have ambiguous source attribution; verify source traceability.");
@@ -513,6 +527,7 @@ document.addEventListener("DOMContentLoaded", () => {
             estimatedMinutes: Number(module.estimatedMinutes) || 10,
             learningObjectives: [...module.learningObjectives],
             content: JSON.parse(JSON.stringify(module.content)),
+            ...(isObject(module.assessment) ? {assessment:JSON.parse(JSON.stringify(module.assessment))} : {}),
             source: {
                 fileName: module.source?.fileName || draft.source?.fileName || "",
                 ...(module.source?.page ? {page:module.source.page} : {}),
@@ -723,7 +738,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 await sendCourseToContentExplorer(canonicalCourse(), "Pending Review", previous?.id);
                 renderSavedLocalCourses();
                 dialog.close();
-                showDraftNotice(`"${draft.title}" is in Content Explorer for review. It is not yet in Training Courses.`);
+                showDraftNotice(`"${draft.title}" is in Course Builder for review. It is not yet in Training Courses.`);
                 return;
             } catch (error) {
                 if (previousStore === null) localStorage.removeItem(STORAGE_KEY);
@@ -732,7 +747,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("courseDraftStatus").value = draft.status;
                 editingCourseId = previousEditingId;
                 validateDraftCourse();
-                console.error("Unable to submit the course to Content Explorer.", error);
+                console.error("Unable to submit the course to Course Builder.", error);
                 showDraftNotice(`Unable to submit the course: ${error.message}`, true);
                 return;
             }

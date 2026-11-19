@@ -54,6 +54,16 @@ test("shared schema rejects incomplete courses and unsafe links but accepts exis
     assert.equal(schema.safeUrl("//example.test/path"), false);
     assert.equal(schema.safeUrl("data:image/svg+xml;base64,PHN2Zz4=", true), false);
     assert.equal(schema.safeUrl("data:image/png;base64,AAAA", true), true);
+
+    const assessedCourse = structuredClone(builtIn[0]);
+    assessedCourse.modules[0].assessment = {questions:[{
+        prompt:"Which choice is correct?",
+        choices:["Correct","Incorrect"],
+        answerIndex:0
+    }]};
+    assert.equal(schema.validateCourse(assessedCourse).length, 0);
+    assessedCourse.modules[0].assessment.questions[0].answerIndex = 2;
+    assert.ok(schema.validateCourse(assessedCourse).some(error => /valid correct answer/.test(error)));
 });
 
 test("converts DOCX headings, lists, tables, links, and images to structured blocks", async () => {

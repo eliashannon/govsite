@@ -292,7 +292,7 @@ test("Training Courses no longer exposes catalog-wide division, branch, or role 
     assert.match(script, /const roleName = hasSignedInAccount \? roleSelection\?\.role/);
 });
 
-test("published courses can be selected and unpublished and course player has a back link", () => {
+test("published courses can be selected, queued for exam building, and returned to Course Builder", () => {
     const explorerHtml = source("ai-training-content-manager.html");
     const explorer = source("assets/pages/ai-training-content-manager/ai-training-content-manager.js");
     const localEditor = source("assets/pages/ai-training-content-manager/course-editor.js");
@@ -300,13 +300,20 @@ test("published courses can be selected and unpublished and course player has a 
     const player = source("assets/pages/training-courses/training.js");
     assert.match(explorerHtml, /unpublishSelectedCoursesButton/);
     assert.match(explorerHtml, /unpublishSelectedLocalCourseButton/);
+    assert.match(explorerHtml, /id="examBuilderTitle">Exam Builder/);
+    assert.match(explorerHtml, /addSelectedExamCoursesButton/);
+    assert.match(explorerHtml, /returnSelectedExamCoursesButton/);
     assert.match(explorer, /data-select-structured-course/);
+    assert.match(explorer, /trainingExamBuilderCourseIds/);
+    assert.match(explorer, /data-edit-exam/);
+    assert.match(explorerHtml, /Place exam after module/);
     assert.match(explorer, /unpublishStructuredCourses/);
     assert.match(explorer, /status:"approved"/);
     assert.match(explorerHtml, /Unpublish Selected Course/);
+    assert.match(explorerHtml, /Course Builder/);
     assert.match(playerHtml, /id="courseBackLink"/);
     assert.match(player, /Back to Training Courses/);
-    assert.match(player, /Back to Content Explorer/);
+    assert.match(player, /Back to Course Builder/);
 });
 
 test("topbar search markup and shared styles are consistent across pages", () => {

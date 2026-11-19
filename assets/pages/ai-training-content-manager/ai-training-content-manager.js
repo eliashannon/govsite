@@ -33,8 +33,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const rejectSelectedButton = document.getElementById("rejectSelectedButton");
     const deleteSelectedContentButton = document.getElementById("deleteSelectedContentButton");
     const unpublishSelectedCoursesButton = document.getElementById("unpublishSelectedCoursesButton");
+    const addSelectedExamCoursesButton = document.getElementById("addSelectedExamCoursesButton");
     const selectAllVisibleButton = document.getElementById("selectAllVisibleButton");
     const createModuleButton = document.getElementById("createModuleButton");
+    const examBuilderList = document.getElementById("examBuilderList");
+    const examBuilderCount = document.getElementById("examBuilderCount");
+    const examBuilderSelectionCount = document.getElementById("examBuilderSelectionCount");
+    const selectAllExamCoursesButton = document.getElementById("selectAllExamCoursesButton");
+    const returnSelectedExamCoursesButton = document.getElementById("returnSelectedExamCoursesButton");
+    const examEditorDialog = document.getElementById("examEditorDialog");
+    const examModuleSelect = document.getElementById("examModuleSelect");
+    const examQuestionEditor = document.getElementById("examQuestionEditor");
+    const examEditorNotice = document.getElementById("examEditorNotice");
     const moduleList = document.getElementById("moduleList");
     const moduleCount = document.getElementById("moduleCount");
     const moduleSelectionCount = document.getElementById("moduleSelectionCount");
@@ -55,7 +65,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const selectedDocumentIds = new Set();
     const selectedContentIds = new Set();
     const selectedStructuredCourseIds = new Set();
+    const selectedExamBuilderCourseIds = new Set();
     const selectedModuleIds = new Set();
+    const examBuilderCourseIds = new Set();
+    let examBuilderStorageAvailable = true;
+    let editingExamCourse = null;
+    let editingExamQuestionsByModule = new Map();
+    let editingExamModuleId = "";
+    let editingExamHadQuestions = false;
     const maximumFileSize = 75 * 1024 * 1024;
     const state = {
         documents: [],
@@ -65,7 +82,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         modules: [],
         activePreviewId: null
     };
-
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({
         "&": "&amp;",
         "<": "&lt;",
@@ -83,12 +99,51 @@ document.addEventListener("DOMContentLoaded", async () => {
         target.hidden = !message;
         target.classList.toggle("is-error", isError);
     };
+    try {
+        const savedIds = JSON.parse(localStorage.getItem("trainingExamBuilderCourseIds") || "[]");
+        if (!Array.isArray(savedIds) || !savedIds.every(id => typeof id === "string")) {
+            throw new Error("The Exam Builder course queue has an invalid format.");
+        }
+        savedIds.forEach(id => examBuilderCourseIds.add(id));
+    } catch (error) {
+        examBuilderStorageAvailable = false;
+        console.error("Unable to read the Exam Builder course queue.", error);
+        showNotice("The Exam Builder queue could not be read. Clear or repair trainingExamBuilderCourseIds in this browser's local storage before using the Exam Builder.", true);
+    }
     const isMasterUser = () => profile.isMaster === true
         && profile.email.toLowerCase() === "elias@navy.mil";
     const requireMaster = target => {
         if (isMasterUser()) return true;
         showNotice("Only the master account can approve or publish training courses.", true, target);
         return false;
+    };
+    const getStructuredCourse = courseId => {
+        try {
+            const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+            return records && typeof records === "object" && !Array.isArray(records) ? records[courseId] || null : null;
+        } catch (error) {
+            console.error("Unable to read the structured course.", error);
+            showNotice("Unable to read a structured course from local storage.", true);
+            return null;
+        }
+    };
+    const isEligibleExamCourse = courseId => ["approved", "published"].includes(getStructuredCourse(courseId)?.status);
+    const persistExamBuilderQueue = courseIds => {
+        if (!examBuilderStorageAvailable) {
+            showNotice("The Exam Builder queue is unavailable until its saved data is repaired.", true);
+            return false;
+        }
+        try {
+            const uniqueIds = [...new Set(courseIds)];
+            localStorage.setItem("trainingExamBuilderCourseIds", JSON.stringify(uniqueIds));
+            examBuilderCourseIds.clear();
+            uniqueIds.forEach(id => examBuilderCourseIds.add(id));
+            return true;
+        } catch (error) {
+            console.error("Unable to save the Exam Builder course queue.", error);
+            showNotice(error instanceof Error ? error.message : "Unable to save the Exam Builder course queue.", true);
+            return false;
+        }
     };
     const statusClass = status => ({
         "Processed": "status-processed",
@@ -163,7 +218,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         approveSelectedButton.disabled = selectedContentIds.size === 0;
         rejectSelectedButton.disabled = selectedContentIds.size === 0;
         deleteSelectedContentButton.disabled = selectedContentIds.size === 0;
-        unpublishSelectedCoursesButton.disabled = selectedStructuredCourseIds.size === 0;
+        const selectedPublishedCourseIds = [...selectedStructuredCourseIds].filter(id => getStructuredCourse(id)?.status === "published");
+        const selectedExamCourseIds = [...selectedStructuredCourseIds].filter(isEligibleExamCourse);
+        unpublishSelectedCoursesButton.disabled = selectedPublishedCourseIds.length === 0;
+        addSelectedExamCoursesButton.disabled = selectedExamCourseIds.length === 0 || !examBuilderStorageAvailable;
         createModuleButton.disabled = !selectedAreApproved();
         const visibleCheckboxes = [...contentExplorer.querySelectorAll("[data-select-content]")];
         selectAllVisibleButton.textContent = visibleCheckboxes.length > 0
@@ -264,10 +322,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 : course?.status === "approved" ? "Approved"
                 : course?.status === "rejected" ? "Rejected"
                 : course?.status === "needs-review" ? "Pending Review" : "Unpublished";
+            const canSelectForExam = ["approved", "published"].includes(course?.status);
             return `
                 <article class="source-content-item">
-                    ${course?.status === "published"
-                        ? `<input type="checkbox" data-select-structured-course="${escapeHtml(item.structuredCourseId)}" aria-label="Select published course ${escapeHtml(course.title || item.structuredCourseId)}" ${selectedStructuredCourseIds.has(item.structuredCourseId) ? "checked" : ""}>`
+                    ${canSelectForExam
+                        ? `<input type="checkbox" data-select-structured-course="${escapeHtml(item.structuredCourseId)}" aria-label="Select approved course ${escapeHtml(course.title || item.structuredCourseId)}" ${selectedStructuredCourseIds.has(item.structuredCourseId) ? "checked" : ""}>`
                         : `<span></span>`}
                     <div class="source-content-copy">
                         <button class="source-item-preview" type="button" data-preview-course="${escapeHtml(item.structuredCourseId)}">${escapeHtml(heading || item.structuredCourseId)}</button>
@@ -435,11 +494,311 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateModuleSelectionControls();
     };
 
+    const updateExamBuilderSelectionControls = () => {
+        const availableIds = new Set(examBuilderCourseIds);
+        selectedExamBuilderCourseIds.forEach(id => {
+            if (!availableIds.has(id)) selectedExamBuilderCourseIds.delete(id);
+        });
+        examBuilderSelectionCount.textContent = `${selectedExamBuilderCourseIds.size} selected`;
+        returnSelectedExamCoursesButton.disabled = selectedExamBuilderCourseIds.size === 0 || !examBuilderStorageAvailable;
+        selectAllExamCoursesButton.textContent = examBuilderCourseIds.size > 0
+            && [...examBuilderCourseIds].every(id => selectedExamBuilderCourseIds.has(id))
+            ? "Deselect all"
+            : "Select all";
+    };
+
+    const renderExamBuilder = () => {
+        examBuilderCount.textContent = `${examBuilderCourseIds.size} ${examBuilderCourseIds.size === 1 ? "course" : "courses"}`;
+        if (!examBuilderCourseIds.size) {
+            examBuilderList.innerHTML = '<div class="handbook-empty">No courses are in the Exam Builder. Select approved courses in Course Builder and add them here.</div>';
+            updateExamBuilderSelectionControls();
+            return;
+        }
+        let records = {};
+        try {
+            const parsed = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+                throw new Error("The structured course store has an invalid format.");
+            }
+            records = parsed;
+        } catch (error) {
+            console.error("Unable to load courses for the Exam Builder.", error);
+            showNotice(error instanceof Error ? error.message : "Unable to load courses for the Exam Builder.", true);
+        }
+        examBuilderList.innerHTML = [...examBuilderCourseIds].map(courseId => {
+            const course = records[courseId];
+            if (!course) {
+                return `<article class="exam-builder-course">
+                    <input type="checkbox" data-select-exam-course="${escapeHtml(courseId)}" aria-label="Select unavailable queued course ${escapeHtml(courseId)}" ${selectedExamBuilderCourseIds.has(courseId) ? "checked" : ""}>
+                    <div class="exam-builder-course-copy"><h3>Course unavailable</h3><p>${escapeHtml(courseId)} is no longer saved in Course Builder.</p></div>
+                    <div class="exam-builder-course-actions"><button class="manager-small-button" type="button" data-return-exam-course="${escapeHtml(courseId)}">Return to Course Builder</button></div>
+                </article>`;
+            }
+            const eligible = ["approved", "published"].includes(course.status);
+            const examModules = (Array.isArray(course.modules) ? course.modules : [])
+                .filter(module => Array.isArray(module?.assessment?.questions) && module.assessment.questions.length);
+            const questionCount = examModules.reduce((total, module) => total + module.assessment.questions.length, 0);
+            const examSummary = examModules.length
+                ? `${questionCount} ${questionCount === 1 ? "question" : "questions"} after ${examModules.map(module => module.title || "Untitled module").join(", ")}`
+                : "No exam questions yet";
+            return `<article class="exam-builder-course">
+                <input type="checkbox" data-select-exam-course="${escapeHtml(courseId)}" aria-label="Select ${escapeHtml(course.title || courseId)} in Exam Builder" ${selectedExamBuilderCourseIds.has(courseId) ? "checked" : ""}>
+                <div class="exam-builder-course-copy">
+                    <h3>${escapeHtml(course.title || courseId)}</h3>
+                    <p>${escapeHtml(examSummary)}</p>
+                    <div class="exam-builder-course-meta"><span>${escapeHtml(course.status || "draft")}</span><span>${(course.modules || []).length} ${(course.modules || []).length === 1 ? "module" : "modules"}</span></div>
+                </div>
+                <div class="exam-builder-course-actions">
+                    <button class="manager-small-button" type="button" data-edit-exam="${escapeHtml(courseId)}" ${eligible ? "" : "disabled"}>Build / edit exam</button>
+                    <button class="manager-small-button" type="button" data-preview-exam-course="${escapeHtml(courseId)}" ${eligible ? "" : "disabled"}>Preview course</button>
+                    <button class="manager-small-button" type="button" data-return-exam-course="${escapeHtml(courseId)}">Return to Course Builder</button>
+                </div>
+            </article>`;
+        }).join("");
+        updateExamBuilderSelectionControls();
+    };
+
+    const renderExamQuestions = () => {
+        examQuestionEditor.replaceChildren();
+        const questions = editingExamQuestionsByModule.get(editingExamModuleId) || [];
+        document.getElementById("removeModuleExamButton").hidden = questions.length === 0;
+        if (!questions.length) {
+            const empty = document.createElement("p");
+            empty.className = "handbook-empty";
+            empty.textContent = "No questions have been added for this module.";
+            examQuestionEditor.append(empty);
+        }
+        questions.forEach((question, questionIndex) => {
+            const card = document.createElement("section");
+            card.className = "exam-question-card";
+            const heading = document.createElement("div");
+            heading.className = "exam-question-heading";
+            const title = document.createElement("strong");
+            title.textContent = `Question ${questionIndex + 1}`;
+            const removeQuestion = document.createElement("button");
+            removeQuestion.type = "button";
+            removeQuestion.className = "manager-small-button";
+            removeQuestion.textContent = "Remove question";
+            removeQuestion.addEventListener("click", () => {
+                questions.splice(questionIndex, 1);
+                renderExamQuestions();
+            });
+            heading.append(title, removeQuestion);
+
+            const promptLabel = document.createElement("label");
+            promptLabel.textContent = "Question";
+            const prompt = document.createElement("textarea");
+            prompt.required = true;
+            prompt.value = question.prompt || "";
+            prompt.addEventListener("input", () => { question.prompt = prompt.value; });
+            promptLabel.append(prompt);
+
+            const answerList = document.createElement("div");
+            answerList.className = "exam-answer-list";
+            const choiceLimit = document.createElement("p");
+            choiceLimit.className = "exam-editor-help";
+            choiceLimit.textContent = "Enter at least two answer choices and select the correct answer.";
+            answerList.append(choiceLimit);
+            (Array.isArray(question.choices) ? question.choices : []).forEach((choice, choiceIndex) => {
+                const row = document.createElement("label");
+                row.className = "exam-answer-choice";
+                const radio = document.createElement("input");
+                radio.type = "radio";
+                radio.name = `exam-answer-${questionIndex}`;
+                radio.checked = question.answerIndex === choiceIndex;
+                radio.setAttribute("aria-label", `Mark choice ${choiceIndex + 1} correct`);
+                radio.addEventListener("change", () => { question.answerIndex = choiceIndex; });
+                const input = document.createElement("input");
+                input.type = "text";
+                input.maxLength = 500;
+                input.required = true;
+                input.value = choice;
+                input.setAttribute("aria-label", `Answer choice ${choiceIndex + 1}`);
+                input.addEventListener("input", () => { question.choices[choiceIndex] = input.value; });
+                const removeChoice = document.createElement("button");
+                removeChoice.type = "button";
+                removeChoice.className = "manager-small-button";
+                removeChoice.textContent = "Remove";
+                removeChoice.disabled = question.choices.length <= 2;
+                removeChoice.addEventListener("click", () => {
+                    question.choices.splice(choiceIndex, 1);
+                    if (question.answerIndex === choiceIndex) question.answerIndex = -1;
+                    else if (question.answerIndex > choiceIndex) question.answerIndex -= 1;
+                    renderExamQuestions();
+                });
+                row.append(radio, input, removeChoice);
+                answerList.append(row);
+            });
+            const questionActions = document.createElement("div");
+            questionActions.className = "exam-question-actions";
+            const addChoice = document.createElement("button");
+            addChoice.type = "button";
+            addChoice.className = "manager-small-button";
+            addChoice.textContent = "Add answer choice";
+            addChoice.addEventListener("click", () => {
+                question.choices.push("");
+                renderExamQuestions();
+            });
+            questionActions.append(addChoice);
+            answerList.append(questionActions);
+            card.append(heading, promptLabel, answerList);
+            examQuestionEditor.append(card);
+        });
+    };
+
+    const openExamEditor = courseId => {
+        if (!requireMaster(examEditorNotice)) return;
+        const course = getStructuredCourse(courseId);
+        if (!course || !["approved", "published"].includes(course.status)) {
+            showNotice("Only an approved course can be edited in the Exam Builder.", true, examEditorNotice);
+            return;
+        }
+        if (!Array.isArray(course.modules) || !course.modules.length) {
+            showNotice("This course has no modules to attach an exam to.", true, examEditorNotice);
+            return;
+        }
+        editingExamCourse = JSON.parse(JSON.stringify(course));
+        editingExamQuestionsByModule = new Map(course.modules.map(module => [
+            module.id,
+            Array.isArray(module.assessment?.questions)
+                ? module.assessment.questions.map(question => ({
+                    ...question,
+                    prompt:typeof question?.prompt === "string" ? question.prompt : "",
+                    choices:Array.isArray(question?.choices) ? [...question.choices] : [],
+                    answerIndex:Number.isInteger(question?.answerIndex) ? question.answerIndex : -1
+                }))
+                : []
+        ]));
+        editingExamHadQuestions = [...editingExamQuestionsByModule.values()].some(questions => questions.length);
+        editingExamModuleId = course.modules.find(module => editingExamQuestionsByModule.get(module.id)?.length)?.id
+            || course.modules[0].id;
+        examModuleSelect.replaceChildren(...course.modules.map((module, index) => {
+            const option = document.createElement("option");
+            option.value = module.id;
+            option.textContent = `${module.sourceModuleNumber ? `${module.sourceModuleNumber}: ` : `Module ${index + 1}: `}${module.title || "Untitled module"}`;
+            option.selected = module.id === editingExamModuleId;
+            return option;
+        }));
+        document.getElementById("examEditorCourseTitle").textContent = course.title || course.id;
+        showNotice("", false, examEditorNotice);
+        renderExamQuestions();
+        examEditorDialog.showModal();
+    };
+
+    const validateExamQuestions = questions => {
+        if (!Array.isArray(questions) || !questions.length) return ["Add at least one question."];
+        const issues = [];
+        questions.forEach((question, index) => {
+            const label = `Question ${index + 1}`;
+            if (typeof question.prompt !== "string" || !question.prompt.trim()) issues.push(`${label} needs question text.`);
+            if (!Array.isArray(question.choices) || question.choices.length < 2
+                || !question.choices.every(choice => typeof choice === "string" && choice.trim())) {
+                issues.push(`${label} needs at least two non-empty answer choices.`);
+            }
+            if (!Number.isInteger(question.answerIndex) || question.answerIndex < 0 || question.answerIndex >= (question.choices || []).length) {
+                issues.push(`${label} needs one correct answer selected.`);
+            }
+        });
+        return issues;
+    };
+
+    const saveExam = () => {
+        if (!requireMaster(examEditorNotice) || !editingExamCourse) return;
+        const hasQuestions = [...editingExamQuestionsByModule.values()].some(questions => questions.length);
+        if (!hasQuestions && !editingExamHadQuestions) {
+            showNotice("Add an exam question before saving.", true, examEditorNotice);
+            return;
+        }
+        for (const [moduleId, questions] of editingExamQuestionsByModule.entries()) {
+            if (!questions.length) continue;
+            const errors = validateExamQuestions(questions);
+            if (errors.length) {
+                const module = editingExamCourse.modules.find(item => item.id === moduleId);
+                showNotice(`${module?.title || "A module"}: ${errors.join(" ")}`, true, examEditorNotice);
+                return;
+            }
+        }
+        showNotice("", false, examEditorNotice);
+        try {
+            const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+            const current = records[editingExamCourse.id];
+            if (!current || JSON.stringify(current) !== JSON.stringify(editingExamCourse)) {
+                throw new Error("The course changed while the exam was being edited. Close this dialog and reopen the course.");
+            }
+            if (!["approved", "published"].includes(current.status)) {
+                throw new Error("Only an approved course can be updated in the Exam Builder.");
+            }
+            const changedAt = new Date().toISOString();
+            const modules = current.modules.map(module => {
+                const questions = editingExamQuestionsByModule.get(module.id) || [];
+                if (!questions.length) {
+                    const {assessment, ...moduleWithoutAssessment} = module;
+                    return moduleWithoutAssessment;
+                }
+                return {
+                    ...module,
+                    assessment: {...(module.assessment || {}), questions:JSON.parse(JSON.stringify(questions))}
+                };
+            });
+            records[current.id] = {
+                ...current,
+                ...(current.status === "published" ? {status:"approved", publishedAt:null, unpublishedAt:changedAt} : {}),
+                modules
+            };
+            localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+            window.dispatchEvent(new Event("training-course-changed"));
+            examEditorDialog.close();
+            editingExamCourse = null;
+            render();
+            showNotice("Exam saved. Preview the course, then publish it when ready.");
+        } catch (error) {
+            console.error("Unable to save the course exam.", error);
+            showNotice(error instanceof Error ? error.message : "Unable to save the course exam.", true, examEditorNotice);
+        }
+    };
+
+    const addSelectedCoursesToExamBuilder = () => {
+        if (!requireMaster()) return;
+        const eligibleIds = [...selectedStructuredCourseIds].filter(isEligibleExamCourse);
+        if (!eligibleIds.length) {
+            showNotice("Select one or more approved courses in Course Builder first.", true);
+            return;
+        }
+        const queuedBefore = examBuilderCourseIds.size;
+        if (!persistExamBuilderQueue([...examBuilderCourseIds, ...eligibleIds])) return;
+        eligibleIds.forEach(id => selectedStructuredCourseIds.delete(id));
+        render();
+        showNotice(`Added ${examBuilderCourseIds.size - queuedBefore} course(s) to Exam Builder.`);
+    };
+
+    const returnCoursesToCourseBuilder = courseIds => {
+        if (!requireMaster()) return;
+        const idsToReturn = [...new Set(courseIds)].filter(id => examBuilderCourseIds.has(id));
+        if (!idsToReturn.length) return;
+        const returned = new Set(idsToReturn);
+        if (!persistExamBuilderQueue([...examBuilderCourseIds].filter(id => !returned.has(id)))) return;
+        idsToReturn.forEach(id => selectedExamBuilderCourseIds.delete(id));
+        renderExamBuilder();
+        showNotice(`Returned ${idsToReturn.length} course(s) to Course Builder.`);
+    };
+
+    const previewExamCourse = courseId => {
+        const course = getStructuredCourse(courseId);
+        if (!course || !["approved", "published"].includes(course.status)) {
+            showNotice("Only an approved course can be previewed for publishing.", true);
+            return;
+        }
+        const preview = window.open(`training.html?preview=1&course=${encodeURIComponent(courseId)}`, "_blank");
+        if (!preview) showNotice("The course preview could not be opened. Allow pop-ups and try again.", true);
+        else preview.opener = null;
+    };
+
     const render = () => {
         renderDocuments();
         updateCategoryOptions();
         renderContent();
         renderModules();
+        renderExamBuilder();
     };
 
     window.addEventListener("training-content-imported", event => {
@@ -450,14 +809,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (index < 0) target.push(record);
                 else target[index] = record;
             });
-            window.addEventListener("training-content-removed", event => {
-                const ids = new Set(event.detail.contentIds);
-                state.sourceContent = state.sourceContent.filter(item => !ids.has(item.id));
-                state.organizationMetadata = state.organizationMetadata.filter(item => !ids.has(item.contentId));
-                state.reviews = state.reviews.filter(item => !ids.has(item.contentId));
-                render();
-            });
-            window.addEventListener("training-course-changed", render);
         };
         mergeBy(state.sourceContent, sourceContent, "id");
         mergeBy(state.organizationMetadata, organizationMetadata, "contentId");
@@ -466,7 +817,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         categoryFilter.value = "All";
         reviewFilter.value = "All";
         render();
-        showNotice("Course added to Content Explorer for review.");
+        showNotice("Course added to Course Builder for review.");
+    });
+    window.addEventListener("training-content-removed", event => {
+        const ids = new Set(event.detail.contentIds);
+        state.sourceContent = state.sourceContent.filter(item => !ids.has(item.id));
+        state.organizationMetadata = state.organizationMetadata.filter(item => !ids.has(item.contentId));
+        state.reviews = state.reviews.filter(item => !ids.has(item.contentId));
+        render();
+    });
+    window.addEventListener("training-course-changed", render);
+    window.addEventListener("storage", event => {
+        if (event.key === "trainingManagerCourses") render();
     });
 
     const openOriginal = async (documentId, pageNumber = null, shouldDownload = false) => {
@@ -1092,6 +1454,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         else selectedContentIds.delete(checkbox.dataset.selectContent);
         updateSelectionControls();
     });
+    examBuilderList.addEventListener("change", event => {
+        const checkbox = event.target.closest("[data-select-exam-course]");
+        if (!checkbox) return;
+        if (checkbox.checked) selectedExamBuilderCourseIds.add(checkbox.dataset.selectExamCourse);
+        else selectedExamBuilderCourseIds.delete(checkbox.dataset.selectExamCourse);
+        updateExamBuilderSelectionControls();
+    });
     moduleList.addEventListener("change", event => {
         const checkbox = event.target.closest("[data-select-module]");
         if (!checkbox) return;
@@ -1140,6 +1509,20 @@ document.addEventListener("DOMContentLoaded", async () => {
                 });
         }
     });
+    examBuilderList.addEventListener("click", event => {
+        const editButton = event.target.closest("[data-edit-exam]");
+        if (editButton) {
+            openExamEditor(editButton.dataset.editExam);
+            return;
+        }
+        const previewButton = event.target.closest("[data-preview-exam-course]");
+        if (previewButton) {
+            previewExamCourse(previewButton.dataset.previewExamCourse);
+            return;
+        }
+        const returnButton = event.target.closest("[data-return-exam-course]");
+        if (returnButton) returnCoursesToCourseBuilder([returnButton.dataset.returnExamCourse]);
+    });
     contentSearch.addEventListener("input", renderContent);
     categoryFilter.addEventListener("change", renderContent);
     reviewFilter.addEventListener("change", renderContent);
@@ -1169,7 +1552,41 @@ document.addEventListener("DOMContentLoaded", async () => {
         showNotice(error instanceof Error ? error.message : String(error), true);
     }));
     unpublishSelectedCoursesButton.addEventListener("click", () => {
-        unpublishStructuredCourses([...selectedStructuredCourseIds]);
+        unpublishStructuredCourses([...selectedStructuredCourseIds].filter(id => getStructuredCourse(id)?.status === "published"));
+    });
+    addSelectedExamCoursesButton.addEventListener("click", addSelectedCoursesToExamBuilder);
+    selectAllExamCoursesButton.addEventListener("click", () => {
+        const allSelected = examBuilderCourseIds.size > 0
+            && [...examBuilderCourseIds].every(id => selectedExamBuilderCourseIds.has(id));
+        if (allSelected) examBuilderCourseIds.forEach(id => selectedExamBuilderCourseIds.delete(id));
+        else examBuilderCourseIds.forEach(id => selectedExamBuilderCourseIds.add(id));
+        renderExamBuilder();
+    });
+    returnSelectedExamCoursesButton.addEventListener("click", () => {
+        returnCoursesToCourseBuilder([...selectedExamBuilderCourseIds]);
+    });
+    examModuleSelect.addEventListener("change", () => {
+        editingExamModuleId = examModuleSelect.value;
+        renderExamQuestions();
+    });
+    document.getElementById("addExamQuestionButton").addEventListener("click", () => {
+        if (!editingExamModuleId) return;
+        const questions = editingExamQuestionsByModule.get(editingExamModuleId) || [];
+        questions.push({prompt:"", choices:["","","",""], answerIndex:-1});
+        editingExamQuestionsByModule.set(editingExamModuleId, questions);
+        renderExamQuestions();
+    });
+    document.getElementById("removeModuleExamButton").addEventListener("click", () => {
+        if (!editingExamModuleId) return;
+        editingExamQuestionsByModule.set(editingExamModuleId, []);
+        renderExamQuestions();
+        showNotice("Exam removed from this module. Save exam changes to apply the removal.", false, examEditorNotice);
+    });
+    document.getElementById("saveExamButton").addEventListener("click", saveExam);
+    document.getElementById("closeExamEditorDialog").addEventListener("click", () => examEditorDialog.close());
+    document.getElementById("cancelExamEditorButton").addEventListener("click", () => examEditorDialog.close());
+    examEditorDialog.addEventListener("click", event => {
+        if (event.target === examEditorDialog) examEditorDialog.close();
     });
     approveSelectedButton.addEventListener("click", () => updateReviewStatus([...selectedContentIds], "Approved")
         .catch(error => {

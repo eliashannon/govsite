@@ -182,8 +182,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const backLink = document.getElementById("courseBackLink");
         if (previewMode) {
             backLink.href = "ai-training-content-manager.html";
-            backLink.textContent = "← Back to Content Explorer";
-            backLink.setAttribute("aria-label", "Back to Content Explorer");
+            backLink.textContent = "← Back to Course Builder";
+            backLink.setAttribute("aria-label", "Back to Course Builder");
         } else {
             backLink.href = "required-training.html";
             backLink.textContent = "← Back to Training Courses";
@@ -224,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("courseCompletionTitle").textContent = selectedCourse.title;
             const returnLink = document.getElementById("courseCompletionReturn");
             returnLink.href = previewMode ? "ai-training-content-manager.html" : "required-training.html";
-            returnLink.textContent = previewMode ? "Return to Content Explorer" : "Return to Training Courses";
+            returnLink.textContent = previewMode ? "Return to Course Builder" : "Return to Training Courses";
         }
     }
 
@@ -745,7 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const errors = previewType === "editor" ? [] : validatePublishedCourse(selectedCourse);
                 approve.disabled = publish.disabled = errors.length > 0;
                 notice.textContent = previewType === "editor"
-                    ? "Editor preview only. Submit the draft to Content Explorer for approval."
+                    ? "Editor preview only. Submit the draft to Course Builder for approval."
                     : errors.length
                         ? `Course validation failed: ${errors.join(" ")}`
                         : `Course status: ${selectedCourse.status}. ${selectedCourse.status === "approved" ? "Publish when ready." : ""}`;
@@ -761,7 +761,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
                     if (JSON.stringify(records[selectedCourse.id]) !== JSON.stringify(selectedCourse)) {
-                        throw new Error("The course changed since this preview opened. Return to Content Explorer and reopen it.");
+                        throw new Error("The course changed since this preview opened. Return to Course Builder and reopen it.");
                     }
                     if ((action === "approve" && selectedCourse.status !== "needs-review")
                         || (action === "publish" && selectedCourse.status !== "approved")

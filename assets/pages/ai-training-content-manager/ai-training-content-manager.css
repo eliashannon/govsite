@@ -140,8 +140,37 @@
 .import-to-explorer-option input{accent-color:var(--blue-600)}
 .prototype-course-storage-panel>label{display:block;margin:0 20px 6px;color:var(--text-secondary);font-size:12px;font-weight:600}
 #savedLocalCourses{width:calc(100% - 40px);margin:0 20px;height:auto}
+.exam-builder-description{margin:0;padding:0 20px 14px;color:var(--text-secondary);font-size:12px;line-height:1.55}
+.exam-builder-list{border-top:1px solid var(--border)}
+.exam-builder-course{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:start;gap:12px;padding:15px 20px;border-bottom:1px solid var(--border)}
+.exam-builder-course:last-child{border-bottom:0}
+.exam-builder-course>input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--blue-600)}
+.exam-builder-course-copy{min-width:0}
+.exam-builder-course-copy h3{margin:0 0 5px;font-size:14px}
+.exam-builder-course-copy p{margin:0;color:var(--text-secondary);font-size:11px;line-height:1.5}
+.exam-builder-course-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.exam-builder-course-meta span{padding:4px 7px;border:1px solid var(--border);border-radius:20px;color:var(--text-muted);font-size:9px}
+.exam-builder-course-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+.exam-editor-content{padding:22px}
+.exam-editor-content>label{display:block;margin:12px 0 6px;color:var(--text-secondary);font-size:12px;font-weight:600}
+.exam-editor-content>select{width:100%}
+.exam-editor-help{margin:7px 0 14px;color:var(--text-muted);font-size:11px;line-height:1.5}
+.exam-question-editor{display:grid;gap:10px}
+.exam-question-card{padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-secondary)}
+.exam-question-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.exam-question-heading strong{font-size:12px}
+.exam-question-card>label{display:grid;gap:5px;color:var(--text-secondary);font-size:11px;font-weight:600}
+.exam-question-card textarea{width:100%;min-height:62px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--input-background);color:var(--text-primary);font:inherit;resize:vertical}
+.exam-answer-list{display:grid;gap:6px;margin-top:10px}
+.exam-answer-choice{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:7px;color:var(--text-secondary);font-size:11px}
+.exam-answer-choice input[type=radio]{margin:0;accent-color:var(--blue-600)}
+.exam-answer-choice input[type=text]{min-width:0;height:36px;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--input-background);color:var(--text-primary)}
+.exam-question-actions,.exam-editor-toolbar{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.exam-editor-toolbar{justify-content:space-between}
+.exam-editor-dialog{width:min(760px,calc(100% - 28px));max-height:90vh;overflow:auto}
+.exam-editor-content .manager-notice{margin-top:12px}
 @media(max-width:850px){.handbook-toolbar{grid-template-columns:minmax(180px,1fr) 160px}.handbook-toolbar input{grid-column:1/-1}.source-preview-metadata{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:620px){.ai-manager-heading{align-items:flex-start;flex-direction:column}.ai-manager-heading h1{font-size:25px}.manager-section-heading{align-items:flex-start;padding:15px}.ai-status{max-width:150px;white-space:normal}.handbook-upload-form{grid-template-columns:1fr;padding:0 15px 15px}.handbook-upload-form button{grid-column:1;grid-row:auto}.handbook-toolbar{grid-template-columns:1fr;padding:0 15px 12px}.handbook-toolbar input{grid-column:auto}.handbook-selection-toolbar{padding:10px 15px}.handbook-selection-toolbar>span{width:100%}.handbook-selection-toolbar .btn{flex:1}.source-content-item{grid-template-columns:18px minmax(0,1fr);padding:12px 15px}.source-item-actions{grid-column:2}.source-preview-metadata{padding-right:15px;padding-left:15px}.source-preview-warnings{margin-right:15px;margin-left:15px}.source-preview-text{margin-right:15px;margin-left:15px}.handbook-document,.module-card{grid-template-columns:1fr;padding:13px 15px}.handbook-document-actions,.module-actions{justify-content:flex-start}.module-options{grid-template-columns:1fr}.ai-content-dialog form{padding:17px}.ai-dialog-actions{flex-wrap:wrap}.ai-dialog-actions>span{display:none}.ai-dialog-actions .btn{flex:1}}
+@media(max-width:620px){.ai-manager-heading{align-items:flex-start;flex-direction:column}.ai-manager-heading h1{font-size:25px}.manager-section-heading{align-items:flex-start;padding:15px}.ai-status{max-width:150px;white-space:normal}.handbook-upload-form{grid-template-columns:1fr;padding:0 15px 15px}.handbook-upload-form button{grid-column:1;grid-row:auto}.handbook-toolbar{grid-template-columns:1fr;padding:0 15px 12px}.handbook-toolbar input{grid-column:auto}.handbook-selection-toolbar{padding:10px 15px}.handbook-selection-toolbar>span{width:100%}.handbook-selection-toolbar .btn{flex:1}.source-content-item{grid-template-columns:18px minmax(0,1fr);padding:12px 15px}.source-item-actions{grid-column:2}.source-preview-metadata{padding-right:15px;padding-left:15px}.source-preview-warnings{margin-right:15px;margin-left:15px}.source-preview-text{margin-right:15px;margin-left:15px}.handbook-document,.module-card{grid-template-columns:1fr;padding:13px 15px}.handbook-document-actions,.module-actions{justify-content:flex-start}.exam-builder-course{grid-template-columns:18px minmax(0,1fr);padding:12px 15px}.exam-builder-course-actions{grid-column:2;justify-content:flex-start}.exam-editor-content{padding:17px}.module-options{grid-template-columns:1fr}.ai-content-dialog form{padding:17px}.ai-dialog-actions{flex-wrap:wrap}.ai-dialog-actions>span{display:none}.ai-dialog-actions .btn{flex:1}}
 @media(max-width:760px){
   .ai-manager-heading-actions{width:100%;flex-direction:column}.ai-manager-heading-actions .btn{width:100%}
   .course-field-grid{grid-template-columns:1fr}.course-assignment-controls{grid-template-columns:1fr}

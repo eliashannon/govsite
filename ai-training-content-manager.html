@@ -5,7 +5,7 @@
 <script src="assets/shared/js/auth.js?v=2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | AI Training Content Manager</title>
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261118-7">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261118-8">
 </head>
 <body data-page="ai-training-content-manager">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -30,7 +30,7 @@
     <form id="handbookUploadForm" class="handbook-upload-form">
       <label for="handbookFiles">Standardized training documents</label>
       <input id="handbookFiles" class="form-control" type="file" accept=".docx,.txt,.md,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple required>
-      <p>Choose a DOCX, TXT, or Markdown course document using the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a>, then create a structured draft. Choose a valid organization assignment and send the draft to Content Explorer. Preview and approve or reject it, then publish an approved course separately. PDF is supported for source extraction only.</p>
+      <p>Choose a DOCX, TXT, or Markdown course document using the <a href="HANDBOOKFORMAT.txt" target="_blank" rel="noopener">handbook format</a>, then create a structured draft. Choose a valid organization assignment and send the draft to Course Builder. Preview and approve or reject it, then publish an approved course separately. PDF is supported for source extraction only.</p>
       <button id="uploadHandbooksButton" class="btn btn-primary" type="submit">Upload and extract</button>
       <button id="createCourseDraftButton" class="btn btn-secondary" type="button">Create structured course draft</button>
     </form>
@@ -47,7 +47,7 @@
   </section>
 
   <section class="ai-manager-panel handbook-explorer-panel" aria-labelledby="contentExplorerTitle">
-    <div class="manager-section-heading"><div><span class="tqs-label">SOURCE CONTENT</span><h2 id="contentExplorerTitle">Content explorer</h2></div><span id="contentCount" class="ai-content-count">0 items</span></div>
+    <div class="manager-section-heading"><div><span class="tqs-label">COURSES &amp; SOURCE CONTENT</span><h2 id="contentExplorerTitle">Course Builder</h2></div><span id="contentCount" class="ai-content-count">0 items</span></div>
     <div class="handbook-toolbar">
       <input id="contentSearch" type="search" class="form-control" placeholder="Search exact source text, section, or document">
       <select id="categoryFilter" class="form-control" aria-label="Filter by content category"><option value="All">All categories</option></select>
@@ -60,9 +60,21 @@
       <button id="rejectSelectedButton" class="btn btn-secondary" type="button" disabled>Reject selected</button>
       <button id="deleteSelectedContentButton" class="btn btn-secondary" type="button" disabled>Delete selected</button>
       <button id="unpublishSelectedCoursesButton" class="btn btn-secondary" type="button" disabled>Unpublish selected courses</button>
+      <button id="addSelectedExamCoursesButton" class="btn btn-primary" type="button" disabled>Add approved courses to Exam Builder</button>
       <button id="createModuleButton" class="btn btn-primary" type="button" disabled>Create module from approved</button>
     </div>
     <div id="contentExplorer" class="handbook-content-explorer"></div>
+  </section>
+
+  <section class="ai-manager-panel exam-builder-panel" aria-labelledby="examBuilderTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">COURSE ASSESSMENTS</span><h2 id="examBuilderTitle">Exam Builder</h2></div><span id="examBuilderCount" class="ai-content-count">0 courses</span></div>
+    <p class="exam-builder-description">Add approved courses from Course Builder, choose the module after which each exam appears, and write the questions. Exams are manual for now; no AI-generated questions are used. Returning a course removes it from this list but keeps any saved exam in the course.</p>
+    <div class="handbook-selection-toolbar">
+      <span id="examBuilderSelectionCount">0 selected</span>
+      <button id="selectAllExamCoursesButton" class="ai-text-button" type="button">Select all</button>
+      <button id="returnSelectedExamCoursesButton" class="btn btn-secondary" type="button" disabled>Return selected to Course Builder</button>
+    </div>
+    <div id="examBuilderList" class="exam-builder-list"></div>
   </section>
 
   <section class="ai-manager-panel source-preview-panel" id="sourcePreview" aria-labelledby="previewTitle" hidden>
@@ -94,7 +106,7 @@
       <button id="clearLocalCoursesButton" class="btn btn-secondary" type="button">Clear All Prototype Courses</button>
       <button id="exportSelectedLocalCourseButton" class="btn btn-secondary" type="button" disabled>Export Course JSON</button>
       <button id="importLocalCourseButton" class="btn btn-secondary" type="button">Import Course JSON</button>
-      <label class="import-to-explorer-option"><input id="sendImportToExplorer" type="checkbox"> Also send imported course to Content Explorer for review</label>
+      <label class="import-to-explorer-option"><input id="sendImportToExplorer" type="checkbox"> Also send imported course to Course Builder for review</label>
       <input id="importLocalCourseFile" type="file" accept=".json,application/json" hidden>
     </div>
     <label for="savedLocalCourses">Saved local courses</label>
@@ -143,7 +155,7 @@ Every user contributes to organizational security.</pre>
       </select>
       <button id="saveCourseDraftButton" class="btn btn-secondary" type="button">Save draft</button>
       <button id="previewEditingCourseButton" class="btn btn-secondary" type="button">Preview course</button>
-      <button id="reviewCourseDraftButton" class="btn btn-primary" type="button">Publish to Content Explorer for review</button>
+      <button id="reviewCourseDraftButton" class="btn btn-primary" type="button">Submit to Course Builder for review</button>
       <button id="archiveCourseDraftButton" class="btn btn-secondary" type="button">Archive</button>
       <button id="exportCourseDraftButton" class="btn btn-primary" type="button" disabled>Export approved JSON</button>
     </div>
@@ -177,7 +189,22 @@ Every user contributes to organizational security.</pre>
       <fieldset><legend>Modules</legend><div id="courseModuleEditor" class="course-module-editor"></div><button id="addCourseModuleButton" class="btn btn-secondary" type="button">Add module</button></fieldset>
     </form>
   </dialog>
-
+  <dialog id="examEditorDialog" class="ai-content-dialog exam-editor-dialog" aria-labelledby="examEditorTitle">
+    <div class="exam-editor-content">
+      <div class="ai-dialog-header"><div><span class="tqs-label">MANUAL ASSESSMENT</span><h2 id="examEditorTitle">Build course exam</h2></div><button id="closeExamEditorDialog" type="button" aria-label="Close exam builder">×</button></div>
+      <p id="examEditorCourseTitle" class="module-source-summary"></p>
+      <label for="examModuleSelect">Place exam after module</label>
+      <select id="examModuleSelect" class="form-control"></select>
+      <p class="exam-editor-help">The exam appears after the selected module’s content and must be passed before continuing.</p>
+      <div id="examQuestionEditor" class="exam-question-editor"></div>
+      <div class="exam-editor-toolbar">
+        <button id="addExamQuestionButton" class="btn btn-secondary" type="button">Add question</button>
+        <button id="removeModuleExamButton" class="btn btn-secondary" type="button" hidden>Remove exam from this module</button>
+      </div>
+      <p id="examEditorNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
+      <div class="ai-dialog-actions"><span></span><button id="cancelExamEditorButton" class="btn btn-secondary" type="button">Cancel</button><button id="saveExamButton" class="btn btn-primary" type="button">Save exam</button></div>
+    </div>
+  </dialog>
   <dialog id="moduleDialog" class="ai-content-dialog module-dialog" aria-labelledby="moduleDialogTitle">
     <form id="moduleForm">
       <div class="ai-dialog-header"><div><span class="tqs-label">SOURCE-BASED MODULE</span><h2 id="moduleDialogTitle">Create training module</h2></div><button id="closeModuleDialog" type="button" aria-label="Close">×</button></div>
@@ -205,7 +232,7 @@ Every user contributes to organizational security.</pre>
   </dialog>
 </main></div></div>
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
-<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=1"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-4"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-11"></script>
-<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261118-4"></script>
+<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=2"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-4"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-12"></script>
+<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261118-5"></script>
 </body>
 </html>

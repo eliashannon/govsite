@@ -67,20 +67,39 @@
             if (!Array.isArray(module.learningObjectives) || !module.learningObjectives.every(hasText)) errors.push(`${label} has invalid learning objectives.`);
             if (!Array.isArray(module.content) || !module.content.length) {
                 errors.push(`${label} has no content.`);
-                return;
+            } else {
+                module.content.forEach((block, blockIndex) => {
+                    const prefix = `${label} block ${blockIndex + 1}`;
+                    if (!isObject(block) || !["heading","paragraph","list","callout","link","image","table"].includes(block.type)) {
+                        errors.push(`${prefix} has an unsupported type.`);
+                    } else if (block.type === "link" && !safeUrl(block.url)) errors.push(`${prefix} contains an unsafe or missing link.`);
+                    else if (block.type === "image" && !safeUrl(block.src, true)) errors.push(`${prefix} contains an unsafe or missing image source.`);
+                    else if (["heading", "paragraph", "callout"].includes(block.type) && !hasText(block.text)) errors.push(`${prefix} has no text.`);
+                    else if (block.type === "list" && (!Array.isArray(block.items) || !block.items.length || !block.items.every(hasText))) errors.push(`${prefix} has invalid list items.`);
+                    else if (block.type === "table" && (!Array.isArray(block.headers) || !block.headers.every(item => typeof item === "string")
+                        || !Array.isArray(block.rows) || !block.rows.length
+                        || !block.rows.every(row => Array.isArray(row) && row.length && row.every(item => typeof item === "string")))) errors.push(`${prefix} has invalid table rows.`);
+                });
             }
-            module.content.forEach((block, blockIndex) => {
-                const prefix = `${label} block ${blockIndex + 1}`;
-                if (!isObject(block) || !["heading","paragraph","list","callout","link","image","table"].includes(block.type)) {
-                    errors.push(`${prefix} has an unsupported type.`);
-                } else if (block.type === "link" && !safeUrl(block.url)) errors.push(`${prefix} contains an unsafe or missing link.`);
-                else if (block.type === "image" && !safeUrl(block.src, true)) errors.push(`${prefix} contains an unsafe or missing image source.`);
-                else if (["heading", "paragraph", "callout"].includes(block.type) && !hasText(block.text)) errors.push(`${prefix} has no text.`);
-                else if (block.type === "list" && (!Array.isArray(block.items) || !block.items.length || !block.items.every(hasText))) errors.push(`${prefix} has invalid list items.`);
-                else if (block.type === "table" && (!Array.isArray(block.headers) || !block.headers.every(item => typeof item === "string")
-                    || !Array.isArray(block.rows) || !block.rows.length
-                    || !block.rows.every(row => Array.isArray(row) && row.length && row.every(item => typeof item === "string")))) errors.push(`${prefix} has invalid table rows.`);
-            });
+            if (module.assessment !== undefined) {
+                const questions = module.assessment?.questions;
+                if (!isObject(module.assessment) || !Array.isArray(questions) || !questions.length) {
+                    errors.push(`${label} has an invalid assessment.`);
+                } else questions.forEach((question, questionIndex) => {
+                    const questionLabel = `${label} assessment question ${questionIndex + 1}`;
+                    if (!isObject(question) || !hasText(question.prompt)) {
+                        errors.push(`${questionLabel} has no question text.`);
+                        return;
+                    }
+                    if (!Array.isArray(question.choices) || question.choices.length < 2 || !question.choices.every(hasText)) {
+                        errors.push(`${questionLabel} needs at least two non-empty answer choices.`);
+                    }
+                    if (!Number.isInteger(question.answerIndex) || question.answerIndex < 0
+                        || question.answerIndex >= (Array.isArray(question.choices) ? question.choices.length : 0)) {
+                        errors.push(`${questionLabel} needs a valid correct answer.`);
+                    }
+                });
+            }
         });
         return errors;
     }
