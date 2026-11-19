@@ -5,7 +5,7 @@
 <script src="assets/shared/js/auth.js?v=2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | AI Training Content Manager</title>
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261118-8">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261118-10">
 </head>
 <body data-page="ai-training-content-manager">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -193,16 +193,17 @@ Every user contributes to organizational security.</pre>
     <div class="exam-editor-content">
       <div class="ai-dialog-header"><div><span class="tqs-label">MANUAL ASSESSMENT</span><h2 id="examEditorTitle">Build course exam</h2></div><button id="closeExamEditorDialog" type="button" aria-label="Close exam builder">×</button></div>
       <p id="examEditorCourseTitle" class="module-source-summary"></p>
+      <label for="examTitleInput">Exam title</label>
+      <input id="examTitleInput" class="form-control" type="text" maxlength="160" placeholder="For example, Module 1 knowledge check">
       <label for="examModuleSelect">Place exam after module</label>
       <select id="examModuleSelect" class="form-control"></select>
       <p class="exam-editor-help">The exam appears after the selected module’s content and must be passed before continuing.</p>
       <div id="examQuestionEditor" class="exam-question-editor"></div>
       <div class="exam-editor-toolbar">
         <button id="addExamQuestionButton" class="btn btn-secondary" type="button">Add question</button>
-        <button id="removeModuleExamButton" class="btn btn-secondary" type="button" hidden>Remove exam from this module</button>
       </div>
       <p id="examEditorNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
-      <div class="ai-dialog-actions"><span></span><button id="cancelExamEditorButton" class="btn btn-secondary" type="button">Cancel</button><button id="saveExamButton" class="btn btn-primary" type="button">Save exam</button></div>
+      <div class="ai-dialog-actions"><span></span><button id="cancelExamEditorButton" class="btn btn-secondary" type="button">Cancel</button><button id="addAnotherExamButton" class="btn btn-secondary" type="button">Add Another Exam</button><button id="saveExamButton" class="btn btn-primary" type="button">Save Exam</button></div>
     </div>
   </dialog>
   <dialog id="moduleDialog" class="ai-content-dialog module-dialog" aria-labelledby="moduleDialogTitle">
@@ -232,7 +233,7 @@ Every user contributes to organizational security.</pre>
   </dialog>
 </main></div></div>
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
-<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=2"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-4"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-12"></script>
-<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261118-5"></script>
+<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/course-schema.js?v=4"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261118-4"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261118-14"></script>
+<script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261118-7"></script>
 </body>
 </html>

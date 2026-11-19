@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedCourse = null;
     let progress = null;
     let currentModuleIndex = 0;
-    let examState = null;
+    const examStates = new Map();
 
     const app = document.getElementById("trainingApp");
     const errorBox = document.getElementById("trainingError");
@@ -368,42 +368,52 @@ document.addEventListener("DOMContentLoaded", () => {
         return null;
     }
 
-    function hasExam(module) {
-        return Array.isArray(module?.assessment?.questions) && module.assessment.questions.length > 0;
+    function getModuleExams(module) {
+        const assessments = Array.isArray(module?.assessments)
+            ? module.assessments.filter(exam =>
+                window.CourseSchema.isObject(exam) && Array.isArray(exam.questions) && exam.questions.length > 0
+            )
+            : [];
+        if (Array.isArray(module?.assessment?.questions) && module.assessment.questions.length > 0) {
+            assessments.push({id:`legacy-${module.id}`, title:"Knowledge Check", questions:module.assessment.questions});
+        }
+        return assessments;
     }
 
-    function getExamState(module) {
-        if (!examState || examState.moduleId !== module.id) {
-            examState = {moduleId:module.id, answers:[], submitted:false, passed:false, correct:0, score:0};
+    function getExamState(module, assessment) {
+        const key = `${module.id}:${assessment.id}`;
+        if (!examStates.has(key)) {
+            examStates.set(key, {answers:[], submitted:false, passed:false, correct:0, score:0});
         }
-        return examState;
+        return examStates.get(key);
     }
 
     function isModulePassed(module) {
-        if (!hasExam(module)) return true;
+        const exams = getModuleExams(module);
+        if (!exams.length) return true;
         return progress.continuedModuleIds.includes(module.id)
-            || (examState?.moduleId === module.id && examState.passed === true);
+            || exams.every(assessment => getExamState(module, assessment).passed);
     }
 
-    function submitExam(module) {
-        const exam = getExamState(module);
-        const questions = module.assessment.questions;
+    function submitExam(module, assessment) {
+        const exam = getExamState(module, assessment);
+        const questions = assessment.questions;
         if (questions.some((_, index) => !Number.isInteger(exam.answers[index]))) return;
         exam.correct = questions.filter((question, index) => exam.answers[index] === question.answerIndex).length;
         exam.score = Math.round((exam.correct / questions.length) * 100);
         exam.passed = exam.correct === questions.length;
         exam.submitted = true;
         renderModuleContent();
-        document.getElementById("examResult")?.focus({preventScroll:true});
+        document.getElementById(`examResult-${assessment.id}`)?.focus({preventScroll:true});
     }
 
-    function retryExam(module) {
-        const exam = getExamState(module);
+    function retryExam(module, assessment) {
+        const exam = getExamState(module, assessment);
         exam.answers = [];
         exam.submitted = false;
         exam.passed = false;
         renderModuleContent();
-        const heading = document.getElementById("examHeading");
+        const heading = document.getElementById(`examHeading-${assessment.id}`);
         if (typeof heading?.scrollIntoView === "function") heading.scrollIntoView({block:"start"});
         heading?.focus({preventScroll:true});
     }
@@ -503,21 +513,18 @@ document.addEventListener("DOMContentLoaded", () => {
             content.append(reminder);
         }
 
-        const exam = hasExam(module) && !progress.continuedModuleIds.includes(module.id) ? getExamState(module) : null;
-        const gated = exam !== null && !exam.passed;
-        let submitButton = null;
-        const updateSubmitState = () => {
-            if (!exam || !submitButton) return;
-            submitButton.disabled = module.assessment.questions.some((_, index) => !Number.isInteger(exam.answers[index]));
-        };
-        if (exam) {
-            const questions = module.assessment.questions;
+        const assessments = progress.continuedModuleIds.includes(module.id) ? [] : getModuleExams(module);
+        const gated = assessments.some(assessment => !getExamState(module, assessment).passed);
+        assessments.forEach((assessment, assessmentIndex) => {
+            const exam = getExamState(module, assessment);
+            const questions = assessment.questions;
             const examSection = document.createElement("section");
             examSection.className = "training-exam";
             const examHeading = document.createElement("h3");
-            examHeading.id = "examHeading";
+            examHeading.id = `examHeading-${assessment.id}`;
             examHeading.tabIndex = -1;
-            examHeading.textContent = "Knowledge Check";
+            examHeading.textContent = assessment.title || (assessments.length > 1 ? `Exam ${assessmentIndex + 1}` : "Knowledge Check");
+            let submitButton = null;
             const instructions = document.createElement("p");
             instructions.textContent = "Answer every question. You must score 100% to continue.";
             examSection.append(examHeading, instructions);
@@ -532,13 +539,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     label.className = "training-exam-choice";
                     const input = document.createElement("input");
                     input.type = "radio";
-                    input.name = `exam-question-${questionIndex}`;
+                    input.name = `exam-question-${assessment.id}-${questionIndex}`;
                     input.value = String(choiceIndex);
                     input.checked = exam.answers[questionIndex] === choiceIndex;
                     input.disabled = exam.submitted;
                     input.addEventListener("change", () => {
                         exam.answers[questionIndex] = choiceIndex;
-                        updateSubmitState();
+                        if (submitButton) submitButton.disabled = questions.some((_, index) => !Number.isInteger(exam.answers[index]));
                     });
                     const text = document.createElement("span");
                     text.textContent = choice;
@@ -549,20 +556,36 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             if (exam.submitted) {
                 const result = document.createElement("p");
-                result.id = "examResult";
+                result.id = `examResult-${assessment.id}`;
                 result.tabIndex = -1;
                 result.setAttribute("role", "status");
                 if (exam.passed) {
                     result.className = "training-success";
-                    result.textContent = "Success: you passed the knowledge check.";
+                    result.textContent = assessment.title && assessment.title !== "Knowledge Check"
+                        ? `Success: you passed ${assessment.title}.`
+                        : "Success: you passed the knowledge check.";
                 } else {
                     result.className = "training-exam-fail";
                     result.textContent = `You scored ${exam.score}% (${exam.correct} of ${questions.length} correct). You need 100% to continue.`;
                 }
                 examSection.append(result);
             }
+            if (!exam.passed) {
+                submitButton = document.createElement("button");
+                submitButton.type = "button";
+                submitButton.className = "btn btn-primary";
+                if (exam.submitted) {
+                    submitButton.textContent = assessments.length > 1 ? `Retry ${examHeading.textContent}` : "Retry";
+                    submitButton.addEventListener("click", () => retryExam(module, assessment));
+                } else {
+                    submitButton.textContent = assessments.length > 1 ? `Submit ${examHeading.textContent}` : "Submit";
+                    submitButton.disabled = questions.some((_, index) => !Number.isInteger(exam.answers[index]));
+                    submitButton.addEventListener("click", () => submitExam(module, assessment));
+                }
+                examSection.append(submitButton);
+            }
             content.append(examSection);
-        }
+        });
 
         // Future test/SQL database integration can be inserted here before handleContinue advances.
         const controls = document.createElement("div");
@@ -576,31 +599,14 @@ document.addEventListener("DOMContentLoaded", () => {
             controls.append(back);
         }
 
-        if (gated) {
-            if (exam.submitted) {
-                const retry = document.createElement("button");
-                retry.type = "button";
-                retry.className = "btn btn-primary";
-                retry.textContent = "Retry";
-                retry.addEventListener("click", () => retryExam(module));
-                controls.append(retry);
-            } else {
-                submitButton = document.createElement("button");
-                submitButton.type = "button";
-                submitButton.className = "btn btn-primary";
-                submitButton.textContent = "Submit";
-                submitButton.addEventListener("click", () => submitExam(module));
-                controls.append(submitButton);
-                updateSubmitState();
-            }
-        } else if (currentModuleIndex < selectedCourse.modules.length - 1) {
+        if (!gated && currentModuleIndex < selectedCourse.modules.length - 1) {
             const next = document.createElement("button");
             next.type = "button";
             next.className = "btn btn-primary";
             next.textContent = "Continue";
             next.addEventListener("click", handleContinue);
             controls.append(next);
-        } else {
+        } else if (!gated) {
             const complete = document.createElement("button");
             complete.type = "button";
             complete.className = "btn btn-primary";

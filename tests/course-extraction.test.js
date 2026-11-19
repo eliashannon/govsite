@@ -64,6 +64,14 @@ test("shared schema rejects incomplete courses and unsafe links but accepts exis
     assert.equal(schema.validateCourse(assessedCourse).length, 0);
     assessedCourse.modules[0].assessment.questions[0].answerIndex = 2;
     assert.ok(schema.validateCourse(assessedCourse).some(error => /valid correct answer/.test(error)));
+    assessedCourse.modules[0].assessment.questions[0].answerIndex = 0;
+    assessedCourse.modules[0].assessments = [
+        {id:"exam-one", title:"First exam", questions:[{prompt:"First?", choices:["Yes","No"], answerIndex:0}]},
+        {id:"exam-two", title:"Second exam", questions:[{prompt:"Second?", choices:["Yes","No"], answerIndex:1}]}
+    ];
+    assert.equal(schema.validateCourse(assessedCourse).length, 0);
+    assessedCourse.modules[0].assessments[1].id = "exam-one";
+    assert.ok(schema.validateCourse(assessedCourse).some(error => /Duplicate assessment ID/.test(error)));
 });
 
 test("converts DOCX headings, lists, tables, links, and images to structured blocks", async () => {

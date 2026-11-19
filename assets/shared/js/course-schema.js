@@ -56,6 +56,28 @@
             return errors;
         }
         const ids = new Set();
+        const assessmentIds = new Set();
+        const validateAssessment = (assessment, label) => {
+            const questions = assessment?.questions;
+            if (!isObject(assessment) || !Array.isArray(questions) || !questions.length) {
+                errors.push(`${label} is invalid.`);
+                return;
+            }
+            questions.forEach((question, questionIndex) => {
+                const questionLabel = `${label} question ${questionIndex + 1}`;
+                if (!isObject(question) || !hasText(question.prompt)) {
+                    errors.push(`${questionLabel} has no question text.`);
+                    return;
+                }
+                if (!Array.isArray(question.choices) || question.choices.length < 2 || !question.choices.every(hasText)) {
+                    errors.push(`${questionLabel} needs at least two non-empty answer choices.`);
+                }
+                if (!Number.isInteger(question.answerIndex) || question.answerIndex < 0
+                    || question.answerIndex >= (Array.isArray(question.choices) ? question.choices.length : 0)) {
+                    errors.push(`${questionLabel} needs a valid correct answer.`);
+                }
+            });
+        };
         course.modules.forEach((module, index) => {
             const label = `Module ${module?.sourceModuleNumber || index + 1}`;
             if (!isObject(module)) { errors.push(`${label} is invalid.`); return; }
@@ -82,22 +104,20 @@
                 });
             }
             if (module.assessment !== undefined) {
-                const questions = module.assessment?.questions;
-                if (!isObject(module.assessment) || !Array.isArray(questions) || !questions.length) {
-                    errors.push(`${label} has an invalid assessment.`);
-                } else questions.forEach((question, questionIndex) => {
-                    const questionLabel = `${label} assessment question ${questionIndex + 1}`;
-                    if (!isObject(question) || !hasText(question.prompt)) {
-                        errors.push(`${questionLabel} has no question text.`);
+                validateAssessment(module.assessment, `${label} assessment`);
+            }
+            if (module.assessments !== undefined) {
+                if (!Array.isArray(module.assessments)) {
+                    errors.push(`${label} has invalid assessments.`);
+                } else module.assessments.forEach((assessment, assessmentIndex) => {
+                    const assessmentLabel = `${label} assessment ${assessmentIndex + 1}`;
+                    if (!isObject(assessment) || !hasText(assessment.id) || !hasText(assessment.title)) {
+                        errors.push(`${assessmentLabel} needs a valid ID and title.`);
                         return;
                     }
-                    if (!Array.isArray(question.choices) || question.choices.length < 2 || !question.choices.every(hasText)) {
-                        errors.push(`${questionLabel} needs at least two non-empty answer choices.`);
-                    }
-                    if (!Number.isInteger(question.answerIndex) || question.answerIndex < 0
-                        || question.answerIndex >= (Array.isArray(question.choices) ? question.choices.length : 0)) {
-                        errors.push(`${questionLabel} needs a valid correct answer.`);
-                    }
+                    if (assessmentIds.has(assessment.id)) errors.push(`Duplicate assessment ID: ${assessment.id}.`);
+                    assessmentIds.add(assessment.id);
+                    validateAssessment(assessment, assessmentLabel);
                 });
             }
         });

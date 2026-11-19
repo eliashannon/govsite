@@ -173,6 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
             learningObjectives: Array.isArray(module.learningObjectives) ? module.learningObjectives : [],
             content: Array.isArray(module.content) ? module.content : [],
             ...(isObject(module.assessment) ? {assessment:JSON.parse(JSON.stringify(module.assessment))} : {}),
+            ...(Array.isArray(module.assessments) ? {assessments:JSON.parse(JSON.stringify(module.assessments))} : {}),
             source: module.source || {fileName: parsed.source?.fileName || ""}
         }));
         normalized.roleAssignments = (Array.isArray(parsed.roleAssignments) ? parsed.roleAssignments : []).map(item => ({
@@ -411,6 +412,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     source: {...module.source, section: `${module.sourceModuleNumber || ""} split`}
                 };
                 delete module.assessment;
+                delete module.assessments;
                 draft.modules.splice(moduleIndex + 1, 0, split);
                 draft.modules.forEach((item, index) => { item.order = index + 1; });
                 draft.warnings.push("A module split may have ambiguous source attribution; verify source traceability.");
@@ -423,15 +425,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 const next = draft.modules[moduleIndex + 1];
                 module.content.push(...next.content);
                 module.learningObjectives = [...new Set([...module.learningObjectives, ...next.learningObjectives])];
-                const assessmentQuestions = [
-                    ...(Array.isArray(module.assessment?.questions) ? module.assessment.questions : []),
-                    ...(Array.isArray(next.assessment?.questions) ? next.assessment.questions : [])
-                ];
-                if (assessmentQuestions.length) {
-                    module.assessment = {
-                        ...(module.assessment || next.assessment),
-                        questions:assessmentQuestions
-                    };
+                const moduleAssessments = Array.isArray(module.assessments)
+                    ? module.assessments
+                    : Array.isArray(module.assessment?.questions)
+                        ? [{id:`legacy-${module.id}`, title:"Knowledge Check", questions:module.assessment.questions}]
+                        : [];
+                const nextAssessments = Array.isArray(next.assessments)
+                    ? next.assessments
+                    : Array.isArray(next.assessment?.questions)
+                        ? [{id:`legacy-${next.id}`, title:"Knowledge Check", questions:next.assessment.questions}]
+                        : [];
+                if (moduleAssessments.length || nextAssessments.length) {
+                    module.assessments = [...moduleAssessments, ...nextAssessments];
+                    delete module.assessment;
                 }
                 draft.modules.splice(moduleIndex + 1, 1);
                 draft.modules.forEach((item, index) => { item.order = index + 1; });
@@ -528,6 +534,7 @@ document.addEventListener("DOMContentLoaded", () => {
             learningObjectives: [...module.learningObjectives],
             content: JSON.parse(JSON.stringify(module.content)),
             ...(isObject(module.assessment) ? {assessment:JSON.parse(JSON.stringify(module.assessment))} : {}),
+            ...(Array.isArray(module.assessments) ? {assessments:JSON.parse(JSON.stringify(module.assessments))} : {}),
             source: {
                 fileName: module.source?.fileName || draft.source?.fileName || "",
                 ...(module.source?.page ? {page:module.source.page} : {}),

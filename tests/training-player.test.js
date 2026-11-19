@@ -301,11 +301,12 @@ test("published courses can be selected, queued for exam building, and returned 
     assert.match(explorerHtml, /unpublishSelectedCoursesButton/);
     assert.match(explorerHtml, /unpublishSelectedLocalCourseButton/);
     assert.match(explorerHtml, /id="examBuilderTitle">Exam Builder/);
+    assert.match(explorerHtml, /id="addAnotherExamButton".*Add Another Exam/);
     assert.match(explorerHtml, /addSelectedExamCoursesButton/);
     assert.match(explorerHtml, /returnSelectedExamCoursesButton/);
     assert.match(explorer, /data-select-structured-course/);
     assert.match(explorer, /trainingExamBuilderCourseIds/);
-    assert.match(explorer, /data-edit-exam/);
+    assert.match(explorer, /data-view-exam-course/);
     assert.match(explorerHtml, /Place exam after module/);
     assert.match(explorer, /unpublishStructuredCourses/);
     assert.match(explorer, /status:"approved"/);
@@ -395,4 +396,43 @@ test("knowledge checks gate Continue and Mark Complete until every answer is cor
     p.button("Submit").click();
     p.button("Mark Complete").click();
     assert.equal(p.elements.courseProgressLabel.textContent, "100%");
+});
+
+test("multiple named exams after one module must each be passed before continuing", async () => {
+    const base = JSON.parse(source("data/courses.json")).courses[0];
+    const fixture = structuredClone(base);
+    fixture.modules = Array.from({length:5}, (_, index) => ({
+        ...structuredClone(base.modules[index % base.modules.length]),
+        id:`fixture-module-${index + 1}`,
+        ...(index === 0 ? {} : {assessments:[]})
+    }));
+    fixture.modules[0].assessments = [
+        {id:"exam-one", title:"First exam", questions:[{prompt:"First?", choices:["No","Yes"], answerIndex:1}]},
+        {id:"exam-two", title:"Second exam", questions:[{prompt:"Second?", choices:["No","Yes"], answerIndex:1}]}
+    ];
+    const p = await player(false, null, fixture);
+    const choose = (examId, choice) => {
+        const input = descendants(p.elements.moduleContent).find(element =>
+            element.tagName === "INPUT" && element.name === `exam-question-${examId}-0` && element.value === String(choice)
+        );
+        assert.ok(input, `expected answer ${choice} for ${examId}`);
+        input.checked = true;
+        input.events.change();
+    };
+
+    assert.equal(p.button("Continue"), undefined);
+    choose("exam-one", 1);
+    p.button("Submit First exam").click();
+    assert.match(p.elements.moduleContent.textContent, /Success: you passed First exam\./);
+    assert.equal(p.button("Continue"), undefined);
+
+    choose("exam-two", 0);
+    p.button("Submit Second exam").click();
+    assert.match(p.elements.moduleContent.textContent, /You scored 0% \(0 of 1 correct\)/);
+    p.button("Retry Second exam").click();
+    choose("exam-two", 1);
+    p.button("Submit Second exam").click();
+    assert.match(p.elements.moduleContent.textContent, /Success: you passed Second exam\./);
+    p.button("Continue").click();
+    assert.equal(p.elements.courseProgressLabel.textContent, "20%");
 });

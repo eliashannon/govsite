@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const returnSelectedExamCoursesButton = document.getElementById("returnSelectedExamCoursesButton");
     const examEditorDialog = document.getElementById("examEditorDialog");
     const examModuleSelect = document.getElementById("examModuleSelect");
+    const examTitleInput = document.getElementById("examTitleInput");
     const examQuestionEditor = document.getElementById("examQuestionEditor");
     const examEditorNotice = document.getElementById("examEditorNotice");
     const moduleList = document.getElementById("moduleList");
@@ -69,10 +70,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const selectedModuleIds = new Set();
     const examBuilderCourseIds = new Set();
     let examBuilderStorageAvailable = true;
+    let editingExamOriginalCourse = null;
     let editingExamCourse = null;
-    let editingExamQuestionsByModule = new Map();
+    let editingExamId = "";
     let editingExamModuleId = "";
-    let editingExamHadQuestions = false;
+    let editingExamQuestions = [];
     const maximumFileSize = 75 * 1024 * 1024;
     const state = {
         documents: [],
@@ -494,6 +496,40 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateModuleSelectionControls();
     };
 
+    const getModuleAssessments = module => {
+        const assessments = Array.isArray(module?.assessments)
+            ? module.assessments.map((exam, index) => ({
+                ...exam,
+                id:typeof exam?.id === "string" && exam.id ? exam.id : `${module.id}-assessment-${index + 1}`,
+                title:typeof exam?.title === "string" && exam.title.trim() ? exam.title : `Exam ${index + 1}`
+            }))
+            : [];
+        if (Array.isArray(module?.assessment?.questions) && module.assessment.questions.length) {
+            assessments.push({
+                id:`legacy-${module.id}`,
+                title:"Knowledge Check",
+                questions:module.assessment.questions,
+                legacy:true
+            });
+        }
+        return assessments;
+    };
+
+    const normalizeCourseAssessments = course => ({
+        ...JSON.parse(JSON.stringify(course)),
+        modules:course.modules.map(module => {
+            const moduleWithoutAssessments = {...module};
+            delete moduleWithoutAssessments.assessment;
+            delete moduleWithoutAssessments.assessments;
+            const exams = getModuleAssessments(module).map(exam => {
+                const normalized = JSON.parse(JSON.stringify(exam));
+                delete normalized.legacy;
+                return normalized;
+            });
+            return exams.length ? {...moduleWithoutAssessments, assessments:exams} : moduleWithoutAssessments;
+        })
+    });
+
     const updateExamBuilderSelectionControls = () => {
         const availableIds = new Set(examBuilderCourseIds);
         selectedExamBuilderCourseIds.forEach(id => {
@@ -535,21 +571,31 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </article>`;
             }
             const eligible = ["approved", "published"].includes(course.status);
-            const examModules = (Array.isArray(course.modules) ? course.modules : [])
-                .filter(module => Array.isArray(module?.assessment?.questions) && module.assessment.questions.length);
-            const questionCount = examModules.reduce((total, module) => total + module.assessment.questions.length, 0);
-            const examSummary = examModules.length
-                ? `${questionCount} ${questionCount === 1 ? "question" : "questions"} after ${examModules.map(module => module.title || "Untitled module").join(", ")}`
-                : "No exam questions yet";
+            const exams = (Array.isArray(course.modules) ? course.modules : []).flatMap((module, moduleIndex) =>
+                getModuleAssessments(module).map(exam => ({...exam, moduleId:module.id, moduleTitle:module.title || `Module ${moduleIndex + 1}`}))
+            );
+            const questionCount = exams.reduce((total, exam) => total + (Array.isArray(exam.questions) ? exam.questions.length : 0), 0);
+            const examSummary = exams.length
+                ? `${exams.length} ${exams.length === 1 ? "exam" : "exams"} · ${questionCount} ${questionCount === 1 ? "question" : "questions"}`
+                : "No exams yet";
             return `<article class="exam-builder-course">
                 <input type="checkbox" data-select-exam-course="${escapeHtml(courseId)}" aria-label="Select ${escapeHtml(course.title || courseId)} in Exam Builder" ${selectedExamBuilderCourseIds.has(courseId) ? "checked" : ""}>
                 <div class="exam-builder-course-copy">
                     <h3>${escapeHtml(course.title || courseId)}</h3>
                     <p>${escapeHtml(examSummary)}</p>
                     <div class="exam-builder-course-meta"><span>${escapeHtml(course.status || "draft")}</span><span>${(course.modules || []).length} ${(course.modules || []).length === 1 ? "module" : "modules"}</span></div>
+                    <div class="exam-builder-exams">${exams.length ? exams.map(exam => `
+                        <div class="exam-builder-exam-row">
+                            <div class="exam-builder-exam-copy"><strong>${escapeHtml(exam.title)}</strong>${escapeHtml(exam.moduleTitle)} · ${(exam.questions || []).length} ${(exam.questions || []).length === 1 ? "question" : "questions"}</div>
+                            <div class="exam-builder-exam-actions">
+                                <button class="manager-small-button" type="button" data-view-exam-course="${escapeHtml(courseId)}" data-view-exam-module="${escapeHtml(exam.moduleId)}" data-view-exam-id="${escapeHtml(exam.id)}">View / edit</button>
+                                <button class="manager-small-button" type="button" data-remove-exam-course="${escapeHtml(courseId)}" data-remove-exam-module="${escapeHtml(exam.moduleId)}" data-remove-exam-id="${escapeHtml(exam.id)}">Remove</button>
+                            </div>
+                        </div>`).join("") : ""}
+                    </div>
                 </div>
                 <div class="exam-builder-course-actions">
-                    <button class="manager-small-button" type="button" data-edit-exam="${escapeHtml(courseId)}" ${eligible ? "" : "disabled"}>Build / edit exam</button>
+                    <button class="manager-small-button" type="button" data-add-exam-course="${escapeHtml(courseId)}" ${eligible ? "" : "disabled"}>${exams.length ? "Add Another Exam" : "Add Exam"}</button>
                     <button class="manager-small-button" type="button" data-preview-exam-course="${escapeHtml(courseId)}" ${eligible ? "" : "disabled"}>Preview course</button>
                     <button class="manager-small-button" type="button" data-return-exam-course="${escapeHtml(courseId)}">Return to Course Builder</button>
                 </div>
@@ -560,12 +606,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const renderExamQuestions = () => {
         examQuestionEditor.replaceChildren();
-        const questions = editingExamQuestionsByModule.get(editingExamModuleId) || [];
-        document.getElementById("removeModuleExamButton").hidden = questions.length === 0;
+        const questions = editingExamQuestions;
         if (!questions.length) {
             const empty = document.createElement("p");
             empty.className = "handbook-empty";
-            empty.textContent = "No questions have been added for this module.";
+            empty.textContent = "No questions have been added to this exam.";
             examQuestionEditor.append(empty);
         }
         questions.forEach((question, questionIndex) => {
@@ -646,7 +691,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     };
 
-    const openExamEditor = courseId => {
+    const openExamEditor = (courseId, moduleId = null, examId = null) => {
         if (!requireMaster(examEditorNotice)) return;
         const course = getStructuredCourse(courseId);
         if (!course || !["approved", "published"].includes(course.status)) {
@@ -657,22 +702,30 @@ document.addEventListener("DOMContentLoaded", async () => {
             showNotice("This course has no modules to attach an exam to.", true, examEditorNotice);
             return;
         }
-        editingExamCourse = JSON.parse(JSON.stringify(course));
-        editingExamQuestionsByModule = new Map(course.modules.map(module => [
-            module.id,
-            Array.isArray(module.assessment?.questions)
-                ? module.assessment.questions.map(question => ({
-                    ...question,
-                    prompt:typeof question?.prompt === "string" ? question.prompt : "",
-                    choices:Array.isArray(question?.choices) ? [...question.choices] : [],
-                    answerIndex:Number.isInteger(question?.answerIndex) ? question.answerIndex : -1
-                }))
-                : []
-        ]));
-        editingExamHadQuestions = [...editingExamQuestionsByModule.values()].some(questions => questions.length);
-        editingExamModuleId = course.modules.find(module => editingExamQuestionsByModule.get(module.id)?.length)?.id
-            || course.modules[0].id;
-        examModuleSelect.replaceChildren(...course.modules.map((module, index) => {
+        editingExamOriginalCourse = JSON.parse(JSON.stringify(course));
+        editingExamCourse = normalizeCourseAssessments(course);
+        const existingExam = examId
+            ? editingExamCourse.modules.flatMap(module => getModuleAssessments(module)
+                .map(exam => ({moduleId:module.id, exam})))
+                .find(item => item.moduleId === moduleId && item.exam.id === examId)
+            : null;
+        if (examId && !existingExam) {
+            showNotice("The selected exam is no longer available. Refresh the Exam Builder and try again.", true, examEditorNotice);
+            return;
+        }
+        editingExamId = existingExam?.exam.id || makeId("exam");
+        editingExamModuleId = existingExam?.moduleId
+            || (moduleId && course.modules.some(module => module.id === moduleId) ? moduleId : course.modules[0].id);
+        editingExamQuestions = Array.isArray(existingExam?.exam.questions)
+            ? existingExam.exam.questions.map(question => ({
+                ...question,
+                prompt:typeof question?.prompt === "string" ? question.prompt : "",
+                choices:Array.isArray(question?.choices) ? [...question.choices] : [],
+                answerIndex:Number.isInteger(question?.answerIndex) ? question.answerIndex : -1
+            }))
+            : [];
+        examTitleInput.value = existingExam?.exam.title || "";
+        examModuleSelect.replaceChildren(...editingExamCourse.modules.map((module, index) => {
             const option = document.createElement("option");
             option.value = module.id;
             option.textContent = `${module.sourceModuleNumber ? `${module.sourceModuleNumber}: ` : `Module ${index + 1}: `}${module.title || "Untitled module"}`;
@@ -690,7 +743,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const issues = [];
         questions.forEach((question, index) => {
             const label = `Question ${index + 1}`;
-            if (typeof question.prompt !== "string" || !question.prompt.trim()) issues.push(`${label} needs question text.`);
+            if (!question || typeof question !== "object") {
+                issues.push(`${label} is invalid.`);
+                return;
+            }
+            if (typeof question.prompt !== "string" || !question.prompt.trim()) {
+                issues.push(`${label} needs question text.`);
+            }
             if (!Array.isArray(question.choices) || question.choices.length < 2
                 || !question.choices.every(choice => typeof choice === "string" && choice.trim())) {
                 issues.push(`${label} needs at least two non-empty answer choices.`);
@@ -702,58 +761,110 @@ document.addEventListener("DOMContentLoaded", async () => {
         return issues;
     };
 
-    const saveExam = () => {
+    const saveExam = keepOpen => {
         if (!requireMaster(examEditorNotice) || !editingExamCourse) return;
-        const hasQuestions = [...editingExamQuestionsByModule.values()].some(questions => questions.length);
-        if (!hasQuestions && !editingExamHadQuestions) {
-            showNotice("Add an exam question before saving.", true, examEditorNotice);
+        const title = examTitleInput.value.trim();
+        if (!title) {
+            showNotice("Enter a title for this exam.", true, examEditorNotice);
             return;
         }
-        for (const [moduleId, questions] of editingExamQuestionsByModule.entries()) {
-            if (!questions.length) continue;
-            const errors = validateExamQuestions(questions);
-            if (errors.length) {
-                const module = editingExamCourse.modules.find(item => item.id === moduleId);
-                showNotice(`${module?.title || "A module"}: ${errors.join(" ")}`, true, examEditorNotice);
-                return;
-            }
+        const errors = validateExamQuestions(editingExamQuestions);
+        if (errors.length) {
+            showNotice(errors.join(" "), true, examEditorNotice);
+            return;
         }
         showNotice("", false, examEditorNotice);
         try {
             const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
-            const current = records[editingExamCourse.id];
-            if (!current || JSON.stringify(current) !== JSON.stringify(editingExamCourse)) {
+            const current = records[editingExamOriginalCourse.id];
+            if (!current || JSON.stringify(current) !== JSON.stringify(editingExamOriginalCourse)) {
                 throw new Error("The course changed while the exam was being edited. Close this dialog and reopen the course.");
             }
             if (!["approved", "published"].includes(current.status)) {
                 throw new Error("Only an approved course can be updated in the Exam Builder.");
             }
+            if (!editingExamCourse.modules.some(module => module.id === examModuleSelect.value)) {
+                throw new Error("Choose a module for this exam.");
+            }
             const changedAt = new Date().toISOString();
-            const modules = current.modules.map(module => {
-                const questions = editingExamQuestionsByModule.get(module.id) || [];
-                if (!questions.length) {
-                    const {assessment, ...moduleWithoutAssessment} = module;
-                    return moduleWithoutAssessment;
-                }
-                return {
-                    ...module,
-                    assessment: {...(module.assessment || {}), questions:JSON.parse(JSON.stringify(questions))}
-                };
+            const exam = {id:editingExamId, title, questions:JSON.parse(JSON.stringify(editingExamQuestions))};
+            const modules = editingExamCourse.modules.map(module => {
+                const exams = getModuleAssessments(module).filter(item => item.id !== editingExamId);
+                if (module.id === examModuleSelect.value) exams.push(exam);
+                const moduleWithoutAssessments = {...module};
+                delete moduleWithoutAssessments.assessment;
+                delete moduleWithoutAssessments.assessments;
+                return exams.length ? {...moduleWithoutAssessments, assessments:exams} : moduleWithoutAssessments;
             });
-            records[current.id] = {
+            const updatedCourse = {
                 ...current,
                 ...(current.status === "published" ? {status:"approved", publishedAt:null, unpublishedAt:changedAt} : {}),
                 modules
             };
+            const validationErrors = window.CourseSchema.validateCourse(updatedCourse);
+            if (validationErrors.length) throw new Error(`Exam validation failed: ${validationErrors.join(" ")}`);
+            records[current.id] = updatedCourse;
             localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+            editingExamOriginalCourse = JSON.parse(JSON.stringify(updatedCourse));
+            editingExamCourse = normalizeCourseAssessments(updatedCourse);
             window.dispatchEvent(new Event("training-course-changed"));
-            examEditorDialog.close();
-            editingExamCourse = null;
             render();
+            if (keepOpen) {
+                editingExamId = makeId("exam");
+                editingExamQuestions = [];
+                examTitleInput.value = "";
+                renderExamQuestions();
+                showNotice("Exam saved. Enter another exam title and questions, then choose its module.", false, examEditorNotice);
+                return;
+            }
+            examEditorDialog.close();
+            editingExamOriginalCourse = null;
+            editingExamCourse = null;
             showNotice("Exam saved. Preview the course, then publish it when ready.");
         } catch (error) {
             console.error("Unable to save the course exam.", error);
             showNotice(error instanceof Error ? error.message : "Unable to save the course exam.", true, examEditorNotice);
+        }
+    };
+
+    const removeCourseExam = (courseId, moduleId, examId) => {
+        if (!requireMaster()) return;
+        const course = getStructuredCourse(courseId);
+        if (!course || !window.confirm("Remove this exam from the course? This cannot be undone.")) return;
+        try {
+            const records = JSON.parse(localStorage.getItem("trainingManagerCourses") || "{}");
+            const current = records[courseId];
+            if (!current || JSON.stringify(current) !== JSON.stringify(course)) {
+                throw new Error("The course changed before the exam could be removed. Refresh the Exam Builder and try again.");
+            }
+            let removed = false;
+            const modules = current.modules.map(module => {
+                const exams = getModuleAssessments(module);
+                const remaining = exams.filter(exam => {
+                    if (module.id === moduleId && exam.id === examId) {
+                        removed = true;
+                        return false;
+                    }
+                    return true;
+                });
+                const moduleWithoutAssessments = {...module};
+                delete moduleWithoutAssessments.assessment;
+                delete moduleWithoutAssessments.assessments;
+                return remaining.length ? {...moduleWithoutAssessments, assessments:remaining} : moduleWithoutAssessments;
+            });
+            if (!removed) throw new Error("The selected exam is no longer available.");
+            records[courseId] = {
+                ...current,
+                ...(current.status === "published" ? {status:"approved", publishedAt:null, unpublishedAt:new Date().toISOString()} : {}),
+                modules
+            };
+            localStorage.setItem("trainingManagerCourses", JSON.stringify(records));
+            window.dispatchEvent(new Event("training-course-changed"));
+            render();
+            showNotice("Exam removed from the course.");
+        } catch (error) {
+            console.error("Unable to remove the course exam.", error);
+            showNotice(error instanceof Error ? error.message : "Unable to remove the course exam.", true);
         }
     };
 
@@ -1510,9 +1621,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });
     examBuilderList.addEventListener("click", event => {
-        const editButton = event.target.closest("[data-edit-exam]");
+        const addButton = event.target.closest("[data-add-exam-course]");
+        if (addButton) {
+            openExamEditor(addButton.dataset.addExamCourse);
+            return;
+        }
+        const editButton = event.target.closest("[data-view-exam-course]");
         if (editButton) {
-            openExamEditor(editButton.dataset.editExam);
+            openExamEditor(editButton.dataset.viewExamCourse, editButton.dataset.viewExamModule, editButton.dataset.viewExamId);
+            return;
+        }
+        const removeButton = event.target.closest("[data-remove-exam-course]");
+        if (removeButton) {
+            removeCourseExam(removeButton.dataset.removeExamCourse, removeButton.dataset.removeExamModule, removeButton.dataset.removeExamId);
             return;
         }
         const previewButton = event.target.closest("[data-preview-exam-course]");
@@ -1565,24 +1686,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     returnSelectedExamCoursesButton.addEventListener("click", () => {
         returnCoursesToCourseBuilder([...selectedExamBuilderCourseIds]);
     });
-    examModuleSelect.addEventListener("change", () => {
-        editingExamModuleId = examModuleSelect.value;
-        renderExamQuestions();
-    });
     document.getElementById("addExamQuestionButton").addEventListener("click", () => {
-        if (!editingExamModuleId) return;
-        const questions = editingExamQuestionsByModule.get(editingExamModuleId) || [];
-        questions.push({prompt:"", choices:["","","",""], answerIndex:-1});
-        editingExamQuestionsByModule.set(editingExamModuleId, questions);
+        editingExamQuestions.push({prompt:"", choices:["","","",""], answerIndex:-1});
         renderExamQuestions();
     });
-    document.getElementById("removeModuleExamButton").addEventListener("click", () => {
-        if (!editingExamModuleId) return;
-        editingExamQuestionsByModule.set(editingExamModuleId, []);
-        renderExamQuestions();
-        showNotice("Exam removed from this module. Save exam changes to apply the removal.", false, examEditorNotice);
-    });
-    document.getElementById("saveExamButton").addEventListener("click", saveExam);
+    document.getElementById("addAnotherExamButton").addEventListener("click", () => saveExam(true));
+    document.getElementById("saveExamButton").addEventListener("click", () => saveExam(false));
     document.getElementById("closeExamEditorDialog").addEventListener("click", () => examEditorDialog.close());
     document.getElementById("cancelExamEditorButton").addEventListener("click", () => examEditorDialog.close());
     examEditorDialog.addEventListener("click", event => {
