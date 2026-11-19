@@ -9,6 +9,21 @@ const context = {window: {}, URL};
 vm.runInNewContext(fs.readFileSync(path.join(root, "assets/shared/js/course-schema.js"), "utf8"), context);
 vm.runInNewContext(fs.readFileSync(path.join(root, "assets/pages/ai-training-content-manager/document-processing.js"), "utf8"), context);
 
+const metadataLines = [
+    "Course ID: workplace-ergonomics-basics",
+    "Course Title: Workplace Ergonomics and Safe Computer Use",
+    "Short Description: An introductory course on safe and comfortable computer workstation practices.",
+    "Category: Workplace Safety",
+    "Difficulty: Beginner",
+    "Duration Minutes: 45",
+    "Version: 1.0",
+    "Division: Operations",
+    "Branch: Administrative Support",
+    "Role: Office Support Specialist"
+];
+const courseText = metadata => `COURSE\n${metadata}\nCOURSE DESCRIPTION\nDescription\n`;
+const extractTextCourse = text => context.window.HandbookProcessor.extractCourse({name:"example.txt", text:async () => text});
+
 test("extracts the handbook course, modules, callouts, table, and references", async () => {
     const text = fs.readFileSync(path.join(root, "HANDBOOKFORMAT.txt"), "utf8");
     const course = await context.window.HandbookProcessor.extractCourse({name: "HANDBOOKFORMAT.txt", text: async () => text});
@@ -28,17 +43,56 @@ test("extracts the handbook course, modules, callouts, table, and references", a
     assert.equal(course.warnings.length, 0);
 });
 
-test("recognizes all supported module heading forms without inventing a missing course ID", async () => {
+test("recognizes all supported module heading forms", async () => {
     const text = [
-        "COURSE", "Course Title: Example",
+        courseText(metadataLines.join("\n")),
         "MODULE 1.1: First", "CONTENT", "Text",
         "1.2 Second", "CONTENT", "Text",
         "1.3: Third", "CONTENT", "Text",
         "MODULE 1.4 Fourth", "CONTENT", "Text"
     ].join("\n");
-    const course = await context.window.HandbookProcessor.extractCourse({name:"example.txt", text:async () => text});
-    assert.equal(course.id, "");
+    const course = await extractTextCourse(text);
     assert.deepEqual(Array.from(course.modules, module => module.title), ["First", "Second", "Third", "Fourth"]);
+});
+
+test("parses line-separated and flattened course metadata independently", async () => {
+    for (const separator of ["\n", ""]) {
+        const text = `${courseText(metadataLines.join(separator))}Category: Not metadata\nMODULE 1.1: First\nCONTENT\nRole: Content\n`;
+        const course = await extractTextCourse(text);
+        assert.deepEqual(JSON.parse(JSON.stringify({
+            id:course.id, title:course.title, shortDescription:course.shortDescription,
+            category:course.category, difficulty:course.difficulty, durationMinutes:course.durationMinutes,
+            version:course.version, roleAssignments:course.roleAssignments
+        })), {
+            id:"workplace-ergonomics-basics", title:"Workplace Ergonomics and Safe Computer Use",
+            shortDescription:"An introductory course on safe and comfortable computer workstation practices.",
+            category:"Workplace Safety", difficulty:"Beginner", durationMinutes:45, version:"1.0",
+            roleAssignments:[{divisionId:"operations", branchId:"administrative-support", roleId:"office-support-specialist", required:true}]
+        });
+        assert.equal(course.description, "Description Category: Not metadata");
+        assert.equal(course.modules[0].content[0].text, "Role: Content");
+    }
+});
+
+test("rejects missing or invalid required metadata with actionable errors", async () => {
+    for (const [index, label] of [[0,"Course ID"], [1,"Course Title"], [2,"Short Description"],
+        [3,"Category"], [4,"Difficulty"], [5,"Duration Minutes"]]) {
+        const lines = metadataLines.filter((_, position) => position !== index);
+        await assert.rejects(extractTextCourse(courseText(lines.join("\n"))), new RegExp(`${label} is required`));
+    }
+    for (const value of ["Uppercase", "-leading", "trailing-", "two--hyphens", "has spaces", "one_two"]) {
+        const lines = [...metadataLines];
+        lines[0] = `Course ID: ${value}`;
+        await assert.rejects(extractTextCourse(courseText(lines.join("\n"))), /Course ID must be a lowercase slug/);
+    }
+    for (const value of ["0", "-1", "1.5", "1e2", "999999999999999999999"]) {
+        const lines = [...metadataLines];
+        lines[5] = `Duration Minutes: ${value}`;
+        await assert.rejects(extractTextCourse(courseText(lines.join("\n"))), /Duration Minutes must be a positive whole number/);
+    }
+    await assert.rejects(extractTextCourse(`COURSE\n${metadataLines.join("\n")}`), /Missing COURSE DESCRIPTION heading/);
+    await assert.rejects(extractTextCourse(metadataLines.join("\n")), /Missing COURSE heading/);
+    await assert.rejects(extractTextCourse(courseText(`${metadataLines.join("\n")}\nCategory: Extra`)), /Duplicate Category field/);
 });
 
 test("shared schema rejects incomplete courses and unsafe links but accepts existing built-in courses", () => {
@@ -74,9 +128,9 @@ test("shared schema rejects incomplete courses and unsafe links but accepts exis
     assert.ok(schema.validateCourse(assessedCourse).some(error => /Duplicate assessment ID/.test(error)));
 });
 
-test("converts DOCX headings, lists, tables, links, and images to structured blocks", async () => {
-    const element = (tag, text, children = [], attrs = {}) => ({
+const element = (tag, text, children = [], attrs = {}) => ({
         nodeType:1, tagName:tag.toUpperCase(), textContent:text, children,
+        childNodes:children.length ? children : [{nodeType:3, nodeValue:text}],
         getAttribute:name => attrs[name] || null,
         querySelectorAll(selector) {
             const tags = selector.split(",").map(value => value.trim().toUpperCase());
@@ -84,24 +138,30 @@ test("converts DOCX headings, lists, tables, links, and images to structured blo
             return find(this);
         },
         querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
-    });
-    const link = element("a", "Guide", [], {href:"https://example.test/guide"});
-    const image = element("img", "", [], {src:"data:image/png;base64,AAAA", alt:"Diagram"});
-    const row = element("tr", "Cell", [element("td", "Cell")]);
-    const children = [
-        element("p", "COURSE"), element("p", "Course ID: example"), element("p", "Course Title: Example"),
-        element("h1", "MODULE 1.1: First"), element("p", "CONTENT"),
-        element("h2", "A heading"),
-        element("ol", "OneTwo", [element("li", "One"), element("li", "Two")]),
-        element("table", "Cell", [row]),
-        element("p", "Guide", [link]), element("p", "", [image])
-    ];
+});
+const extractDocxCourse = async children => {
     const docxContext = {
         window:{mammoth:{convertToHtml:async () => ({value:"synthetic", messages:[]})}, CourseSchema:context.window.CourseSchema},
         Node:{ELEMENT_NODE:1}, DOMParser:class { parseFromString() { return {body:{children}}; } }
     };
     vm.runInNewContext(fs.readFileSync(path.join(root, "assets/pages/ai-training-content-manager/document-processing.js"), "utf8"), docxContext);
-    const course = await docxContext.window.HandbookProcessor.extractCourse({name:"synthetic.docx", arrayBuffer:async () => new ArrayBuffer(0)});
+    return docxContext.window.HandbookProcessor.extractCourse({name:"synthetic.docx", arrayBuffer:async () => new ArrayBuffer(0)});
+};
+
+test("converts DOCX headings, lists, tables, links, and images to structured blocks", async () => {
+    const link = element("a", "Guide", [], {href:"https://example.test/guide"});
+    const image = element("img", "", [], {src:"data:image/png;base64,AAAA", alt:"Diagram"});
+    const row = element("tr", "Cell", [element("td", "Cell")]);
+    const children = [
+        element("p", "COURSE"), ...metadataLines.map(line => element("p", line)), element("p", "COURSE DESCRIPTION"), element("p", "Description"),
+        element("h1", "MODULE 1: First"), element("p", "CONTENT"),
+        element("h2", "A heading"),
+        element("ol", "OneTwo", [element("li", "One"), element("li", "Two")]),
+        element("table", "Cell", [row]),
+        element("p", "Guide", [link]), element("p", "", [image])
+    ];
+    const course = await extractDocxCourse(children);
+    assert.equal(course.modules[0].sourceModuleNumber, "1");
     const content = course.modules[0].content;
     assert.ok(content.some(block => block.type === "heading" && block.text === "A heading"));
     assert.ok(content.some(block => block.type === "list" && block.style === "ordered" && block.items.length === 2));
@@ -110,8 +170,82 @@ test("converts DOCX headings, lists, tables, links, and images to structured blo
     assert.ok(content.some(block => block.type === "image" && block.alt === "Diagram"));
 });
 
+test("preserves DOCX runs, paragraph boundaries, and line breaks in metadata", async () => {
+    const id = element("p", metadataLines[0], [
+        element("strong", "Course "), element("span", "ID: workplace-"), element("em", "ergonomics-basics")
+    ]);
+    const cell = element("td", metadataLines.slice(1, 5).join(""), metadataLines.slice(1, 5).map(line => element("p", line)));
+    const row = element("tr", cell.textContent, [cell]);
+    const breaks = element("p", metadataLines.slice(5).join(""), metadataLines.slice(5).flatMap((line, index) =>
+        index ? [element("br", ""), element("span", line)] : [element("span", line)]
+    ));
+    const course = await extractDocxCourse([
+        element("p", "COURSE"), id, element("table", cell.textContent, [row]), breaks,
+        element("p", "COURSE DESCRIPTION"), element("p", "Description"),
+        element("p", "MODULE 1.1: First"), element("p", "CONTENT"), element("p", "Text")
+    ]);
+    assert.equal(course.id, "workplace-ergonomics-basics");
+    assert.equal(course.title, "Workplace Ergonomics and Safe Computer Use");
+    assert.equal(course.shortDescription, "An introductory course on safe and comfortable computer workstation practices.");
+    assert.equal(course.category, "Workplace Safety");
+    assert.equal(course.difficulty, "Beginner");
+    assert.equal(course.durationMinutes, 45);
+    assert.equal(course.version, "1.0");
+    assert.deepEqual(JSON.parse(JSON.stringify(course.roleAssignments)), [
+        {divisionId:"operations", branchId:"administrative-support", roleId:"office-support-specialist", required:true}
+    ]);
+    assert.equal(course.modules[0].content[0].text, "Text");
+});
+
+test("Create Structured Draft displays metadata errors and opens a valid draft", async () => {
+    class EditorElement {
+        constructor() {
+            this.events = {};
+            this.value = "";
+            this.dataset = {};
+            this.classList = {add() {}, remove() {}, toggle() {}};
+        }
+        addEventListener(name, callback) { this.events[name] = callback; }
+        append() {}
+        replaceChildren() {}
+        setAttribute() {}
+        showModal() { this.open = true; }
+        focus() {}
+    }
+    const elements = Object.fromEntries([...fs.readFileSync(path.join(root, "ai-training-content-manager.html"), "utf8")
+        .matchAll(/\bid="([^"]+)"/g)].map(match => [match[1], new EditorElement()]));
+    let initialize;
+    const editorContext = {
+        window:{PortalData:{}, location:{}},
+        document:{
+            getElementById:id => elements[id] || null,
+            createElement:() => new EditorElement(),
+            addEventListener:(name, callback) => { if (name === "DOMContentLoaded") initialize = callback; }
+        },
+        sessionStorage:{getItem:() => JSON.stringify({isMaster:true, email:"elias@navy.mil"})},
+        localStorage:{getItem:() => null},
+        URL, console:{error() {}}
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(root, "assets/shared/js/course-schema.js"), "utf8"), editorContext);
+    vm.runInNewContext(fs.readFileSync(path.join(root, "assets/pages/ai-training-content-manager/document-processing.js"), "utf8"), editorContext);
+    vm.runInNewContext(fs.readFileSync(path.join(root, "assets/pages/ai-training-content-manager/course-editor.js"), "utf8"), editorContext);
+    initialize();
+    const file = text => ({name:"course.txt", size:text.length, text:async () => text});
+    elements.handbookFiles.files = [file(courseText(metadataLines.filter((_, index) => index !== 0).join("\n")))];
+    await elements.createCourseDraftButton.events.click();
+    assert.match(elements.managerNotice.textContent, /Course ID is required/);
+    assert.notEqual(elements.courseDraftDialog.open, true);
+
+    elements.handbookFiles.files = [file(courseText(metadataLines.join("")))];
+    await elements.createCourseDraftButton.events.click();
+    assert.equal(elements.courseDraftDialog.open, true);
+    assert.equal(elements.courseEditorId.value, "workplace-ergonomics-basics");
+    assert.equal(elements.courseEditorTitle.value, "Workplace Ergonomics and Safe Computer Use");
+    assert.equal(elements.courseEditorDuration.value, 45);
+});
+
 test("reports incomplete course tables for review", async () => {
-    const text = "COURSE\nCourse Title: Example\nMODULE 1.1: First\nTABLE: Review\n2 rows x 2 cols\none\ntwo";
+    const text = `${courseText(metadataLines.join("\n"))}MODULE 1.1: First\nTABLE: Review\n2 rows x 2 cols\none\ntwo`;
     const course = await context.window.HandbookProcessor.extractCourse({name: "example.txt", text: async () => text});
     assert.match(course.warnings[0], /table could not be fully extracted/i);
 });

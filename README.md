@@ -85,4 +85,6 @@ Sessions are stored in session storage; newly created prototype accounts and sal
 
 ## Training manager workflow
 
+Structured course drafts accept DOCX, TXT, or Markdown documents in the [handbook format](HANDBOOKFORMAT.txt). The COURSE section must include a lowercase, hyphen-separated Course ID, Course Title, Short Description, Category, Difficulty, and a positive whole-number Duration Minutes, followed by a COURSE DESCRIPTION heading. Invalid or missing metadata must be corrected in the document before creating a draft.
+
 Review courses in Course Builder, then move approved courses to Exam Builder or Published Courses. A course appears in only one of these sections. Publish and unpublish from Published Courses; unpublishing leaves the course there until it is moved to a builder. To reject a published course, unpublish it and move it back to Course Builder first. Course locations and publication remain browser-local prototype data.

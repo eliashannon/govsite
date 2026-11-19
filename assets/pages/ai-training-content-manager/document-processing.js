@@ -195,12 +195,56 @@
         return {blocks, warnings, pageCount: null};
     };
 
+    const parseCourseMetadata = text => {
+        const heading = /^[ \t]*COURSE[ \t]*:?[ \t]*$/im.exec(text);
+        if (!heading) throw new Error("Missing COURSE heading. Add a COURSE section containing the required metadata.");
+        const start = heading.index + heading[0].length;
+        const end = /^[ \t]*COURSE DESCRIPTION[ \t]*:?[ \t]*$/im.exec(text.slice(start));
+        if (!end) throw new Error("Missing COURSE DESCRIPTION heading after the COURSE metadata.");
+        const metadata = text.slice(start, start + end.index);
+        const labels = {
+            "course id":"id", "course title":"title", "short description":"shortDescription",
+            "category":"category", "difficulty":"difficulty", "duration minutes":"durationMinutes",
+            "version":"version", "division":"_division", "branch":"_branch", "role":"_role"
+        };
+        const labelPattern = /(Course ID|Course Title|Short Description|Category|Difficulty|Duration Minutes|Version|Division|Branch|Role)[ \t]*:/gi;
+        const matches = [...metadata.matchAll(labelPattern)];
+        const fields = {};
+        const errors = [];
+        matches.forEach((match, index) => {
+            const label = match[1];
+            const key = labels[label.toLowerCase()];
+            const value = metadata.slice(match.index + match[0].length, matches[index + 1]?.index ?? metadata.length).trim();
+            if (Object.hasOwn(fields, key)) errors.push(`Duplicate ${label} field.`);
+            else fields[key] = value;
+        });
+        [
+            ["id", "Course ID"], ["title", "Course Title"], ["shortDescription", "Short Description"],
+            ["category", "Category"], ["difficulty", "Difficulty"], ["durationMinutes", "Duration Minutes"]
+        ].forEach(([key, label]) => {
+            if (!fields[key]) errors.push(`${label} is required.`);
+        });
+        if (fields.id && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fields.id)) {
+            errors.push("Course ID must be a lowercase slug with letters or numbers separated by single hyphens.");
+        }
+        if (fields.durationMinutes) {
+            const duration = Number(fields.durationMinutes);
+            if (!/^\d+$/.test(fields.durationMinutes) || !Number.isSafeInteger(duration) || duration <= 0) {
+                errors.push("Duration Minutes must be a positive whole number.");
+            } else fields.durationMinutes = duration;
+        }
+        if (errors.length) throw new Error(`Invalid course metadata: ${errors.join(" ")}`);
+        return fields;
+    };
+
     const parseCourseText = (text, fileName) => {
-        const lines = String(text).replace(/\r\n?/g, "\n").split("\n");
+        const normalizedText = String(text).replace(/\r\n?/g, "\n");
+        const metadata = parseCourseMetadata(normalizedText);
+        const lines = normalizedText.split("\n");
         const course = {
             id: "", title: "", shortDescription: "", description: "", category: "", difficulty: "",
             durationMinutes: 0, version: "1.0", learningObjectives: [], roleAssignments: [],
-            status: "draft", source: {fileName}, modules: [], warnings: []
+            status: "draft", source: {fileName}, modules: [], warnings: [], ...metadata
         };
         const moduleHeadingPattern = /^\s*(?:(?:MODULE)\s*)?((?:\d+\.)+\d+|\d+\.\d+)\s*(?:[:\-]\s*|\s+)(.+?)\s*$/i;
         const moduleHeadingWithColon = /^\s*MODULE\s+((?:\d+\.)*\d+(?:\.\d+)*)\s*[:\-]?\s*(.*?)\s*$/i;
@@ -297,6 +341,7 @@
                 callout = null;
                 return;
             }
+            if (section === "COURSE" && !currentModule) return;
             if (currentModule && /^(?:KEY POINT|FINAL KEY POINT|WARNING|CALLOUT)$/.test(upper)) {
                 section = "CALLOUT";
                 callout = {type:"callout", variant:upper === "WARNING" ? "warning" : "info", title:upper === "CALLOUT" ? "" : line, text:""};
@@ -321,27 +366,11 @@
                 else callout.text = [callout.text, line].filter(Boolean).join(" ");
                 return;
             }
-            if (/^COURSE\s+ID\s*:/i.test(line)) { course.id = line.replace(/^COURSE\s+ID\s*:\s*/i,"").trim(); return; }
-            if (/^COURSE\s+TITLE\s*:/i.test(line)) { course.title = line.replace(/^COURSE\s+TITLE\s*:\s*/i,"").trim(); return; }
-            if (/^SHORT\s+DESCRIPTION\s*:/i.test(line) && !currentModule) { course.shortDescription = line.replace(/^SHORT\s+DESCRIPTION\s*:\s*/i,"").trim(); return; }
             if (section === "SOURCE INFORMATION" && !currentModule) {
                 const field = line.match(/^([^:]+):\s*(.*)$/);
                 if (field) {
                     course.source[field[1].trim()] = field[2].trim();
                     if (/^Source Classification$/i.test(field[1].trim())) course.source.classification = field[2].trim();
-                }
-                return;
-            }
-            if (/^CATEGORY\s*:/i.test(line)) { course.category = line.replace(/^CATEGORY\s*:\s*/i,"").trim(); return; }
-            if (/^DIFFICULTY\s*:/i.test(line)) { course.difficulty = line.replace(/^DIFFICULTY\s*:\s*/i,"").trim(); return; }
-            if (/^DURATION\s+MINUTES\s*:/i.test(line)) { course.durationMinutes = Number(line.replace(/^DURATION\s+MINUTES\s*:\s*/i,"").trim()) || 0; return; }
-            if (/^VERSION\s*:/i.test(line)) { course.version = line.replace(/^VERSION\s*:\s*/i,"").trim(); return; }
-            if (/^(DIVISION|BRANCH|ROLE)\s*:/i.test(line)) {
-                const match = line.match(/^([A-Z]+)\s*:\s*(.+)$/i);
-                if (match) {
-                    if (match[1].toLowerCase() === "division") course._division = match[2].trim();
-                    if (match[1].toLowerCase() === "branch") course._branch = match[2].trim();
-                    if (match[1].toLowerCase() === "role") course._role = match[2].trim();
                 }
                 return;
             }
@@ -406,6 +435,28 @@
         const parsed = new DOMParser().parseFromString(result.value, "text/html");
         const pseudoLines = [];
         const warnings = (result.messages || []).map(message => message.message);
+        let inCourseMetadata = false;
+        const appendText = text => {
+            pseudoLines.push(text);
+            text.split(/\r?\n/).forEach(line => {
+                if (/^\s*COURSE\s*:?\s*$/i.test(line)) inCourseMetadata = true;
+                else if (/^\s*COURSE DESCRIPTION\s*:?\s*$/i.test(line)) inCourseMetadata = false;
+            });
+        };
+        const textWithParagraphs = node => {
+            if (node.nodeType === 3) return node.nodeValue;
+            if (node.nodeType !== Node.ELEMENT_NODE) return "";
+            const tag = node.tagName.toLowerCase();
+            if (tag === "br") return "\n";
+            let text = "";
+            for (const child of node.childNodes) {
+                const childIsParagraph = child.nodeType === Node.ELEMENT_NODE && child.tagName.toLowerCase() === "p";
+                if (childIsParagraph && text && !text.endsWith("\n")) text += "\n";
+                text += textWithParagraphs(child);
+                if (childIsParagraph && !text.endsWith("\n")) text += "\n";
+            }
+            return text;
+        };
         const imageLine = image => {
             const src = image.getAttribute("src") || "";
             if (window.CourseSchema.safeUrl(src, true)) {
@@ -416,34 +467,46 @@
             if (node.nodeType !== Node.ELEMENT_NODE) return;
             const tag = node.tagName.toLowerCase();
             if (/^h[1-6]$/.test(tag)) {
-                const text = node.textContent.trim();
-                if (/^(?:MODULE\s+)?\d+\.\d+(?:[:\-\s]|$)/i.test(text)
+                const text = textWithParagraphs(node).trim();
+                if (/^(?:MODULE\s+\d+(?:\.\d+)*|\d+(?:\.\d+)+)(?:[:\-\s]|$)/i.test(text)
                     || /^(?:COURSE|COURSE DESCRIPTION|LEARNING OBJECTIVES|MODULE OBJECTIVES|CONTENT|REFERENCES|SOURCE INFORMATION|KEY POINT|FINAL KEY POINT|WARNING|CALLOUT|TABLE\s*:)/i.test(text)) {
-                    pseudoLines.push(text);
+                    appendText(text);
                 } else pseudoLines.push(`[HEADING] ${JSON.stringify({level:Math.max(2, Math.min(4, Number(tag[1]))), text})}`);
                 return;
             }
             if (tag === "table") {
                 const rowNodes = [...node.querySelectorAll("tr")];
-                const rows = rowNodes.map(row => [...row.querySelectorAll("th,td")].map(cell => cell.textContent.trim()));
+                if (inCourseMetadata) {
+                    rowNodes.forEach(row => {
+                        row.querySelectorAll("th,td").forEach(cell => appendText(textWithParagraphs(cell).trim()));
+                    });
+                    return;
+                }
+                const rows = rowNodes.map(row => [...row.querySelectorAll("th,td")].map(cell => textWithParagraphs(cell).trim()));
                 const hasHeaders = rowNodes[0]?.querySelector("th");
                 if (rows.length) pseudoLines.push("[TABLE]", JSON.stringify({headers:hasHeaders ? rows[0] : [],rows:hasHeaders ? rows.slice(1) : rows}));
                 return;
             }
             if (tag === "ul" || tag === "ol") {
                 [...node.children].forEach(item => {
-                    if (item.tagName.toLowerCase() === "li") pseudoLines.push(`${tag === "ol" ? "1." : "-"} ${item.textContent.trim()}`);
+                    if (item.tagName.toLowerCase() !== "li") return;
+                    const text = textWithParagraphs(item).trim();
+                    if (inCourseMetadata) appendText(text);
+                    else pseudoLines.push(`${tag === "ol" ? "1." : "-"} ${text}`);
                 });
                 return;
             }
             if (tag === "p") {
                 const links = [...node.querySelectorAll("a")];
                 const images = [...node.querySelectorAll("img")];
-                if (links.length === 1 && node.textContent.trim() === links[0].textContent.trim()) {
+                const text = textWithParagraphs(node).trim();
+                if (inCourseMetadata) {
+                    appendText(text);
+                } else if (links.length === 1 && node.textContent.trim() === links[0].textContent.trim()) {
                     const href = links[0].getAttribute("href") || "";
-                    pseudoLines.push(`[${links[0].textContent.trim()}](${href})`);
+                    appendText(`[${links[0].textContent.trim()}](${href})`);
                 } else {
-                    pseudoLines.push(node.textContent.trim());
+                    appendText(text);
                     links.forEach(link => pseudoLines.push(`[${link.textContent.trim()}](${link.getAttribute("href") || ""})`));
                 }
                 images.forEach(imageLine);
