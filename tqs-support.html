@@ -5,7 +5,7 @@
 <script src="assets/shared/js/auth.js?v=2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | TQS Support</title>
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261119-3">
 </head>
 <body data-page="tqs-support">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -30,6 +30,16 @@
   </section>
 
   <div id="tqsTracker" hidden>
+    <section id="demoTqs" class="tqs-progress-panel demo-tqs" aria-labelledby="demoTqsTitle" hidden>
+      <span class="tqs-label">SYNTHETIC SAMPLE · DEMO D</span>
+      <h2 id="demoTqsTitle">Sample Role Qualification Standard</h2>
+      <p class="demo-tqs-meta">TQS ID: DEMO-TQS-001 · Version 1.0 · Role: Demo D</p>
+      <p class="demo-tqs-note">Example only, not an official qualification. Checkoffs are saved in this browser and are not authenticated or audited.</p>
+      <p id="demoTqsProgress" aria-live="polite"></p>
+      <p id="demoTqsNotice" class="tqs-storage-notice" role="status" aria-live="polite" hidden></p>
+      <div id="demoTqsModules"></div>
+    </section>
+
     <section class="tqs-role-card" aria-labelledby="selectedRoleName">
       <div class="tqs-role-mark" aria-hidden="true">TQS</div>
       <div class="tqs-role-copy">
@@ -45,7 +55,7 @@
 
     <aside class="tqs-data-note">
       <span aria-hidden="true">i</span>
-      <p>This tracker uses the existing role-required course catalog. The portal does not currently contain separate TQS standard records; this progress view is not an official qualification record.</p>
+      <p>The role-required course checklist below uses the existing course catalog and is not an official qualification record.</p>
     </aside>
 
     <section class="tqs-progress-panel" aria-labelledby="progressTitle">
@@ -111,5 +121,5 @@
     </div>
   </dialog>
 </main></div></div>
-<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/tqs-support/tqs-support.js?v=20261118-2"></script>
+<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/tqs-support/tqs-support.js?v=20261118-2"></script><script src="assets/pages/tqs-support/demo-tqs.js"></script>
 </body></html>

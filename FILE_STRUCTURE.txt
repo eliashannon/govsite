@@ -38,6 +38,7 @@ Git internals and empty, untracked directories are omitted.
 |   |   |-- role-overview
 |   |   |   `-- role-overview.js
 |   |   |-- tqs-support
+|   |   |   |-- demo-tqs.js
 |   |   |   |-- tqs-support.css
 |   |   |   |-- tqs-parser.js
 |   |   |   `-- tqs-support.js
@@ -74,6 +75,7 @@ Git internals and empty, untracked directories are omitted.
 |-- tqs-support.html
 |-- tests
 |   |-- course-extraction.test.js
+|   |-- demo-tqs.test.js
 |   |-- tqs-editor.test.js
 |   `-- tqs-parser.test.js
 `-- training.html
