@@ -12,7 +12,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Unable to read the temporary account profile.", error);
     }
 
-    if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+    if (!profile || typeof profile !== "object" || Array.isArray(profile)
+        || typeof profile.email !== "string" || !profile.email.trim()) {
         emptyTitle.textContent = "Sign in to view your requirements";
         emptyMessage.textContent = "Sign in and select a role in Role Overview to see its qualification requirements.";
         emptyLink.href = "account.html";
@@ -33,8 +34,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    if (window.DemoTqs.matches(profile, roleSelection)) {
-        window.DemoTqs.start(profile, roleSelection);
+    let publishedTqs;
+    try {
+        publishedTqs = window.TqsStore.publishedForRole(roleSelection);
+    } catch (error) {
+        console.error("Unable to read the published TQS.", error);
+        document.getElementById("selectedRoleName").textContent = roleName;
+        document.getElementById("selectedRoleDescription").textContent = "TQS data could not be read from this browser.";
+        document.getElementById("progressSummary").textContent = "TQS progress unavailable";
+        document.getElementById("tqsTracker").hidden = false;
+        document.querySelector("[data-tqs-search]").disabled = true;
+        return;
+    }
+
+    window.addEventListener("storage", event => {
+        if (event.key === window.TqsStore.storageKey || event.key === null) window.location.reload();
+    });
+    if (publishedTqs || window.DemoTqs.matches(profile, roleSelection)) {
+        window.DemoTqs.start(profile, roleSelection, publishedTqs);
         return;
     }
 

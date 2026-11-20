@@ -5,7 +5,7 @@
 <script src="assets/shared/js/auth.js?v=2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Training Portal | AI Training Content Manager</title>
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261119-13">
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261118-2"><link rel="stylesheet" href="assets/pages/ai-training-content-manager/ai-training-content-manager.css?v=20261120-1">
 </head>
 <body data-page="ai-training-content-manager">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -20,7 +20,7 @@
 
   <aside class="manager-prototype-notice" aria-label="Prototype processing and storage notice">
     <strong>Local prototype — no AI service is connected.</strong>
-    <span>PDF/DOCX text extraction and rule-based classification run in this browser. Original files and workflow data stay in this browser. Publishing updates this browser's training catalog only; export and source-control the JSON package and original handbooks separately for shared deployment. Master-only publishing checks run in this browser; this static prototype has no server-side authorization.</span>
+    <span>PDF/DOCX text extraction and rule-based classification run in this browser. Original files and workflow data stay in this browser. Publishing makes courses and TQS available only in this browser; course JSON and original handbooks must be exported and source-controlled separately for shared deployment. Master-only publishing checks run in this browser; this static prototype has no server-side authorization.</span>
     <span>Bundled parser notices: <a href="assets/pages/ai-training-content-manager/vendor/PDFJS-LICENSE.txt" target="_blank" rel="noopener">PDF.js license</a> and <a href="assets/pages/ai-training-content-manager/vendor/MAMMOTH-LICENSE.txt" target="_blank" rel="noopener">Mammoth.js license</a>.</span>
   </aside>
   <p id="managerNotice" class="manager-notice" role="status" aria-live="polite" hidden></p>
@@ -37,9 +37,28 @@
   </section>
 
   <section class="ai-manager-panel" aria-labelledby="tqsDraftsTitle">
-    <div class="manager-section-heading"><div><span class="tqs-label">LOCAL TQS DRAFTS</span><h2 id="tqsDraftsTitle">TQS Builder</h2></div></div>
-    <p class="exam-builder-description">Create and edit role-specific TQS drafts in this browser. Drafts are not published to TQS Requirements or shared with other users.</p>
+    <div class="manager-section-heading"><div><span class="tqs-label">LOCAL TQS DRAFTS</span><h2 id="tqsDraftsTitle">TQS Builder</h2></div><span id="tqsDraftCount" class="ai-content-count">0 TQS</span></div>
+    <p class="exam-builder-description">Edit TQS drafts here, then move them to Published TQS for publication. Drafts are not visible to learners.</p>
+    <div class="handbook-selection-toolbar">
+      <span id="tqsDraftSelectionCount">0 selected</span>
+      <button id="selectAllTqsDrafts" class="ai-text-button" type="button">Select all</button>
+      <button id="deleteSelectedTqsDrafts" class="btn btn-secondary" type="button" disabled>Delete selected</button>
+      <button id="moveSelectedTqsToPublished" class="btn btn-primary" type="button" disabled>Move selected to Published TQS</button>
+    </div>
     <div id="tqsDraftList" class="exam-builder-list"></div>
+  </section>
+
+  <section class="ai-manager-panel" aria-labelledby="publishedTqsTitle">
+    <div class="manager-section-heading"><div><span class="tqs-label">PUBLICATION CONTROL</span><h2 id="publishedTqsTitle">Published TQS</h2></div><span id="publishedTqsCount" class="ai-content-count">0 TQS</span></div>
+    <p class="exam-builder-description">Publish TQS here. Unpublish before returning a TQS to the builder for editing. Only one TQS can be published per role.</p>
+    <div class="handbook-selection-toolbar">
+      <span id="publishedTqsSelectionCount">0 selected</span>
+      <button id="selectAllPublishedTqs" class="ai-text-button" type="button">Select all</button>
+      <button id="publishSelectedTqs" class="btn btn-secondary" type="button" disabled>Publish selected</button>
+      <button id="unpublishSelectedTqs" class="btn btn-secondary" type="button" disabled>Unpublish selected</button>
+      <button id="returnSelectedTqs" class="btn btn-secondary" type="button" disabled>Return selected to TQS Builder</button>
+    </div>
+    <div id="publishedTqsList" class="exam-builder-list"></div>
   </section>
 
   <section class="ai-manager-panel handbook-explorer-panel" aria-labelledby="contentExplorerTitle">
@@ -115,7 +134,7 @@
         </div>
       </fieldset>
       <fieldset><legend>Import review</legend>
-        <p class="module-source-summary">Warnings and unassigned requirements must be reviewed against the source. Unassigned requirements can be edited and assigned to a module below.</p>
+        <p class="module-source-summary">Review warnings against the source. Assign or remove unassigned requirements before publishing.</p>
         <div id="tqsImportWarnings"></div>
         <div id="tqsUnassignedEditor" class="course-module-editor"></div>
       </fieldset>
@@ -191,6 +210,6 @@
 <script src="assets/pages/ai-training-content-manager/vendor/pdf.min.js"></script><script src="assets/pages/ai-training-content-manager/vendor/mammoth.browser.min.js"></script>
 <script src="assets/shared/js/data.js?v=20261120-2"></script><script src="assets/shared/js/course-schema.js?v=4"></script><script src="assets/shared/js/course-workflow.js?v=2"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261120-1"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/ai-training-content-manager/document-processing.js?v=20261119-1"></script><script src="assets/pages/ai-training-content-manager/ai-training-content-manager.js?v=20261119-6"></script>
 <script src="assets/pages/ai-training-content-manager/course-editor.js?v=20261119-3"></script>
-<script src="assets/pages/tqs-support/tqs-parser.js"></script><script src="assets/pages/ai-training-content-manager/tqs-editor.js"></script>
+<script src="assets/pages/tqs-support/tqs-parser.js"></script><script src="assets/shared/js/tqs-store.js?v=20261120-1"></script><script src="assets/pages/ai-training-content-manager/tqs-editor.js?v=20261120-1"></script>
 </body>
 </html>

@@ -26,6 +26,7 @@ async function setup({selectedRole = role, account = profile, values = {}, failW
         }
         addEventListener(name, callback) { this.events[name] = callback; }
         querySelector() { return {focus() {}}; }
+        querySelectorAll() { return []; }
         setAttribute(name, value) { this.attributes[name] = value; }
         removeAttribute(name) { delete this.attributes[name]; }
     }
@@ -49,11 +50,12 @@ async function setup({selectedRole = role, account = profile, values = {}, failW
     const events = {};
     const window = {
         PortalDataReady: Promise.resolve(),
-        PortalData: {courses: [{id:"COURSE-1", title:"Existing course", description:"Course", category:"Training",
+        PortalData: {organizationHierarchy: {"Demo: D":{"Demo D":["Demo D", "Demo E"]}}, courses: [{id:"COURSE-1", title:"Existing course", description:"Course", category:"Training",
             requirement:"Required", roles:["Other"]}], publishedTrainingModules:[]},
-        addEventListener: (name, callback) => { events[name] = callback; }
+        addEventListener: (name, callback) => { (events[name] ||= []).push(callback); }
     };
     const context = {window, document, localStorage, sessionStorage, console, Intl, Date};
+    vm.runInNewContext(fs.readFileSync(path.join(root, "assets/shared/js/tqs-store.js"), "utf8"), context);
     vm.runInNewContext(script, context);
     if (actualPage) {
         vm.runInNewContext(trackerScript, context);
@@ -172,7 +174,7 @@ test("TQS progress refreshes when checkoffs change in another tab", async () => 
     const values = {};
     const app = await setup({values});
     values[key] = JSON.stringify({"1.1.1": {checkedBy:"Demo User", checkedAt:"2026-11-19T23:00:00.000Z"}});
-    app.events.storage({key});
+    app.events.storage.forEach(callback => callback({key}));
     assert.equal(app.elements.progressSummary.textContent, "1/10 requirements completed");
     assert.match(app.elements.demoTqsModules.innerHTML, /11\/19\/2026/);
 });
@@ -193,4 +195,51 @@ test("invalid saved progress is not overwritten and disables sample checkoffs", 
     assert.equal(app.elements.progressSummary.textContent, "Progress unavailable");
     assert.equal(app.elements.progressPercent.textContent, "N/A");
     assert.equal(values[key], "{invalid");
+});
+
+test("published TQS is shown for its role, tracks each account, and survives unpublishing", async () => {
+    const record = {
+        id:"custom-1", identifier:"TQS-X", title:"Role <Qualification>", version:"1.0", effectiveDate:"2026-11-20",
+        assignment:role, status:"published", managerZone:"published", unassignedRequirements:[],
+        modules:[{moduleNumber:"1.0", moduleTitle:"Basics", requirements:[
+            {id:"req-1", requirementNumber:"1.1.1", requirementText:"First", required:true},
+            {id:"req-2", requirementNumber:"1.1.2", requirementText:"Second", required:false}
+        ]}]
+    };
+    const values = {trainingManagerTqsDrafts:JSON.stringify({[record.id]:record})};
+    const account = {email:"other@example.test", firstName:"Other", lastName:"User"};
+    const app = await setup({values, account, actualPage:true});
+    assert.equal(app.elements.demoTqs.hidden, false);
+    assert.equal(app.elements.demoTqsTitle.textContent, "Role <Qualification>");
+    assert.match(app.elements.demoTqsModules.innerHTML, /Second \(Optional\)/);
+    assert.equal(app.elements.progressSummary.textContent, "0/2 requirements completed");
+    app.check("req-1", true);
+    const progressKey = `portal.tqsRequirementProgress:other%40example.test:custom-1:${encodeURIComponent(JSON.stringify([role.division, role.branch, role.role]))}`;
+    assert.equal(JSON.parse(values[progressKey])["req-1"].checkedBy, "Other User");
+    assert.equal(app.elements.progressSummary.textContent, "1/2 requirements completed");
+    const other = await setup({values, account:{...account, email:"another@example.test"}, actualPage:true});
+    assert.equal(other.elements.progressSummary.textContent, "0/2 requirements completed");
+    record.status = "draft";
+    values.trainingManagerTqsDrafts = JSON.stringify({[record.id]:record});
+    const unpublished = await setup({values, account, actualPage:true});
+    assert.equal(unpublished.elements.tqsUnavailable.hidden, false);
+    assert.ok(values[progressKey]);
+    record.status = "published";
+    values.trainingManagerTqsDrafts = JSON.stringify({[record.id]:record});
+    const republished = await setup({values, account, actualPage:true});
+    assert.equal(republished.elements.progressSummary.textContent, "1/2 requirements completed");
+    const first = record.modules[0].requirements.shift();
+    values.trainingManagerTqsDrafts = JSON.stringify({[record.id]:record});
+    const modified = await setup({values, account, actualPage:true});
+    assert.equal(modified.elements.progressSummary.textContent, "0/1 requirements completed");
+    modified.check("req-2", true);
+    record.modules[0].requirements.unshift(first);
+    values.trainingManagerTqsDrafts = JSON.stringify({[record.id]:record});
+    const restored = await setup({values, account, actualPage:true});
+    assert.equal(restored.elements.progressSummary.textContent, "2/2 requirements completed");
+    const newRole = {...role, role:"Demo E"};
+    record.assignment = newRole;
+    values.trainingManagerTqsDrafts = JSON.stringify({[record.id]:record});
+    const reassigned = await setup({values, account, selectedRole:newRole, actualPage:true});
+    assert.equal(reassigned.elements.progressSummary.textContent, "0/2 requirements completed");
 });

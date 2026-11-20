@@ -203,7 +203,10 @@ async function overviewPage(page, localStorage, profile = {firstName:"Test", las
     };
     vm.runInNewContext(source("assets/shared/js/course-schema.js"), context);
     vm.runInNewContext(source("assets/shared/js/course-catalog.js"), context);
-    if (page === "dashboard") vm.runInNewContext(source("assets/pages/tqs-support/demo-tqs.js"), context);
+    if (page === "dashboard") {
+        vm.runInNewContext(source("assets/shared/js/tqs-store.js"), context);
+        vm.runInNewContext(source("assets/pages/tqs-support/demo-tqs.js"), context);
+    }
     vm.runInNewContext(source(page === "dashboard"
         ? "assets/pages/dashboard/dashboard.js" : "assets/pages/training-courses/required-training.js"), context);
     await new Promise(resolve => setImmediate(resolve));
@@ -245,6 +248,31 @@ test("dashboard TQS progress uses master account checkoffs separately", async ()
     });
     assert.equal(dashboard.tqsProgressSummary.textContent, "1/10 requirements completed");
     assert.equal(dashboard.dashboardTqsProgressPercent.textContent, "10%");
+});
+
+test("dashboard reflects published role TQS and unpublishing in another tab", async () => {
+    const record = {
+        id:"role-tqs", identifier:"TQS-X", title:"Role TQS", version:"1", effectiveDate:"2026-11-20",
+        assignment:{division:"Test Division", branch:"Test Branch", role:"Test Role"}, status:"published",
+        unassignedRequirements:[], modules:[{moduleNumber:"1.0", moduleTitle:"Intro", requirements:[
+            {id:"r1", requirementNumber:"1.1.1", requirementText:"First"},
+            {id:"r2", requirementNumber:"1.1.2", requirementText:"Second"}
+        ]}]
+    };
+    const progressKey = `portal.tqsRequirementProgress:test%40example.test:role-tqs:${encodeURIComponent(JSON.stringify(["Test Division", "Test Branch", "Test Role"]))}`;
+    const saved = storage({
+        "portal.selectedRole":JSON.stringify(record.assignment),
+        trainingManagerTqsDrafts:JSON.stringify({[record.id]:record}),
+        [progressKey]:JSON.stringify({r1:{checkedBy:"Test User", checkedAt:"2026-11-19T23:00:00.000Z"}})
+    });
+    const dashboard = await overviewPage("dashboard", saved);
+    assert.equal(dashboard.tqsProgressSummary.textContent, "1/2 requirements completed");
+    assert.equal(dashboard.dashboardTqsProgressPercent.textContent, "50%");
+    record.status = "draft";
+    saved.setItem("trainingManagerTqsDrafts", JSON.stringify({[record.id]:record}));
+    dashboard.emitStorage({key:"trainingManagerTqsDrafts"});
+    assert.equal(dashboard.tqsProgressSummary.textContent, "No TQS available for this role.");
+    assert.ok(saved.getItem(progressKey));
 });
 
 test("dashboard does not treat saved course checklist progress as TQS progress", async () => {

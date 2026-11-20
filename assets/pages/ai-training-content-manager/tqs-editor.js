@@ -9,12 +9,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!profile || profile.isMaster !== true || typeof profile.email !== "string"
         || profile.email.toLowerCase() !== "elias@navy.mil") return;
 
-    const storageKey = "trainingManagerTqsDrafts";
+    const storageKey = window.TqsStore.storageKey;
     const sourceDialog = document.getElementById("tqsSourceDialog");
     const dialog = document.getElementById("tqsDraftDialog");
     const editor = document.getElementById("tqsModuleEditor");
     const unassignedEditor = document.getElementById("tqsUnassignedEditor");
     const draftList = document.getElementById("tqsDraftList");
+    const publishedList = document.getElementById("publishedTqsList");
     const roleSelect = document.getElementById("tqsEditorRole");
     const sourceSelect = document.getElementById("tqsSourceSelect");
     const hierarchy = window.PortalData.organizationHierarchy;
@@ -24,7 +25,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     })[character]);
     let draft = null;
+    let originalDraft = null;
     let documents = [];
+    const selectedDrafts = new Set();
+    const selectedPublished = new Set();
 
     const showNotice = (id, message, isError = false) => {
         const notice = document.getElementById(id);
@@ -32,13 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
         notice.hidden = !message;
         notice.classList.toggle("is-error", isError);
     };
-    const readDrafts = () => {
-        const records = JSON.parse(localStorage.getItem(storageKey) || "{}");
-        if (!records || typeof records !== "object" || Array.isArray(records)) {
-            throw new Error("Invalid TQS draft storage.");
-        }
-        return records;
-    };
+    const readDrafts = () => window.TqsStore.readAll();
     const roleIndex = assignment => roles.findIndex(role =>
         role.division === assignment?.division && role.branch === assignment?.branch && role.role === assignment?.role);
     const showStorageError = error => {
@@ -48,12 +46,31 @@ document.addEventListener("DOMContentLoaded", () => {
     const renderList = () => {
         try {
             const records = Object.values(readDrafts());
-            draftList.innerHTML = records.length ? records.map(item => `
-                <div class="module-card">
-                  <div class="module-card-copy"><h3>${escapeHtml(item.title || "Untitled TQS")}</h3>
-                    <p>${escapeHtml(item.identifier || "No TQS ID")} · ${escapeHtml(item.assignment?.role || "No role")} · Draft</p></div>
-                  <button class="manager-small-button" type="button" data-edit-tqs="${escapeHtml(item.id)}">View / edit</button>
-                </div>`).join("") : '<div class="handbook-empty">No TQS drafts saved in this browser.</div>';
+            const drafts = records.filter(item => item.managerZone !== "published" && item.status !== "published");
+            const published = records.filter(item => item.managerZone === "published" || item.status === "published");
+            for (const id of selectedDrafts) if (!drafts.some(item => item.id === id)) selectedDrafts.delete(id);
+            for (const id of selectedPublished) if (!published.some(item => item.id === id)) selectedPublished.delete(id);
+            const card = (item, selected, stage) => `
+                <article class="exam-builder-course">
+                  <input type="checkbox" data-select-tqs="${escapeHtml(item.id)}" aria-label="Select ${escapeHtml(item.title || "Untitled TQS")}" ${selected.has(item.id) ? "checked" : ""}>
+                  <div class="exam-builder-course-copy"><h3>${escapeHtml(item.title || "Untitled TQS")}</h3>
+                    <p>${escapeHtml(item.identifier || "No TQS ID")} · ${escapeHtml(item.assignment?.role || "No role")} · ${item.status === "published" ? "Published" : "Unpublished"}</p></div>
+                  ${stage === "builder" ? `<button class="manager-small-button" type="button" data-edit-tqs="${escapeHtml(item.id)}">View / edit</button>` : ""}
+                </article>`;
+            draftList.innerHTML = drafts.length ? drafts.map(item => card(item, selectedDrafts, "builder")).join("")
+                : '<div class="handbook-empty">No TQS drafts saved in this browser.</div>';
+            publishedList.innerHTML = published.length ? published.map(item => card(item, selectedPublished, "published")).join("")
+                : '<div class="handbook-empty">No TQS are in Published TQS.</div>';
+            document.getElementById("tqsDraftCount").textContent = `${drafts.length} TQS`;
+            document.getElementById("publishedTqsCount").textContent = `${published.length} TQS`;
+            document.getElementById("tqsDraftSelectionCount").textContent = `${selectedDrafts.size} selected`;
+            document.getElementById("publishedTqsSelectionCount").textContent = `${selectedPublished.size} selected`;
+            document.getElementById("deleteSelectedTqsDrafts").disabled = !selectedDrafts.size;
+            document.getElementById("moveSelectedTqsToPublished").disabled = !selectedDrafts.size;
+            const selected = published.filter(item => selectedPublished.has(item.id));
+            document.getElementById("publishSelectedTqs").disabled = !selected.some(item => item.status !== "published");
+            document.getElementById("unpublishSelectedTqs").disabled = !selected.some(item => item.status === "published");
+            document.getElementById("returnSelectedTqs").disabled = !selected.length || selected.some(item => item.status === "published");
         } catch (error) {
             showStorageError(error);
         }
@@ -64,13 +81,22 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="tqs-module-fields">
                 <label>Module number<input class="form-control" data-module="${index}" data-field="moduleNumber" value="${escapeHtml(module.moduleNumber)}"></label>
                 <label>Module title<input class="form-control" data-module="${index}" data-field="moduleTitle" value="${escapeHtml(module.moduleTitle)}"></label>
-                <button class="manager-small-button" type="button" data-remove-module="${index}">Remove module</button>
+                <div class="module-actions">
+                  <button class="manager-small-button" type="button" data-move-module="${index}" data-direction="-1" ${index === 0 ? "disabled" : ""}>Move up</button>
+                  <button class="manager-small-button" type="button" data-move-module="${index}" data-direction="1" ${index === draft.modules.length - 1 ? "disabled" : ""}>Move down</button>
+                  <button class="manager-small-button" type="button" data-remove-module="${index}">Remove module</button>
+                </div>
               </div>
               ${module.requirements.map((requirement, requirementIndex) => `
                 <div class="course-content-block tqs-requirement-fields">
                   <label>Requirement number<input class="form-control" data-module="${index}" data-requirement="${requirementIndex}" data-field="requirementNumber" value="${escapeHtml(requirement.requirementNumber)}"></label>
                   <label>Requirement text<textarea class="form-control" data-module="${index}" data-requirement="${requirementIndex}" data-field="requirementText">${escapeHtml(requirement.requirementText)}</textarea></label>
-                  <button class="manager-small-button" type="button" data-remove-requirement="${index}" data-index="${requirementIndex}">Remove</button>
+                  <div class="module-actions">
+                    <label><input type="checkbox" data-module="${index}" data-requirement="${requirementIndex}" data-field="required" ${requirement.required !== false ? "checked" : ""}> Required</label>
+                    <button class="manager-small-button" type="button" data-move-requirement="${index}" data-index="${requirementIndex}" data-direction="-1" ${requirementIndex === 0 ? "disabled" : ""}>Move up</button>
+                    <button class="manager-small-button" type="button" data-move-requirement="${index}" data-index="${requirementIndex}" data-direction="1" ${requirementIndex === module.requirements.length - 1 ? "disabled" : ""}>Move down</button>
+                    <button class="manager-small-button" type="button" data-remove-requirement="${index}" data-index="${requirementIndex}">Remove</button>
+                  </div>
                 </div>`).join("")}
               <button class="manager-small-button" type="button" data-add-requirement="${index}">Add requirement</button>
             </div>`).join("");
@@ -80,7 +106,8 @@ document.addEventListener("DOMContentLoaded", () => {
               <label>Requirement text<textarea class="form-control" data-unassigned="${index}" data-field="requirementText">${escapeHtml(requirement.requirementText)}</textarea></label>
               <div><label>Assign to module<select class="form-control" data-assignment="${index}">
                 ${draft.modules.map((module, moduleIndex) => `<option value="${moduleIndex}">${escapeHtml(`${module.moduleNumber} ${module.moduleTitle}`.trim() || "Untitled module")}</option>`).join("")}
-              </select></label><button class="manager-small-button" type="button" data-assign-requirement="${index}" ${draft.modules.length ? "" : "disabled"}>Assign</button></div>
+              </select></label><button class="manager-small-button" type="button" data-assign-requirement="${index}" ${draft.modules.length ? "" : "disabled"}>Assign</button>
+              <button class="manager-small-button" type="button" data-remove-unassigned="${index}">Remove</button></div>
             </div>`).join("");
     };
     const renderWarnings = () => {
@@ -91,6 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     const openEditor = record => {
         draft = structuredClone(record);
+        originalDraft = JSON.stringify(record);
         document.getElementById("tqsEditorIdentifier").value = draft.identifier;
         document.getElementById("tqsEditorTitle").value = draft.title;
         document.getElementById("tqsEditorVersion").value = draft.version;
@@ -149,9 +177,14 @@ document.addEventListener("DOMContentLoaded", () => {
         showNotice(noticeId, "Processing the document locally...");
         try {
             const record = await createFromFile(file, sourceId, persistSource);
+            const records = readDrafts();
+            records[record.id] = record;
+            localStorage.setItem(storageKey, JSON.stringify(records));
+            renderList();
             if (sourceDialog.open) sourceDialog.close();
             openEditor(record);
-            showNotice("tqsDraftNotice", "Draft created. Select a role and review all extracted content before saving.");
+            showNotice("tqsDraftNotice", "Draft added to TQS Builder. Select a role and review all extracted content before saving.");
+            showNotice(noticeId, "");
         } catch (error) {
             console.error("Unable to create the TQS draft.", error);
             showNotice(noticeId, "The document could not be processed or saved. Check the source and browser storage, then try again.", true);
@@ -215,18 +248,21 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!field) return;
         if (unassigned !== undefined && ["requirementNumber", "requirementText"].includes(field)) {
             draft.unassignedRequirements[Number(unassigned)][field] = event.target.value;
-        } else if (moduleIndex !== undefined && requirementIndex !== undefined && ["requirementNumber", "requirementText"].includes(field)) {
-            draft.modules[Number(moduleIndex)].requirements[Number(requirementIndex)][field] = event.target.value;
+        } else if (moduleIndex !== undefined && requirementIndex !== undefined && ["requirementNumber", "requirementText", "required"].includes(field)) {
+            draft.modules[Number(moduleIndex)].requirements[Number(requirementIndex)][field] = field === "required" ? event.target.checked : event.target.value;
         } else if (moduleIndex !== undefined && ["moduleNumber", "moduleTitle"].includes(field)) {
             draft.modules[Number(moduleIndex)][field] = event.target.value;
         }
     };
     editor.addEventListener("input", updateBlock);
+    editor.addEventListener("change", updateBlock);
     unassignedEditor.addEventListener("input", updateBlock);
     editor.addEventListener("click", event => {
         const add = event.target.closest("[data-add-requirement]");
         const remove = event.target.closest("[data-remove-requirement]");
         const removeModule = event.target.closest("[data-remove-module]");
+        const moveModule = event.target.closest("[data-move-module]");
+        const moveRequirement = event.target.closest("[data-move-requirement]");
         if (add) {
             draft.modules[Number(add.dataset.addRequirement)].requirements.push({
                 id: crypto.randomUUID(), requirementNumber: "", requirementText: "", displayOrder: 0, required: true
@@ -237,10 +273,27 @@ document.addEventListener("DOMContentLoaded", () => {
             const index = Number(removeModule.dataset.removeModule);
             draft.unassignedRequirements.push(...draft.modules[index].requirements);
             draft.modules.splice(index, 1);
+        } else if (moveModule) {
+            const index = Number(moveModule.dataset.moveModule);
+            const destination = index + Number(moveModule.dataset.direction);
+            if (destination < 0 || destination >= draft.modules.length) return;
+            [draft.modules[index], draft.modules[destination]] = [draft.modules[destination], draft.modules[index]];
+        } else if (moveRequirement) {
+            const requirements = draft.modules[Number(moveRequirement.dataset.moveRequirement)].requirements;
+            const index = Number(moveRequirement.dataset.index);
+            const destination = index + Number(moveRequirement.dataset.direction);
+            if (destination < 0 || destination >= requirements.length) return;
+            [requirements[index], requirements[destination]] = [requirements[destination], requirements[index]];
         } else return;
         renderBlocks();
     });
     unassignedEditor.addEventListener("click", event => {
+        const remove = event.target.closest("[data-remove-unassigned]");
+        if (remove) {
+            draft.unassignedRequirements.splice(Number(remove.dataset.removeUnassigned), 1);
+            renderBlocks();
+            return;
+        }
         const button = event.target.closest("[data-assign-requirement]");
         if (!button) return;
         const index = Number(button.dataset.assignRequirement);
@@ -273,13 +326,21 @@ document.addEventListener("DOMContentLoaded", () => {
         draft.unassignedRequirements.forEach((requirement, index) => { requirement.displayOrder = index; });
         try {
             const records = readDrafts();
+            const current = records[draft.id];
+            if (!current || current.status === "published" || current.managerZone === "published") {
+                throw new Error("This TQS is no longer in TQS Builder. Return it before editing.");
+            }
+            if (JSON.stringify(current) !== originalDraft) {
+                throw new Error("This TQS changed in another tab. Reopen it before saving.");
+            }
             records[draft.id] = draft;
             localStorage.setItem(storageKey, JSON.stringify(records));
+            originalDraft = JSON.stringify(draft);
             renderList();
             showNotice("tqsDraftNotice", "TQS draft saved in this browser.");
         } catch (error) {
             console.error("Unable to save the TQS draft.", error);
-            showNotice("tqsDraftNotice", "The TQS draft could not be saved in this browser.", true);
+            showNotice("tqsDraftNotice", error.message || "The TQS draft could not be saved in this browser.", true);
         }
     });
     draftList.addEventListener("click", event => {
@@ -287,11 +348,102 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!button) return;
         try {
             const record = readDrafts()[button.dataset.editTqs];
-            if (!record) throw new Error("Draft not found.");
+            if (!record || record.status === "published" || record.managerZone === "published") throw new Error("Draft not found in TQS Builder.");
             openEditor(record);
         } catch (error) {
             showStorageError(error);
         }
+    });
+    const inPublished = item => item.managerZone === "published" || item.status === "published";
+    const selectFrom = (list, selected, published) => list.addEventListener("change", event => {
+        const checkbox = event.target.closest("[data-select-tqs]");
+        if (!checkbox) return;
+        try {
+            const record = readDrafts()[checkbox.dataset.selectTqs];
+            if (!record || inPublished(record) !== published) throw new Error("The TQS is no longer in this section.");
+            if (checkbox.checked) selected.add(record.id);
+            else selected.delete(record.id);
+            renderList();
+        } catch (error) {
+            showStorageError(error);
+            renderList();
+        }
+    });
+    selectFrom(draftList, selectedDrafts, false);
+    selectFrom(publishedList, selectedPublished, true);
+    const selectAll = (selected, published) => {
+        try {
+            const records = Object.values(readDrafts()).filter(item => inPublished(item) === published);
+            if (records.length && records.every(item => selected.has(item.id))) selected.clear();
+            else records.forEach(item => selected.add(item.id));
+            renderList();
+        } catch (error) {
+            showStorageError(error);
+        }
+    };
+    document.getElementById("selectAllTqsDrafts").addEventListener("click", () => selectAll(selectedDrafts, false));
+    document.getElementById("selectAllPublishedTqs").addEventListener("click", () => selectAll(selectedPublished, true));
+
+    const updateSelected = action => {
+        const selected = action === "delete" || action === "move" ? selectedDrafts : selectedPublished;
+        if (!selected.size) return;
+        if (action === "delete" && !window.confirm("Delete the selected TQS drafts? Their source documents and saved checkoffs will remain.")) return;
+        try {
+            const records = readDrafts();
+            const items = [...selected].map(id => {
+                const item = records[id];
+                if (!item || inPublished(item) !== (selected === selectedPublished)) {
+                    throw new Error("A selected TQS is no longer in this section. Refresh and try again.");
+                }
+                return item;
+            });
+            if (action === "return" && items.some(item => item.status === "published")) {
+                throw new Error("Unpublish the selected TQS before returning it to TQS Builder.");
+            }
+            if (action === "publish") {
+                const candidates = items.filter(item => item.status !== "published");
+                if (!candidates.length) throw new Error("Select at least one unpublished TQS.");
+                for (const item of candidates) {
+                    const errors = window.TqsStore.validate(item, hierarchy);
+                    if (errors.length) throw new Error(`TQS validation failed: ${errors.join(" ")}`);
+                    if (Object.values(records).some(other => other.id !== item.id
+                        && (other.status === "published" || candidates.includes(other))
+                        && window.TqsStore.sameRole(other.assignment, item.assignment))) {
+                        throw new Error("Only one TQS can be published for each role. Unpublish the existing TQS first.");
+                    }
+                }
+            }
+            for (const item of items) {
+                if (action === "delete") delete records[item.id];
+                else if (action === "move") records[item.id] = {...item, managerZone:"published"};
+                else if (action === "return") records[item.id] = {...item, managerZone:"builder"};
+                else if (action === "publish" && item.status !== "published") {
+                    records[item.id] = {...item, managerZone:"published", status:"published", publishedAt:new Date().toISOString()};
+                } else if (action === "unpublish" && item.status === "published") {
+                    records[item.id] = {...item, status:"draft", unpublishedAt:new Date().toISOString()};
+                }
+            }
+            localStorage.setItem(storageKey, JSON.stringify(records));
+            selected.clear();
+            renderList();
+            const messages = {
+                delete:"Selected TQS drafts deleted.", move:"Selected TQS moved to Published TQS.",
+                return:"Selected TQS returned to TQS Builder.", publish:"Selected TQS published in this browser.",
+                unpublish:"Selected TQS unpublished in this browser."
+            };
+            showNotice("managerNotice", messages[action]);
+        } catch (error) {
+            console.error("Unable to update TQS workflow.", error);
+            showNotice("managerNotice", error.message || "The TQS workflow could not be updated in this browser.", true);
+        }
+    };
+    document.getElementById("deleteSelectedTqsDrafts").addEventListener("click", () => updateSelected("delete"));
+    document.getElementById("moveSelectedTqsToPublished").addEventListener("click", () => updateSelected("move"));
+    document.getElementById("publishSelectedTqs").addEventListener("click", () => updateSelected("publish"));
+    document.getElementById("unpublishSelectedTqs").addEventListener("click", () => updateSelected("unpublish"));
+    document.getElementById("returnSelectedTqs").addEventListener("click", () => updateSelected("return"));
+    window.addEventListener("storage", event => {
+        if (event.key === storageKey || event.key === null) renderList();
     });
     renderList();
 });

@@ -125,9 +125,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
     const accountId = typeof profile.email === "string" ? profile.email.trim().toLowerCase() : "";
     if (accountId) {
-        const isDemoTqs = window.DemoTqs.matches(profile, selectedRole);
-        document.getElementById("dashboardTqsInProgressStat").hidden = isDemoTqs;
-        document.getElementById("dashboardTqsNotStartedLabel").textContent = isDemoTqs ? "Not Complete" : "Not Started";
+        let currentTqs = null;
+        let hasTqs = false;
         const showTqsUnavailable = message => {
             tqsElements.summary.textContent = message;
             tqsElements.percent.textContent = "N/A";
@@ -141,19 +140,29 @@ document.addEventListener("DOMContentLoaded", async () => {
             tqsElements.qualificationStatus.hidden = true;
         };
         const renderTqsProgress = () => {
-            if (!isDemoTqs) {
+            try {
+                currentTqs = window.TqsStore.publishedForRole(selectedRole);
+            } catch (error) {
+                console.error("Unable to read the published TQS for the dashboard.", error);
+                showTqsUnavailable("TQS progress unavailable");
+                return;
+            }
+            hasTqs = Boolean(currentTqs || window.DemoTqs.matches(profile, selectedRole));
+            document.getElementById("dashboardTqsInProgressStat").hidden = hasTqs;
+            document.getElementById("dashboardTqsNotStartedLabel").textContent = hasTqs ? "Not Complete" : "Not Started";
+            if (!hasTqs) {
                 showTqsUnavailable("No TQS available for this role.");
                 return;
             }
             let tqsProgress;
             try {
-                tqsProgress = window.DemoTqs.readProgress(profile);
+                tqsProgress = window.DemoTqs.readProgress(profile, currentTqs);
             } catch (error) {
                 console.error("Unable to read TQS progress for the dashboard.", error);
                 showTqsUnavailable("TQS progress unavailable");
                 return;
             }
-            const tqsTotal = window.DemoTqs.total;
+            const tqsTotal = window.DemoTqs.totalFor(currentTqs);
             const tqsCompleted = Object.keys(tqsProgress).length;
             const tqsPercent = Math.round((tqsCompleted / tqsTotal) * 100);
             const isComplete = tqsCompleted === tqsTotal;
@@ -171,14 +180,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             tqsElements.qualificationStatus.classList.toggle("is-not-qualified", !isComplete);
             tqsElements.qualificationIcon.textContent = "✓";
             tqsElements.qualificationLabel.textContent = isComplete ? "All complete" : "Not complete";
-            tqsElements.qualificationDetail.textContent = `${tqsPercent}% sample TQS completion`;
+            tqsElements.qualificationDetail.textContent = `${tqsPercent}% ${currentTqs ? "" : "sample "}TQS completion`;
         };
         renderTqsProgress();
-        if (isDemoTqs) {
-            window.addEventListener("storage", event => {
-                if (event.key === window.DemoTqs.storageKeyFor(profile) || event.key === null) renderTqsProgress();
-            });
-        }
+        window.addEventListener("storage", event => {
+            if (event.key === window.TqsStore.storageKey
+                || (hasTqs && event.key === window.DemoTqs.storageKeyFor(profile, currentTqs))
+                || event.key === null) renderTqsProgress();
+        });
     }
 
     const completionKey = "portal.completedCourses";
