@@ -234,6 +234,19 @@ test("dashboard TQS progress uses demo requirement checkoffs", async () => {
     assert.equal(dashboard.dashboardTqsProgressPercent.textContent, "80%");
 });
 
+test("dashboard TQS progress uses master account checkoffs separately", async () => {
+    const checked = {"2.1.1": {checkedBy:"Elias Hannon", checkedAt:"2026-11-19T23:00:00.000Z"}};
+    const saved = storage({
+        "portal.selectedRole":JSON.stringify({division:"Demo: D", branch:"Demo D", role:"Demo D"}),
+        "portal.demoTqsProgress:elias%40navy.mil:DEMO-TQS-001":JSON.stringify(checked)
+    });
+    const dashboard = await overviewPage("dashboard", saved, {
+        firstName:"Elias", lastName:"Hannon", email:"elias@navy.mil", isMaster:true
+    });
+    assert.equal(dashboard.tqsProgressSummary.textContent, "1/10 requirements completed");
+    assert.equal(dashboard.dashboardTqsProgressPercent.textContent, "10%");
+});
+
 test("dashboard does not treat saved course checklist progress as TQS progress", async () => {
     const saved = storage({
         "portal.selectedRole":JSON.stringify({division:"Test Division", branch:"Test Branch", role:"Test Role"}),

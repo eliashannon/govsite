@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             let tqsProgress;
             try {
-                tqsProgress = window.DemoTqs.readProgress();
+                tqsProgress = window.DemoTqs.readProgress(profile);
             } catch (error) {
                 console.error("Unable to read TQS progress for the dashboard.", error);
                 showTqsUnavailable("TQS progress unavailable");
@@ -176,7 +176,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderTqsProgress();
         if (isDemoTqs) {
             window.addEventListener("storage", event => {
-                if (event.key === window.DemoTqs.storageKey || event.key === null) renderTqsProgress();
+                if (event.key === window.DemoTqs.storageKeyFor(profile) || event.key === null) renderTqsProgress();
             });
         }
     }

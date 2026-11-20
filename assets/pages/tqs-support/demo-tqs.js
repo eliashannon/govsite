@@ -22,13 +22,20 @@
         }
     ];
     const requirementIds = new Set(modules.flatMap(module => module.requirements.map(([number]) => number)));
-    const storageKey = "portal.demoTqsProgress:demo%40navy.mil:DEMO-TQS-001";
+    const demoStorageKey = "portal.demoTqsProgress:demo%40navy.mil:DEMO-TQS-001";
+    const masterStorageKey = "portal.demoTqsProgress:elias%40navy.mil:DEMO-TQS-001";
+    const storageKeyFor = profile => {
+        const accountId = typeof profile?.email === "string" ? profile.email.trim().toLowerCase() : "";
+        return accountId
+            ? `portal.demoTqsProgress:${encodeURIComponent(accountId)}:DEMO-TQS-001`
+            : demoStorageKey;
+    };
     const matches = (profile, selectedRole) => typeof profile?.email === "string"
-        && profile.email.trim().toLowerCase() === "demo@navy.mil"
+        && (profile.email.trim().toLowerCase() === "demo@navy.mil" || profile.isMaster === true)
         && selectedRole?.division === "Demo: D" && selectedRole?.branch === "Demo D"
         && selectedRole?.role === "Demo D";
-    const readProgress = () => {
-        const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    const readProgress = (profile = null) => {
+        const saved = JSON.parse(localStorage.getItem(storageKeyFor(profile)) || "{}");
         if (!saved || typeof saved !== "object" || Array.isArray(saved)
             || Object.entries(saved).some(([number, entry]) => !requirementIds.has(number)
                 || !entry || typeof entry.checkedBy !== "string" || !entry.checkedBy
@@ -44,13 +51,15 @@
         const notice = document.getElementById("demoTqsNotice");
         const search = document.querySelector("[data-tqs-search]");
         const track = document.querySelector(".tqs-progress-track");
+        const storageKey = storageKeyFor(profile);
         const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
             "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
         })[character]);
         const formatter = new Intl.DateTimeFormat("en-US", {
             day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC"
         });
-        const checkedBy = [profile.firstName, profile.lastName].filter(value => typeof value === "string" && value.trim()).join(" ") || "Demo User";
+        const checkedBy = [profile.firstName, profile.lastName].filter(value => typeof value === "string" && value.trim()).join(" ")
+            || (profile.isMaster === true ? "Master User" : "Demo User");
         let progress = {};
         let storageAvailable = true;
 
@@ -60,7 +69,7 @@
             notice.classList.add("is-error");
         };
         try {
-            progress = readProgress();
+            progress = readProgress(profile);
         } catch (error) {
             console.error("Unable to read demo TQS progress.", error);
             storageAvailable = false;
@@ -129,7 +138,7 @@
         window.addEventListener("storage", event => {
             if (event.key !== storageKey && event.key !== null) return;
             try {
-                progress = readProgress();
+                progress = readProgress(profile);
                 storageAvailable = true;
                 notice.hidden = true;
                 render();
@@ -153,5 +162,13 @@
         render();
     };
 
-    window.DemoTqs = Object.freeze({matches, start, readProgress, storageKey, total: requirementIds.size});
+    window.DemoTqs = Object.freeze({
+        matches,
+        start,
+        readProgress,
+        storageKeyFor,
+        storageKey: demoStorageKey,
+        masterStorageKey,
+        total: requirementIds.size
+    });
 })();

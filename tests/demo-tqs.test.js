@@ -134,11 +134,24 @@ test("check dates display as month/day/year and search does not alter progress",
     assert.equal(app.elements.progressSummary.textContent, "1/10 requirements completed");
 });
 
-test("sample is limited to the demo account with the Demo D role selected", async () => {
+test("sample is limited to demo and master accounts with the Demo D role selected", async () => {
     for (const options of [{account: {...profile, email: "other@example.test"}}, {selectedRole: {...role, role: "Other"}}]) {
         const app = await setup(options);
         assert.equal(app.elements.demoTqs.hidden, true);
     }
+});
+
+test("master account has the sample TQS with separate saved checkoffs", async () => {
+    const master = {firstName:"Elias", lastName:"Hannon", email:"elias@navy.mil", isMaster:true};
+    const masterKey = "portal.demoTqsProgress:elias%40navy.mil:DEMO-TQS-001";
+    const values = {[key]: JSON.stringify({"1.1.1": {checkedBy:"Demo User", checkedAt:"2026-11-19T23:00:00.000Z"}})};
+    const app = await setup({account:master, values});
+
+    assert.equal(app.elements.demoTqs.hidden, false);
+    assert.equal(app.elements.progressSummary.textContent, "0/10 requirements completed");
+    app.check("2.1.1", true);
+    assert.equal(JSON.parse(values[masterKey])["2.1.1"].checkedBy, "Elias Hannon");
+    assert.equal(JSON.parse(values[key])["1.1.1"].checkedBy, "Demo User");
 });
 
 test("page selects the sample tracker and reports no TQS for other roles", async () => {
