@@ -4,8 +4,8 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="assets/shared/js/auth.js?v=2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<title>Training Portal | TQS Support</title>
-<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261119-3">
+<title>Training Portal | TQS Requirements</title>
+<link rel="stylesheet" href="assets/shared/css/variables.css"><link rel="stylesheet" href="assets/shared/css/global.css"><link rel="stylesheet" href="assets/shared/css/layout.css?v=20261118-8"><link rel="stylesheet" href="assets/shared/css/components.css?v=20261118-4"><link rel="stylesheet" href="assets/shared/css/responsive.css"><link rel="stylesheet" href="assets/pages/tqs-support/tqs-support.css?v=20261120-1">
 </head>
 <body data-page="tqs-support">
 <div class="app-shell"><aside class="sidebar" id="sidebar"></aside><div class="main-area">
@@ -16,8 +16,8 @@
   <section class="tqs-heading">
     <div>
       <p class="tqs-eyebrow">QUALIFICATION TRACKER</p>
-      <h1>Training Qualification Standards</h1>
-      <p class="tqs-intro">Review role-required training and track your progress in one place.</p>
+      <h1>TQS Requirements</h1>
+      <p class="tqs-intro">Review qualification requirements and track your progress in one place.</p>
     </div>
     <a class="btn btn-secondary" href="role-overview.html">Change Role</a>
   </section>
@@ -25,21 +25,11 @@
   <section id="tqsNoRole" class="tqs-empty-card" hidden aria-live="polite">
     <span class="tqs-empty-icon" aria-hidden="true">◎</span>
     <h2 id="tqsEmptyTitle">Select a role to view requirements</h2>
-    <p id="tqsEmptyMessage">Choose a role in Role Overview to see its required training.</p>
+    <p id="tqsEmptyMessage">Choose a role in Role Overview to see its qualification requirements.</p>
     <a id="tqsEmptyLink" class="btn btn-primary" href="role-overview.html">Go to Role Overview</a>
   </section>
 
   <div id="tqsTracker" hidden>
-    <section id="demoTqs" class="tqs-progress-panel demo-tqs" aria-labelledby="demoTqsTitle" hidden>
-      <span class="tqs-label">SYNTHETIC SAMPLE · DEMO D</span>
-      <h2 id="demoTqsTitle">Sample Role Qualification Standard</h2>
-      <p class="demo-tqs-meta">TQS ID: DEMO-TQS-001 · Version 1.0 · Role: Demo D</p>
-      <p class="demo-tqs-note">Example only, not an official qualification. Checkoffs are saved in this browser and are not authenticated or audited.</p>
-      <p id="demoTqsProgress" aria-live="polite"></p>
-      <p id="demoTqsNotice" class="tqs-storage-notice" role="status" aria-live="polite" hidden></p>
-      <div id="demoTqsModules"></div>
-    </section>
-
     <section class="tqs-role-card" aria-labelledby="selectedRoleName">
       <div class="tqs-role-mark" aria-hidden="true">TQS</div>
       <div class="tqs-role-copy">
@@ -53,73 +43,40 @@
       </div>
     </section>
 
-    <aside class="tqs-data-note">
-      <span aria-hidden="true">i</span>
-      <p>The role-required course checklist below uses the existing course catalog and is not an official qualification record.</p>
-    </aside>
-
     <section class="tqs-progress-panel" aria-labelledby="progressTitle">
       <div class="tqs-progress-heading">
         <div>
           <span class="tqs-label">ROLE QUALIFICATION</span>
           <h2 id="progressTitle">Overall Progress</h2>
-          <p id="progressSummary">0 of 0 requirements completed</p>
+          <p id="progressSummary">Progress unavailable</p>
         </div>
-        <strong id="progressPercent" class="tqs-progress-percent">0%</strong>
+        <strong id="progressPercent" class="tqs-progress-percent">N/A</strong>
       </div>
-      <div class="tqs-progress-track" role="progressbar" aria-label="Overall qualification progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="tqs-progress-track" role="progressbar" aria-label="Overall qualification progress" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Progress unavailable">
         <div id="progressBar" class="tqs-progress-bar"></div>
       </div>
-      <div class="tqs-stat-grid" aria-live="polite">
-        <div class="tqs-stat"><span class="tqs-stat-dot stat-total"></span><span>Total Requirements</span><strong id="totalCount">0</strong></div>
-        <div class="tqs-stat"><span class="tqs-stat-dot stat-complete"></span><span>Completed</span><strong id="completedCount">0</strong></div>
-        <div class="tqs-stat"><span class="tqs-stat-dot stat-progress"></span><span>In Progress</span><strong id="inProgressCount">0</strong></div>
-        <div class="tqs-stat"><span class="tqs-stat-dot stat-not-started"></span><span>Not Started</span><strong id="notStartedCount">0</strong></div>
+      <div id="progressStats" class="tqs-stat-grid" aria-live="polite">
+        <div class="tqs-stat"><span class="tqs-stat-dot stat-total"></span><span>Total Requirements</span><strong id="totalCount">N/A</strong></div>
+        <div class="tqs-stat"><span class="tqs-stat-dot stat-complete"></span><span>Completed</span><strong id="completedCount">N/A</strong></div>
+        <div id="inProgressStat" class="tqs-stat"><span class="tqs-stat-dot stat-progress"></span><span>In Progress</span><strong id="inProgressCount">N/A</strong></div>
+        <div class="tqs-stat"><span class="tqs-stat-dot stat-not-started"></span><span id="notStartedLabel">Not Started</span><strong id="notStartedCount">N/A</strong></div>
       </div>
     </section>
 
-    <section class="tqs-requirements-panel" aria-labelledby="requirementsTitle">
-      <div class="tqs-requirements-heading">
-        <div>
-          <span class="tqs-label">YOUR CHECKLIST</span>
-          <h2 id="requirementsTitle">Role-Required Training</h2>
-          <p>Mark each item as you make progress. Your checklist is saved for this account and role.</p>
-        </div>
-        <a class="btn btn-secondary" href="required-training.html">Open Training Courses</a>
-      </div>
-      <div class="tqs-filters">
-        <label class="tqs-search"><span class="visually-hidden">Search by requirement name or ID</span><input id="requirementSearch" type="search" placeholder="Search by name or ID"></label>
-        <label><span class="visually-hidden">Filter by status</span><select id="statusFilter" class="form-control">
-          <option value="All">All requirements</option><option value="Not Started">Not Started</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option>
-        </select></label>
-        <label><span class="visually-hidden">Sort requirements</span><select id="sortFilter" class="form-control">
-          <option value="name-asc">Name (A–Z)</option><option value="name-desc">Name (Z–A)</option><option value="id-asc">Identifier</option>
-        </select></label>
-        <button id="clearFilters" class="tqs-clear-button" type="button">Clear filters</button>
-      </div>
-      <p id="tqsStorageNotice" class="tqs-storage-notice" role="status" hidden>Progress could not be saved in this browser. Check storage settings and try again.</p>
-      <div id="requirementsList" class="tqs-sections"></div>
-      <div id="requirementsEmpty" class="tqs-list-empty" hidden></div>
+    <section id="demoTqs" class="tqs-progress-panel demo-tqs" aria-labelledby="demoTqsTitle" hidden>
+      <span class="tqs-label">SYNTHETIC SAMPLE · DEMO D</span>
+      <h2 id="demoTqsTitle">Sample Role Qualification Standard</h2>
+      <p class="demo-tqs-meta">TQS ID: DEMO-TQS-001 · Version 1.0 · Role: Demo D</p>
+      <p class="demo-tqs-note">Example only, not an official qualification. Checkoffs are saved in this browser and are not authenticated or audited.</p>
+      <p id="demoTqsNotice" class="tqs-storage-notice" role="status" aria-live="polite" hidden></p>
+      <div id="demoTqsModules"></div>
     </section>
 
-    <section id="qualificationComplete" class="tqs-complete-banner" hidden aria-live="polite">
-      <span aria-hidden="true">✓</span><div><h2>All tracked requirements completed</h2><p id="qualificationCompleteDate"></p></div>
+    <section id="tqsUnavailable" class="tqs-empty-card" hidden>
+      <h2>No TQS available for this role</h2>
+      <p>This prototype does not currently have a published TQS for the selected role.</p>
     </section>
   </div>
-
-  <dialog id="requirementDialog" class="tqs-dialog" aria-labelledby="dialogTitle">
-    <div class="tqs-dialog-header">
-      <div><span id="dialogId" class="tqs-label"></span><h2 id="dialogTitle"></h2></div>
-      <button id="closeDialog" class="tqs-dialog-close" type="button" aria-label="Close requirement details">×</button>
-    </div>
-    <p id="dialogDescription" class="tqs-dialog-description"></p>
-    <dl id="dialogDetails" class="tqs-dialog-details"></dl>
-    <div id="dialogCourseLink" class="tqs-dialog-course"></div>
-    <div class="tqs-dialog-actions">
-      <button id="dialogInProgress" class="btn btn-secondary" type="button">Mark In Progress</button>
-      <button id="dialogToggleComplete" class="btn btn-primary" type="button">Mark Complete</button>
-    </div>
-  </dialog>
 </main></div></div>
-<script src="assets/shared/js/data.js?v=20261118-6"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261118-2"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/tqs-support/tqs-support.js?v=20261118-2"></script><script src="assets/pages/tqs-support/demo-tqs.js"></script>
+<script src="assets/shared/js/data.js?v=20261120-2"></script><script src="assets/shared/js/build-info.js"></script><script src="assets/shared/js/navigation.js?v=20261120-1"></script><script src="assets/shared/js/account.js?v=20261118-6"></script><script src="assets/pages/tqs-support/demo-tqs.js?v=20261120-2"></script><script src="assets/pages/tqs-support/tqs-support.js?v=20261120-2"></script>
 </body></html>

@@ -68,7 +68,7 @@ Update all existing interface elements to match the new theme:
 
 7. Implementation Requirements
 
-* Apply the theme consistently across the entire existing website, including Dashboard, Training Center, Role Overview, Training Courses, and TQS Support Left.
+* Apply the theme consistently across the entire existing website, including Dashboard, Training Center, Role Overview, Training Courses, and TQS Requirements.
 * Use centralized CSS variables or the existing theme system so colors can be adjusted globally.
 * Reuse existing components and styles wherever possible.
 * Preserve all current layouts, navigation, routes, functionality, and data.
@@ -91,8 +91,8 @@ Use View / edit in Course Builder to reopen a course in the structured draft edi
 
 ## TQS parser
 
-In Training Content Manager, select a document and choose **Create TQS for Role**, or select a previously uploaded document from the document list. Select an existing role, review the extraction warnings, edit or add module and requirement blocks, and save the draft. Reopen saved drafts in TQS Builder. Unassigned requirements can be edited and assigned to a module. Documents and drafts remain in this browser; drafts are not published to TQS Support.
+In Training Content Manager, select a document and choose **Create TQS for Role**, or select a previously uploaded document from the document list. Select an existing role, review the extraction warnings, edit or add module and requirement blocks, and save the draft. Reopen saved drafts in TQS Builder. Unassigned requirements can be edited and assigned to a module. Documents and drafts remain in this browser; drafts are not published to TQS Requirements.
 
 The TQS parser handles line-separated numbered module headings and requirements, preserving source numbering and order. It reports unassigned requirements, duplicate numbers, and unrecognized lines for review. Check all extracted content against the original, especially PDF layout and DOCX text boxes or tables. Secure TQS administration, completion records, and audit trails require a trusted backend; the existing browser-only sign-in and progress tracker cannot enforce those controls.
 
-The demo account can view a synthetic two-module TQS in TQS Support after selecting **Demo: D / Demo D / Demo D** in Role Overview. Its checkoffs are saved only in the current browser and are not official or audited; they are separate from the existing role-required course checklist.
+The demo account can view a synthetic two-module TQS in TQS Requirements after selecting **Demo: D / Demo D / Demo D** in Role Overview. Its checkoffs are saved only in the current browser and are not official or audited. TQS Requirements and the Dashboard both count checked requirements; check dates are displayed in MM/DD/YYYY format. Other roles do not currently have a published TQS. Previous browser-local course checklist progress is left unchanged.

@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
         {label:"Dashboard",icon:icons.dashboard,href:"index.html",page:"dashboard"},
         {label:"Role Overview",icon:icons.role,href:"role-overview.html",page:"role-overview"},
         {label:"Training Courses",icon:icons.courses,href:"required-training.html",page:"required-training"},
-        {label:"TQS Support",icon:icons.support,href:"tqs-support.html",page:"tqs-support"},
+        {label:"TQS Requirements",icon:icons.support,href:"tqs-support.html",page:"tqs-support"},
         {label:"References",icon:icons.references,href:"key-references.html",page:"references"},
         {label:"Contact / Help",icon:icons.contact,href:"contact.html",page:"contact"}
     ];
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
         {label:"FAQ",icon:icons.help,href:"faq.html"},
         {label:"Completed Workflows",icon:icons.completed,workflowCount:true,disabled:true}
     ];
-    const titles = {dashboard:"Dashboard","role-overview":"Role Overview","required-training":"Training Courses","tqs-support":"TQS Support","ai-training-content-manager":"AI Training Content Manager",references:"References",contact:"Contact",faq:"FAQ"};
+    const titles = {dashboard:"Dashboard","role-overview":"Role Overview","required-training":"Training Courses","tqs-support":"TQS Requirements","ai-training-content-manager":"AI Training Content Manager",references:"References",contact:"Contact",faq:"FAQ"};
     if (pageTitle) pageTitle.textContent = titles[currentPage] || "Training Portal";
     if (sidebar) sidebar.innerHTML = `
         <div class="sidebar-brand"><div class="brand-mark" aria-hidden="true">${icons.training}</div><div><div class="brand-name">Training &<br>Qualification Portal</div></div></div>

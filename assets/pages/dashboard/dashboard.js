@@ -125,49 +125,60 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
     const accountId = typeof profile.email === "string" ? profile.email.trim().toLowerCase() : "";
     if (accountId) {
-        const tqsStorageKey = `portal.tqsProgress:${encodeURIComponent(accountId)}:${encodeURIComponent(roleName)}`;
-        let tqsProgress = {};
-        try {
-            const stored = JSON.parse(localStorage.getItem(tqsStorageKey) || "{}");
-            if (stored && typeof stored === "object" && !Array.isArray(stored)) {
-                tqsProgress = stored;
-            } else {
-                console.error("Saved TQS progress is not a valid record.");
+        const isDemoTqs = window.DemoTqs.matches(profile, selectedRole);
+        document.getElementById("dashboardTqsInProgressStat").hidden = isDemoTqs;
+        document.getElementById("dashboardTqsNotStartedLabel").textContent = isDemoTqs ? "Not Complete" : "Not Started";
+        const showTqsUnavailable = message => {
+            tqsElements.summary.textContent = message;
+            tqsElements.percent.textContent = "N/A";
+            tqsElements.total.textContent = "N/A";
+            tqsElements.completed.textContent = "N/A";
+            tqsElements.inProgress.textContent = "N/A";
+            tqsElements.notStarted.textContent = "N/A";
+            tqsElements.bar.style.width = "0%";
+            tqsElements.track.removeAttribute("aria-valuenow");
+            tqsElements.track.setAttribute("aria-valuetext", "Progress unavailable");
+            tqsElements.qualificationStatus.hidden = true;
+        };
+        const renderTqsProgress = () => {
+            if (!isDemoTqs) {
+                showTqsUnavailable("No TQS available for this role.");
+                return;
             }
-        } catch (error) {
-            console.error("Unable to read TQS progress for the dashboard.", error);
+            let tqsProgress;
+            try {
+                tqsProgress = window.DemoTqs.readProgress();
+            } catch (error) {
+                console.error("Unable to read TQS progress for the dashboard.", error);
+                showTqsUnavailable("TQS progress unavailable");
+                return;
+            }
+            const tqsTotal = window.DemoTqs.total;
+            const tqsCompleted = Object.keys(tqsProgress).length;
+            const tqsPercent = Math.round((tqsCompleted / tqsTotal) * 100);
+            const isComplete = tqsCompleted === tqsTotal;
+            tqsElements.summary.textContent = `${tqsCompleted}/${tqsTotal} requirements completed`;
+            tqsElements.percent.textContent = `${tqsPercent}%`;
+            tqsElements.total.textContent = String(tqsTotal);
+            tqsElements.completed.textContent = String(tqsCompleted);
+            tqsElements.inProgress.textContent = "0";
+            tqsElements.notStarted.textContent = String(tqsTotal - tqsCompleted);
+            tqsElements.bar.style.width = `${tqsPercent}%`;
+            tqsElements.track.removeAttribute("aria-valuetext");
+            tqsElements.track.setAttribute("aria-valuenow", String(tqsPercent));
+            tqsElements.qualificationStatus.hidden = false;
+            tqsElements.qualificationStatus.classList.toggle("is-qualified", isComplete);
+            tqsElements.qualificationStatus.classList.toggle("is-not-qualified", !isComplete);
+            tqsElements.qualificationIcon.textContent = "✓";
+            tqsElements.qualificationLabel.textContent = isComplete ? "All complete" : "Not complete";
+            tqsElements.qualificationDetail.textContent = `${tqsPercent}% sample TQS completion`;
+        };
+        renderTqsProgress();
+        if (isDemoTqs) {
+            window.addEventListener("storage", event => {
+                if (event.key === window.DemoTqs.storageKey || event.key === null) renderTqsProgress();
+            });
         }
-
-        const tqsRequirements = (window.PortalData?.courses || []).filter(course =>
-            Array.isArray(course.roles) && course.roles.includes(roleName) && course.requirement === "Required"
-        );
-        const tqsCompleted = tqsRequirements.filter(course =>
-            tqsProgress[course.id]?.status === "Completed"
-        ).length;
-        const tqsInProgress = tqsRequirements.filter(course =>
-            tqsProgress[course.id]?.status === "In Progress"
-        ).length;
-        const tqsNotStarted = tqsRequirements.length - tqsCompleted - tqsInProgress;
-        const tqsPercent = tqsRequirements.length
-            ? Math.round((tqsCompleted / tqsRequirements.length) * 100)
-            : 0;
-        const isQualified = tqsRequirements.length > 0 && tqsCompleted === tqsRequirements.length;
-
-        tqsElements.summary.textContent = `${tqsCompleted} of ${tqsRequirements.length} requirements completed`;
-        tqsElements.percent.textContent = `${tqsPercent}%`;
-        tqsElements.total.textContent = String(tqsRequirements.length);
-        tqsElements.completed.textContent = String(tqsCompleted);
-        tqsElements.inProgress.textContent = String(tqsInProgress);
-        tqsElements.notStarted.textContent = String(tqsNotStarted);
-        tqsElements.bar.style.width = `${tqsPercent}%`;
-        tqsElements.track.removeAttribute("aria-valuetext");
-        tqsElements.track.setAttribute("aria-valuenow", String(tqsPercent));
-        tqsElements.qualificationStatus.hidden = false;
-        tqsElements.qualificationStatus.classList.toggle("is-qualified", isQualified);
-        tqsElements.qualificationStatus.classList.toggle("is-not-qualified", !isQualified);
-        tqsElements.qualificationIcon.textContent = "✓";
-        tqsElements.qualificationLabel.textContent = isQualified ? "Qualified" : "Not Qualified";
-        tqsElements.qualificationDetail.textContent = `${tqsPercent}% TQS completion`;
     }
 
     const completionKey = "portal.completedCourses";

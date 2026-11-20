@@ -176,7 +176,7 @@ test("preview has learner navigation without changing learner progress and no ap
     assert.match(p.elements.courseReviewNotice.textContent, /Published Courses/);
 });
 
-async function overviewPage(page, localStorage) {
+async function overviewPage(page, localStorage, profile = {firstName:"Test", lastName:"User", email:"test@example.test"}) {
     const html = source(page === "dashboard" ? "index.html" : "required-training.html");
     const elements = Object.fromEntries([...html.matchAll(/\bid="([^"]+)"/g)].map(match => [match[1], new Element()]));
     for (const id of ["trainingCategory", "trainingStatus"]) if (elements[id]) elements[id].value = "All";
@@ -186,14 +186,16 @@ async function overviewPage(page, localStorage) {
         querySelector: () => null,
         addEventListener: (event, callback) => { if (event === "DOMContentLoaded") callback(); }
     };
-    const sessionStorage = storage({govsiteAccountProfile:JSON.stringify({firstName:"Test", lastName:"User", email:"test@example.test"})});
+    const sessionStorage = storage({govsiteAccountProfile:JSON.stringify(profile)});
+    const events = {};
     const window = {
         PortalData:{
             courses:[],
             organizationHierarchy:{"Test Division":{"Test Branch":["Test Role"]}},
             announcements:[]
         },
-        location:{search:"", href:"https://example.test/required-training.html"}
+        location:{search:"", href:"https://example.test/required-training.html"},
+        addEventListener:(name, callback) => { events[name] = callback; }
     };
     const context = {
         window, document, localStorage, sessionStorage, URL, URLSearchParams, console,
@@ -201,11 +203,47 @@ async function overviewPage(page, localStorage) {
     };
     vm.runInNewContext(source("assets/shared/js/course-schema.js"), context);
     vm.runInNewContext(source("assets/shared/js/course-catalog.js"), context);
+    if (page === "dashboard") vm.runInNewContext(source("assets/pages/tqs-support/demo-tqs.js"), context);
     vm.runInNewContext(source(page === "dashboard"
         ? "assets/pages/dashboard/dashboard.js" : "assets/pages/training-courses/required-training.js"), context);
     await new Promise(resolve => setImmediate(resolve));
+    elements.emitStorage = event => events.storage?.(event);
     return elements;
 }
+
+test("dashboard TQS progress uses demo requirement checkoffs", async () => {
+    const checked = Object.fromEntries(
+        ["1.1.1", "1.1.2", "1.1.3", "1.1.4", "1.1.5", "2.1.1", "2.1.2", "2.1.3", "2.1.4"]
+            .map(number => [number, {checkedBy:"Demo User", checkedAt:"2026-11-19T23:00:00.000Z"}])
+    );
+    const saved = storage({
+        "portal.selectedRole":JSON.stringify({division:"Demo: D", branch:"Demo D", role:"Demo D"}),
+        "portal.demoTqsProgress:demo%40navy.mil:DEMO-TQS-001":JSON.stringify(checked)
+    });
+    const dashboard = await overviewPage("dashboard", saved, {firstName:"Demo", lastName:"User", email:"demo@navy.mil"});
+    assert.equal(dashboard.tqsProgressSummary.textContent, "9/10 requirements completed");
+    assert.equal(dashboard.dashboardTqsProgressPercent.textContent, "90%");
+    assert.equal(dashboard.dashboardTqsTotal.textContent, "10");
+    assert.equal(dashboard.dashboardTqsCompleted.textContent, "9");
+    assert.equal(dashboard.dashboardTqsNotStarted.textContent, "1");
+    assert.equal(dashboard.dashboardTqsInProgressStat.hidden, true);
+    delete checked["1.1.1"];
+    saved.setItem("portal.demoTqsProgress:demo%40navy.mil:DEMO-TQS-001", JSON.stringify(checked));
+    dashboard.emitStorage({key:"portal.demoTqsProgress:demo%40navy.mil:DEMO-TQS-001"});
+    assert.equal(dashboard.tqsProgressSummary.textContent, "8/10 requirements completed");
+    assert.equal(dashboard.dashboardTqsProgressPercent.textContent, "80%");
+});
+
+test("dashboard does not treat saved course checklist progress as TQS progress", async () => {
+    const saved = storage({
+        "portal.selectedRole":JSON.stringify({division:"Test Division", branch:"Test Branch", role:"Test Role"}),
+        "portal.tqsProgress:test%40example.test:Test%20Role":JSON.stringify({"COURSE-1":{status:"Completed"}})
+    });
+    const dashboard = await overviewPage("dashboard", saved);
+    assert.equal(dashboard.tqsProgressSummary.textContent, "No TQS available for this role.");
+    assert.equal(dashboard.dashboardTqsProgressPercent.textContent, "N/A");
+    assert.notEqual(saved.getItem("portal.tqsProgress:test%40example.test:Test%20Role"), null);
+});
 
 test("catalog and dashboard agree when a published course is started, completed, and reset", async () => {
     const fixture = structuredClone(JSON.parse(source("data/courses.json")).courses[0]);

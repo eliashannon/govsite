@@ -1,18 +1,4 @@
-document.addEventListener("DOMContentLoaded", async () => {
-    await window.PortalDataReady;
-    let profile;
-    let selectedRole;
-    try {
-        profile = JSON.parse(sessionStorage.getItem("govsiteAccountProfile") || "null");
-        selectedRole = JSON.parse(localStorage.getItem("portal.selectedRole") || "null");
-    } catch (error) {
-        console.error("Unable to read the demo account or role.", error);
-        return;
-    }
-    if (typeof profile?.email !== "string" || profile.email.toLowerCase() !== "demo@navy.mil"
-        || selectedRole?.division !== "Demo: D" || selectedRole?.branch !== "Demo D"
-        || selectedRole?.role !== "Demo D") return;
-
+(() => {
     const modules = [
         {
             number: "1.0", title: "ORIENTATION AND COMMUNICATION",
@@ -37,25 +23,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     ];
     const requirementIds = new Set(modules.flatMap(module => module.requirements.map(([number]) => number)));
     const storageKey = "portal.demoTqsProgress:demo%40navy.mil:DEMO-TQS-001";
-    const section = document.getElementById("demoTqs");
-    const container = document.getElementById("demoTqsModules");
-    const notice = document.getElementById("demoTqsNotice");
-    const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-    })[character]);
-    const formatter = new Intl.DateTimeFormat("en-GB", {
-        day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC"
-    });
-    const checkedBy = [profile.firstName, profile.lastName].filter(value => typeof value === "string" && value.trim()).join(" ") || "Demo User";
-    let progress = {};
-    let storageAvailable = true;
-
-    const showError = message => {
-        notice.textContent = message;
-        notice.hidden = false;
-        notice.classList.add("is-error");
-    };
-    try {
+    const matches = (profile, selectedRole) => typeof profile?.email === "string"
+        && profile.email.trim().toLowerCase() === "demo@navy.mil"
+        && selectedRole?.division === "Demo: D" && selectedRole?.branch === "Demo D"
+        && selectedRole?.role === "Demo D";
+    const readProgress = () => {
         const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
         if (!saved || typeof saved !== "object" || Array.isArray(saved)
             || Object.entries(saved).some(([number, entry]) => !requirementIds.has(number)
@@ -63,54 +35,123 @@ document.addEventListener("DOMContentLoaded", async () => {
                 || typeof entry.checkedAt !== "string" || Number.isNaN(Date.parse(entry.checkedAt)))) {
             throw new Error("Invalid demo TQS progress.");
         }
-        progress = saved;
-    } catch (error) {
-        console.error("Unable to read demo TQS progress.", error);
-        storageAvailable = false;
-        showError("Sample checkoffs could not be read from this browser. Check storage before continuing.");
-    }
-
-    const render = () => {
-        const completed = Object.keys(progress).length;
-        document.getElementById("demoTqsProgress").textContent = `${completed} of ${requirementIds.size} requirements complete`;
-        container.innerHTML = modules.map(module => {
-            const moduleCompleted = module.requirements.filter(([number]) => progress[number]).length;
-            return `<section class="demo-tqs-module">
-                <h3>${escapeHtml(module.number)} ${escapeHtml(module.title)}</h3>
-                <p>${moduleCompleted} of ${module.requirements.length} complete</p>
-                <div class="demo-tqs-table-wrap"><table class="demo-tqs-table" aria-label="${escapeHtml(`${module.number} ${module.title}`)}">
-                  <thead><tr><th scope="col">Requirement Number</th><th scope="col">Requirement</th><th scope="col">Complete</th><th scope="col">Checked By</th><th scope="col">Date Checked</th></tr></thead>
-                  <tbody>${module.requirements.map(([number, text]) => {
-                      const entry = progress[number];
-                      return `<tr><td>${escapeHtml(number)}</td><td>${escapeHtml(text)}</td><td>
-                        <input type="checkbox" data-demo-requirement="${escapeHtml(number)}" aria-label="${escapeHtml(`${number} ${text}`)}" ${entry ? "checked" : ""} ${storageAvailable ? "" : "disabled"}>
-                        </td><td>${entry ? escapeHtml(entry.checkedBy) : ""}</td><td>${entry ? escapeHtml(formatter.format(new Date(entry.checkedAt))) : ""}</td></tr>`;
-                  }).join("")}</tbody>
-                </table></div>
-              </section>`;
-        }).join("");
+        return saved;
     };
-    container.addEventListener("change", event => {
-        const checkbox = event.target.closest("[data-demo-requirement]");
-        const number = checkbox?.dataset.demoRequirement;
-        if (!storageAvailable || !requirementIds.has(number)) return;
-        const next = {...progress};
-        if (checkbox.checked) next[number] = {checkedBy, checkedAt: new Date().toISOString()};
-        else delete next[number];
-        try {
-            localStorage.setItem(storageKey, JSON.stringify(next));
-            progress = next;
+
+    const start = (profile, selectedRole) => {
+        const section = document.getElementById("demoTqs");
+        const container = document.getElementById("demoTqsModules");
+        const notice = document.getElementById("demoTqsNotice");
+        const search = document.querySelector("[data-tqs-search]");
+        const track = document.querySelector(".tqs-progress-track");
+        const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        })[character]);
+        const formatter = new Intl.DateTimeFormat("en-US", {
+            day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC"
+        });
+        const checkedBy = [profile.firstName, profile.lastName].filter(value => typeof value === "string" && value.trim()).join(" ") || "Demo User";
+        let progress = {};
+        let storageAvailable = true;
+
+        const showError = message => {
+            notice.textContent = message;
             notice.hidden = false;
-            notice.classList.remove("is-error");
-            notice.textContent = "Sample checkoff saved in this browser.";
-            render();
-            container.querySelector(`[data-demo-requirement="${number}"]`)?.focus();
+            notice.classList.add("is-error");
+        };
+        try {
+            progress = readProgress();
         } catch (error) {
-            console.error("Unable to save demo TQS progress.", error);
-            checkbox.checked = Boolean(progress[number]);
-            showError("Sample checkoff could not be saved in this browser.");
+            console.error("Unable to read demo TQS progress.", error);
+            storageAvailable = false;
+            showError("Sample checkoffs could not be read from this browser. Check storage before continuing.");
         }
-    });
-    section.hidden = false;
-    render();
-});
+
+        const render = () => {
+            const completed = Object.keys(progress).length;
+            const total = requirementIds.size;
+            const percentage = Math.round(completed / total * 100);
+            document.getElementById("progressSummary").textContent = storageAvailable ? `${completed}/${total} requirements completed` : "Progress unavailable";
+            document.getElementById("progressPercent").textContent = storageAvailable ? `${percentage}%` : "N/A";
+            document.getElementById("totalCount").textContent = String(total);
+            document.getElementById("completedCount").textContent = storageAvailable ? String(completed) : "N/A";
+            document.getElementById("notStartedCount").textContent = storageAvailable ? String(total - completed) : "N/A";
+            document.getElementById("progressBar").style.width = storageAvailable ? `${percentage}%` : "0%";
+            if (storageAvailable) {
+                track.removeAttribute("aria-valuetext");
+                track.setAttribute("aria-valuenow", String(percentage));
+            } else {
+                track.removeAttribute("aria-valuenow");
+                track.setAttribute("aria-valuetext", "Progress unavailable");
+            }
+            const query = search.value.trim().toLowerCase();
+            container.innerHTML = modules.map(module => {
+                const moduleCompleted = module.requirements.filter(([number]) => progress[number]).length;
+                const visible = module.requirements.filter(([number, text]) =>
+                    `${number} ${text} ${module.number} ${module.title}`.toLowerCase().includes(query));
+                if (!visible.length) return "";
+                return `<section class="demo-tqs-module">
+                    <h3>${escapeHtml(module.number)} ${escapeHtml(module.title)}</h3>
+                    <p>${moduleCompleted} of ${module.requirements.length} complete</p>
+                    <div class="demo-tqs-table-wrap"><table class="demo-tqs-table" aria-label="${escapeHtml(`${module.number} ${module.title}`)}">
+                      <thead><tr><th scope="col">Requirement Number</th><th scope="col">Requirement</th><th scope="col">Complete</th><th scope="col">Checked By</th><th scope="col">Date Checked</th></tr></thead>
+                      <tbody>${visible.map(([number, text]) => {
+                          const entry = progress[number];
+                          return `<tr><td>${escapeHtml(number)}</td><td>${escapeHtml(text)}</td><td>
+                            <input type="checkbox" data-demo-requirement="${escapeHtml(number)}" aria-label="${escapeHtml(`${number} ${text}`)}" ${entry ? "checked" : ""} ${storageAvailable ? "" : "disabled"}>
+                            </td><td>${entry ? escapeHtml(entry.checkedBy) : ""}</td><td>${entry ? escapeHtml(formatter.format(new Date(entry.checkedAt))) : ""}</td></tr>`;
+                      }).join("")}</tbody>
+                    </table></div>
+                  </section>`;
+            }).join("") || '<p class="tqs-list-empty">No requirements match this search.</p>';
+        };
+        container.addEventListener("change", event => {
+            const checkbox = event.target.closest("[data-demo-requirement]");
+            const number = checkbox?.dataset.demoRequirement;
+            if (!storageAvailable || !requirementIds.has(number)) return;
+            const next = {...progress};
+            if (checkbox.checked) next[number] = {checkedBy, checkedAt: new Date().toISOString()};
+            else delete next[number];
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(next));
+                progress = next;
+                notice.hidden = false;
+                notice.classList.remove("is-error");
+                notice.textContent = "Sample checkoff saved in this browser.";
+                render();
+                container.querySelector(`[data-demo-requirement="${number}"]`)?.focus();
+            } catch (error) {
+                console.error("Unable to save demo TQS progress.", error);
+                checkbox.checked = Boolean(progress[number]);
+                showError("Sample checkoff could not be saved in this browser.");
+            }
+        });
+        window.addEventListener("storage", event => {
+            if (event.key !== storageKey && event.key !== null) return;
+            try {
+                progress = readProgress();
+                storageAvailable = true;
+                notice.hidden = true;
+                render();
+            } catch (error) {
+                console.error("Unable to read demo TQS progress.", error);
+                storageAvailable = false;
+                showError("Sample checkoffs could not be read from this browser. Check storage before continuing.");
+                render();
+            }
+        });
+        search.addEventListener("input", render);
+        document.getElementById("selectedRoleName").textContent = selectedRole.role;
+        document.getElementById("selectedRoleDescription").textContent = "Synthetic sample qualification standard.";
+        document.getElementById("selectedRoleDivision").textContent = selectedRole.division;
+        document.getElementById("selectedRoleBranch").textContent = selectedRole.branch;
+        document.getElementById("inProgressStat").hidden = true;
+        document.getElementById("notStartedLabel").textContent = "Not Complete";
+        document.getElementById("progressStats").classList.add("demo-tqs-stats");
+        document.getElementById("tqsTracker").hidden = false;
+        section.hidden = false;
+        render();
+    };
+
+    window.DemoTqs = Object.freeze({matches, start, readProgress, storageKey, total: requirementIds.size});
+})();
